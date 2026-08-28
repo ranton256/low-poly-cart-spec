@@ -10,7 +10,7 @@ The document is organised as:
 2. **Reference Frame, Units, and Tick** — the conventions every number in this document is expressed in.
 3. **Art & Asset Specification** — the supplied meshes and textures, their normalisation contract, and the art that lives in code (environment, lighting, HUD).
 4. **Functional Requirements** — features specified as BDD (behaviour-driven development) scenarios in Gherkin format. These are the contract.
-5. **Tuning Constants** — the canonical numeric table, given both per-tick and frame-rate-independent.
+5. **Tuning Constants** — the canonical numeric tables. Every constant has a `name`, and the scenarios refer to constants by name rather than restating values, so each number lives in exactly one place.
 6. **Acceptance Checklist** — what a finished port must demonstrate.
 7. **Known Deviations in the Reference Build** — places where the original implementation differs from the design specified above. The specification wins; these are listed so a porter is not surprised when the original is compared side by side.
 8. **Optional Features** — additional features for the developer to consider, but which **should not be implemented** until if and when they are specifically requested.
@@ -19,9 +19,9 @@ The document is organised as:
 
 ## Game Overview
 
-LowPolyCartJS is a single-player, arcade-style 3D go-kart time-trial set in an open, sunlit green field scattered with low-poly props. The player drives a stylised kart with momentum-based "tank drive" handling — hold forward to build speed, steer while rolling, coast to a stop — through a procedurally scattered obstacle field of trees, rocks, cones, crates, tyre stacks, and cottages. There is no opponent, no lap track, and no fail state: the entire game is the pleasure of driving plus a stopwatch. A 3-2-1-GO countdown starts the clock; crossing the start/finish band moving forward, at least five seconds after the clock started, banks a lap time and immediately restarts the clock for the next attempt. A best time persists for the session.
+LowPolyCartJS is a single-player, arcade-style 3D go-kart time-trial set in an open, sunlit green field scattered with low-poly props. The player drives a stylised kart with momentum-based "tank drive" handling — hold forward to build speed, steer while rolling, coast to a stop — through a procedurally scattered obstacle field of trees, rocks, cones, crates, tyre stacks, and cottages. There is no opponent, no lap track, and no fail state: the entire game is the pleasure of driving plus a stopwatch. A 3-2-1-GO countdown starts the clock; crossing the start/finish band northbound under power, at least five seconds after the clock started, banks a lap time, holds it on screen for half a second, then restarts the clock for the next attempt. A best time persists for the session.
 
-The design goal is **feel over content**: a responsive chase camera that widens its field of view with speed, a needle speedometer, a live minimap, chunky physical collisions that shove the kart aside and kill its momentum, and a live tuning panel so handling can be dialled in without restarting. The scattered world can be saved to a layout file and reloaded, turning a lucky procedural arrangement into a repeatable track.
+The design goal is **feel over content**: a responsive chase camera that widens its field of view with speed, a needle speedometer, a live minimap, and chunky physical collisions that shove the kart aside and kill its momentum. Handling is tunable at runtime so the feel can be dialled in without restarting. The scattered world can be saved to a layout file and reloaded, turning a lucky procedural arrangement into a repeatable track.
 
 **Session shape:** load → countdown → drive forever. The player is never ejected to a menu, never loses, and never runs out of anything.
 
@@ -48,7 +48,9 @@ Every number in this document uses these conventions. A port must either adopt t
 
 The original simulation is a fixed-step integrator with **no delta-time compensation**, tuned at **60 ticks per second**. All per-tick constants in this document are stated at that rate, together with their frame-rate-independent equivalents.
 
-**A port MUST be frame-rate independent.** Either (a) run the simulation on a fixed 60 Hz accumulator and interpolate the render, or (b) use the continuous-time forms given in the Tuning Constants table. A naive per-frame port will drive at double speed on a 120 Hz display and is non-conformant.
+**A port MUST be frame-rate independent, and MUST achieve it with a fixed 60 Hz accumulator**: accumulate real elapsed time, run the simulation in fixed 1/60 s steps, and interpolate the render between steps. A naive per-frame port will drive at double speed on a 120 Hz display and is non-conformant.
+
+The **Continuous** column in the Tuning Constants table is **informative only** — it characterises the behaviour, it is not a permitted alternative implementation. The two do not agree. The discrete recurrence settles at `accel × friction / (1 − friction)` = 0.192 wu/tick (11.52 wu/s, speedometer **115**); the corresponding continuous system `v' = 28.8 − 2.4493·v` settles at 11.76 wu/s (speedometer **117**). A 2% difference in top speed makes lap times non-comparable between ports, so the fixed step is the contract and the discrete values are the ones that must be reproduced.
 
 ---
 
@@ -110,6 +112,8 @@ Per-asset target heights and the resulting world dimensions:
 | `tires` | 1.20 | ×0.8 – ×1.2 | 0.96 – 1.44 | 1.22–1.83 × 1.22–1.83 |
 | `cottage` | 3.00 | ×0.8 – ×1.2 | 2.40 – 3.60 | 1.85–2.77 × 1.94–2.91 |
 
+**The `kart` row is stated in mesh-local axes, before the yaw correction of §4.** The kart's authored long axis is its local X. Once the +90° correction is applied, the kart standing at the start line measures **2.20 wu across world X and 2.36 wu along world Z** — that is, 2.36 wu long in the direction it faces, as the vehicle dimensions elsewhere in this document describe it. Collision uses a world-axis-aligned box recomputed from the kart's current yaw every tick, so these world extents change continuously as it turns; only the vehicle-relative 2.36 long × 2.20 wide × 1.20 tall is fixed.
+
 Note the intentional scale comedy: cottages are shorter than one and a half karts. This is the established look — do not "correct" it.
 
 ### 4. Kart orientation contract
@@ -126,7 +130,6 @@ Critically, **the movement solver must use the same corrected heading as the vis
 | **Fog** | Linear fog, colour `#87CEEB` (matching sky), starting at 50 wu, fully opaque at 150 wu. Distant props dissolve into the horizon rather than popping. |
 | **Ground** | A single flat plane, 200 × 200 wu, centred on the origin, at Y = 0. Grass green `#3D8C40`, roughness 0.9, metalness 0.0. Receives shadows; does not cast. |
 | **Reference grid** | A wireframe grid overlay covering the central 100 × 100 wu, **20 divisions** (5 wu cells), drawn 0.01 wu above the ground to avoid depth fighting. Centre-axis lines `#555555`, minor lines `#333333`. This is deliberately visible in normal play — it reads as a track-testing pad and gives the eye a speed reference. |
-| **Origin axes marker** | A 5 wu three-axis gizmo at the origin. Developer aid, visible in the reference build; a port may hide it behind the developer-tools toggle. |
 | **Start/finish band** | A flat unlit white quad, **10 wu wide (X) × 2 wu deep (Z)**, centred at (0, 0.02, **+5**), 80% opaque, visible from both sides. This is the timing gate and the only track furniture in the game. |
 
 ### 6. Lighting
@@ -143,7 +146,7 @@ Shadow configuration for the sun: 2048 × 2048 shadow map, soft/percentage-close
 
 ### 7. HUD art specification
 
-All HUD elements are screen-space overlays that do not receive world lighting and do not intercept pointer input (except the tuning panel).
+All HUD elements are screen-space overlays that do not receive world lighting and do not intercept pointer input. Every element listed here is **player-facing and required**. Developer instrumentation — a state/velocity readout, an origin gizmo, a tuning panel — is deliberately not specified: see the Runtime Tuning feature for what must be adjustable, not how.
 
 | Element | Anchor | Specification |
 |---|---|---|
@@ -153,8 +156,6 @@ All HUD elements are screen-space overlays that do not receive world lighting an
 | **Countdown overlay** | Screen centre | Heavy black sans face at ~120 px with a strong 4 px black drop shadow. White for `READY`, `3`, `2`, `1`; switches to green `#00FF00` for `GO!`. Hidden outside the start sequence. |
 | **Loading indicator** | Screen centre | Monospace white 18 px, `Loading assets...`. Replaced in place by an error message on failure. |
 | **Minimap** | Bottom-left | A 200 × 200 px viewport inset 10 px from the bottom-left corner, rendered as a live top-down view over the main image with no border or frame. |
-| **Developer readout** | Bottom, right of the minimap | Semi-transparent black panel (70% black, ~10 px padding, 5 px corner radius), monospace 14 px white. Three lines: key indicators, velocity and collision count, and current state name. |
-| **Tuning panel** | Top-right, below the timer | A collapsible folder-style property panel. Present in the reference build's normal play view; a port may gate it behind a developer toggle. |
 
 ### 8. Art bible for producing additional assets
 
@@ -209,6 +210,7 @@ So that I can start driving without configuring anything.
 * **When** the kart is added to the world
 * **Then** the kart stands at world position **X = 0, Z = 0** with its wheels touching **Y = 0**
 * **And** the kart's final dimensions are **2.36 wu long × 2.20 wu wide × 1.20 wu tall**
+* **And** because it faces **+Z**, its world-axis-aligned extent at the start line is therefore **2.20 wu on X and 2.36 wu on Z**
 * **And** the kart faces world **+Z**, toward the start/finish band at **Z = +5**
 * **And** the kart's velocity is **0**
 
@@ -237,8 +239,8 @@ So that the open field stays interesting and the start area is always clear.
 
 ### Scenario: Scattering the standard prop population
 
-* **Given** a world of size **100 wu** and a start-clearance radius of **8 wu**
-* **When** the world is generated
+* **Given** the world is being populated
+* **When** generation runs
 * **Then** the following populations are requested, each at its specified target height:
 
   | Asset | Count | Target height | Clearance radius |
@@ -250,56 +252,51 @@ So that the open field stays interesting and the start area is always clear.
   | `tires` | 6 | 1.2 | 8 |
   | `cottage` | 3 | 3.0 | 20 |
 
-* **And** candidate positions are drawn from a uniform distribution over **X ∈ [−50, +50], Z ∈ [−50, +50]**
+* **And** candidate positions are drawn from a uniform distribution over `±scatterExtent` on both X and Z
 
-### Scenario: Rejecting a placement inside the start clearance
+### Scenario Outline: Rejecting a candidate placement
 
-* **Given** a candidate position is generated for a `tree` with a clearance radius of **8 wu**
-* **When** the candidate's distance from the world origin is less than **8 wu**
+* **Given** a candidate position has been generated for an asset
+* **When** \<Condition>
 * **Then** the candidate is rejected without placing a prop
 * **And** another candidate is attempted
 
-### Scenario: Keeping cottages away from the playfield centre
+  **Examples:**
 
-* **Given** a candidate position is generated for a `cottage`
-* **When** the candidate's distance from the world origin is less than **20 wu**
-* **Then** the candidate is rejected
-* **And** cottages therefore only ever appear as distant landmarks near the edges of the scattered field
+  | Rule | Condition |
+  |---|---|
+  | Start clearance | the candidate's distance from the world origin is less than the asset's clearance radius (`startClearance`, or `cottageClearance` for `cottage`) |
+  | Prop crowding | the candidate lies within `minPropSeparation` of any previously placed prop's position |
 
-### Scenario: Rejecting a placement that crowds an existing prop
-
-* **Given** at least one prop has already been placed
-* **When** a new candidate position lies within **3 wu** of any previously placed prop's position
-* **Then** the candidate is rejected
-* **And** another candidate is attempted
+Because `cottageClearance` is more than twice `startClearance`, cottages only ever appear as distant landmarks near the edges of the scattered field.
 
 ### Scenario: Giving up gracefully when placements cannot be found
 
 * **Given** a request to place **N** instances of an asset
-* **When** **3 × N** candidate positions have been attempted
+* **When** `attemptBudget` × N candidate positions have been attempted
 * **Then** placement for that asset stops
 * **And** the world is considered generated with however many instances succeeded
-* **And** the achieved count versus the requested count is written to the developer log
+* **And** the achieved count versus the requested count is reported to the developer log
 
 ### Scenario: Varying repeated instances so the field does not look tiled
 
 * **Given** a candidate position has been accepted
 * **When** the instance is placed
 * **Then** it is rotated by a uniformly random yaw in **[0, 360°)**
-* **And** it is scaled by a uniformly random factor in **[0.8, 1.2]** applied on top of its target-height normalisation
+* **And** it is scaled by a uniformly random factor within `scaleVariation`, applied on top of its target-height normalisation
 * **And** its lowest point is re-grounded to **Y = 0** after that scaling
 * **And** it is registered as a solid collision obstacle
 
 ### Scenario: Leaving an empty outer ring
 
-* **Given** props are scattered only within **±50 wu** while the kart may drive to **±90 wu**
-* **When** the player drives past **50 wu** from the origin on any axis
+* **Given** props are scattered only within `±scatterExtent` while the kart may drive to `±drivableExtent`
+* **When** the player drives past `scatterExtent` from the origin on any axis
 * **Then** they enter an empty expanse of grass with no props, no grid lines, and no boundary wall visible
 * **And** the world continues to render correctly out to the drivable limit
 
 ### Scenario: Regenerating the world on demand
 
-* **Given** the player invokes the "New World" developer action
+* **Given** the player invokes the **Regenerate World** action
 * **When** regeneration runs
 * **Then** every existing prop is removed from the world and its resources released
 * **And** a fresh population is scattered using the same rules and counts
@@ -316,26 +313,27 @@ So that I know exactly when my time begins.
 ### Scenario: Enumerating the game states
 
 * **Given** the game is running
-* **Then** it is in exactly one of the states **LOADING**, **STARTING**, **RACING**, or **FINISHED** at any moment
-* **And** the current state name is visible in the developer readout
+* **Then** it is in exactly one of the states **LOADING**, **STARTING**, or **RACING** at any moment
+* **And** the transitions are **LOADING → STARTING → RACING**, taken once each; there is no transition out of **RACING**
 
 ### Scenario: Running the countdown
 
 * **Given** world generation has completed and the state has become **STARTING**
 * **When** the countdown begins
 * **Then** the centred overlay shows **READY** immediately
-* **And** after **1 second** the overlay shows **3**
-* **And** the overlay then advances to **2**, **1**, and **GO!** at **1 second** intervals
+* **And** the overlay then advances to **3**, **2**, **1**, and **GO!** at `countdownStep` intervals
+* **And** the **GO!** frame is therefore reached **4.0 s** after the countdown began
 * **And** the **GO!** frame is rendered in green `#00FF00` while the preceding frames are white
 
-### Scenario: Releasing control at GO
+### Scenario: Releasing control on the GO frame
 
-* **Given** the overlay is showing **GO!**
-* **When** a further **1 second** elapses
-* **Then** the overlay is hidden and its colour is reset to white for the next use
-* **And** the state becomes **RACING**
+* **Given** the countdown has reached the **GO!** frame
+* **When** that frame is presented
+* **Then** the state becomes **RACING** on the same frame — the player has control the instant they read **GO!**
 * **And** the elapsed timer is reset to **0.00** and starts running
 * **And** the lap-completion flag is cleared
+* **And** the overlay stays on screen for a further `goLinger` while the kart is already drivable, then hides and resets its colour to white for the next use
+* **And** the total delay from world-ready to control is therefore **4.0 s**, not 5.0 s
 
 ### Scenario: Freezing the kart during the countdown
 
@@ -360,28 +358,43 @@ As a player,
 I want the kart to carry momentum and steer like a light arcade vehicle,
 So that driving feels physical rather than like moving a cursor.
 
+### Tick order of operations
+
+**This ordering is normative.** Every simulation tick executes exactly these steps, in this order. Several scenarios below are only meaningful in terms of it — in particular, the speed clamp is applied *before* friction, and the steering threshold is tested against the **post-clamp, pre-friction** velocity.
+
+1. **Accelerate.** `v += accel` while forward is held; `v −= accel` while reverse is held. Both held: the two terms cancel.
+2. **Clamp.** `v = clamp(v, −maxSpeed × reverseFactor, +maxSpeed)`.
+3. **Steer.** If `|v| > steerThreshold`: `yaw += turnRate × sign(v)` while left is held, `yaw −= turnRate × sign(v)` while right is held. The `sign(v)` term is what reverses the steering sense in reverse.
+4. **Apply friction.** `v *= friction`.
+5. **Integrate position.** Displace the kart along its own forward axis by `v`.
+6. **Enforce the boundary.** Clamp X and Z to `±drivableExtent`. If **either or both** axes clamped, apply `v *= bounceFactor` exactly **once** for the tick — never once per axis, which would square the factor and leave a corner impact accelerating *into* the corner at +9% speed instead of rebounding.
+7. **Resolve collision.** Test for overlap; on contact, push out and set `v = 0`.
+8. **Evaluate the lap gate**, against the position and the step-5 integration of this tick. It runs last, so a kart that clips a prop inside the band has already been stopped and displaced before the gate is tested — and, per step 5 above, the push-out itself can never satisfy the gate.
+
+Steps 1–4 settle the velocity for the tick; steps 5–7 are position work and run only once it is final; step 8 observes the result and changes nothing. Two consequences worth stating outright: the velocity tested at step 3 is always slightly larger than the velocity that moves the kart at step 5, and a collision at step 7 discards the entire tick's acceleration.
+
 ### Scenario: Accumulating forward speed
 
 * **Given** the state is **RACING** and the kart is stationary
 * **When** the player holds the forward input
-* **Then** **0.008 wu/tick** is added to the velocity on every simulation tick (equivalently **28.8 wu/s²** of acceleration)
-* **And** velocity is then multiplied by the friction factor **0.96** each tick (equivalently damped continuously at **2.449 s⁻¹**)
-* **And** the kart approaches a steady-state speed of **0.192 wu/tick**, i.e. **≈11.5 wu/s**
+* **Then** `accel` is added to the velocity on every simulation tick
+* **And** the velocity is then multiplied by `friction` each tick
+* **And** the kart approaches a steady-state speed of `accel × friction / (1 − friction)` = **0.192 wu/tick**, i.e. **≈11.5 wu/s**
 * **And** it reaches 90% of that speed after approximately **0.94 seconds** of held input
 
 ### Scenario: Clamping to the configured speed limits
 
 * **Given** the kart is under power
 * **When** velocity is updated on a tick
-* **Then** forward velocity is clamped to at most **maxSpeed = 0.2 wu/tick** (**12 wu/s**)
-* **And** reverse velocity is clamped to at most **maxSpeed × 0.5 = 0.1 wu/tick** (**6 wu/s**) in magnitude
-* **And** because friction is applied after the clamp, the achievable steady speeds are **≈0.192 wu/tick** forward and **≈0.096 wu/tick** in reverse
+* **Then** forward velocity is clamped to at most `maxSpeed`
+* **And** reverse velocity is clamped to at most `maxSpeed × reverseFactor` in magnitude
+* **And** because friction is applied after the clamp (tick order steps 2 then 4), the achievable steady speeds are **≈0.192 wu/tick** forward and **≈0.096 wu/tick** in reverse
 
 ### Scenario: Reversing
 
 * **Given** the state is **RACING**
 * **When** the player holds the reverse input
-* **Then** **0.008 wu/tick** is subtracted from the velocity each tick
+* **Then** `accel` is subtracted from the velocity each tick
 * **And** the kart travels backwards along its own heading at up to **≈0.096 wu/tick**
 * **And** applying reverse while rolling forward acts as a brake, bleeding speed before motion reverses
 
@@ -389,21 +402,21 @@ So that driving feels physical rather than like moving a cursor.
 
 * **Given** the kart is at steady-state forward speed
 * **When** the player releases all drive inputs
-* **Then** velocity decays by a factor of **0.96** per tick with no further input
-* **And** the kart drops below the steering threshold after approximately **1.2 seconds**
+* **Then** velocity decays by a factor of `friction` per tick with no further input
+* **And** the kart drops below `steerThreshold` after approximately **1.2 seconds**
 * **And** it asymptotically approaches zero without ever snapping to a halt
 
 ### Scenario: Steering while rolling
 
-* **Given** the kart's speed magnitude is greater than **0.01 wu/tick**
+* **Given** the kart's post-clamp speed magnitude is greater than `steerThreshold`
 * **When** the player holds the left input
-* **Then** the kart's heading rotates by **+0.04 radians per tick** (**2.4 rad/s**, ≈**137.5°/s**)
+* **Then** the kart's heading rotates by `+turnRate` per tick (**2.4 rad/s**, ≈**137.5°/s**)
 * **And** holding the right input rotates the heading by the same magnitude in the opposite direction
 * **And** the turn rate is constant regardless of how fast the kart is travelling above the threshold
 
 ### Scenario: Refusing to steer while stationary
 
-* **Given** the kart's speed magnitude is **0.01 wu/tick** or less
+* **Given** the kart's post-clamp speed magnitude is `steerThreshold` or less
 * **When** the player holds a steering input
 * **Then** the kart's heading does not change
 * **And** the kart cannot be spun in place
@@ -433,16 +446,16 @@ So that I cannot drive off the edge of the ground plane.
 
 ### Scenario: Bouncing off the invisible boundary
 
-* **Given** the drivable area extends to **±90 wu** on both the X and Z axes
-* **When** the kart's position exceeds **90 wu** in magnitude on either axis
-* **Then** that axis of the position is clamped back to exactly **±90 wu**
-* **And** the velocity is multiplied by **−0.3**, reversing it and removing 70% of its magnitude
+* **Given** the drivable area extends to `±drivableExtent` on both the X and Z axes
+* **When** the kart's position exceeds `drivableExtent` in magnitude on either axis
+* **Then** that axis of the position is clamped back to exactly `±drivableExtent`
+* **And** the velocity is multiplied by `bounceFactor`, reversing it and removing 70% of its magnitude
 * **And** the kart therefore rebounds gently rather than sticking to or passing through the limit
 
 ### Scenario: Keeping the boundary invisible
 
 * **Given** the ground plane spans **±100 wu**
-* **When** the kart is held against the boundary at **±90 wu**
+* **When** the kart is held against the boundary at `±drivableExtent`
 * **Then** there is still visible grass beyond the kart in every direction
 * **And** no wall, fence, or edge of the ground is drawn or visible
 
@@ -459,19 +472,20 @@ So that the obstacle field actually matters.
 * **Given** the kart is racing
 * **When** collision is evaluated for the tick
 * **Then** the kart's world-axis-aligned bounding volume is recomputed from its current transform
-* **And** that volume is **contracted by 0.2 wu on every side** before testing, to make near misses forgiving
+* **And** that volume is contracted by `hitboxContraction` on every side before testing, to make near misses forgiving
 * **And** it is tested for intersection against the world-axis-aligned bounding volume of every registered prop
-* **And** the first intersecting prop is treated as the collision for this tick
+* **And** the **first intersecting prop in registration order** is treated as the collision for this tick, and testing stops there
+* **And** at most one collision is therefore resolved per tick, however many props overlap
 
 ### Scenario: Responding to an impact
 
 * **Given** the kart's contracted bounding volume intersects a prop's bounding volume
 * **When** the collision response runs
 * **Then** a push direction is computed as the horizontal unit vector from the **prop's bounding-volume centre** to the **kart's position**
-* **And** the kart is displaced **0.3 wu** along that push direction
+* **And** if that horizontal vector is degenerate — the kart's position and the prop's centre coincide within floating-point tolerance — the kart's **backward** axis is used as the push direction instead, ejecting it the way it came in; using the forward axis would drive it further into the prop and walk it out the far side
+* **And** the kart is displaced `pushDistance` along the push direction
 * **And** the kart's velocity is set to exactly **0** — not reflected, not damped
-* **And** the camera is jolted by a random offset of up to **±0.15 wu** horizontally and **±0.10 wu** vertically, which the camera's normal smoothing then absorbs over the following fraction of a second
-* **And** the collision counter in the developer readout increments
+* **And** the camera is jolted by a random offset of up to `±shakeHorizontal` and `±shakeVertical`, which the camera's normal smoothing then absorbs over the following fraction of a second
 
 ### Scenario: Not becoming trapped inside an obstacle
 
@@ -481,13 +495,14 @@ So that the obstacle field actually matters.
 * **And** the kart never becomes wedged inside, jitters through, or tunnels past the prop
 * **And** the kart can always be freed by reversing away
 
+**This guarantee covers one prop at a time, which is what one resolution per tick can deliver.** `minPropSeparation` is measured centre-to-centre and does not subtract footprints, so two cottages placed at the minimum 3 wu leave a gap of **0.09 wu** — against a contracted kart hitbox of 1.80 × 1.96 wu. A kart that reaches such a pair overlaps both, only the first in registration order is resolved, and the push-out drives it into the second; it oscillates in place with its velocity zeroed every tick and cannot drive out. **Reset Kart is the specified escape.** A port that wants the stronger guarantee should raise `minPropSeparation` to clear the largest pair of footprints rather than resolve multiple collisions per tick — the placement rule is the root cause, not the collision response.
+
 ### Scenario: Passing close to a prop without contact
 
 * **Given** the kart passes a prop with a clearance greater than the contracted bounding volume
 * **When** collision is evaluated
 * **Then** no collision is registered
 * **And** the velocity, heading, and position are entirely unaffected
-* **And** the collision counter does not increment
 
 ### Scenario: Growing hit volume when driving diagonally
 
@@ -515,9 +530,9 @@ So that fast driving feels fast.
 
 * **Given** the state is **RACING**
 * **When** a frame is rendered
-* **Then** the camera's target position is **8 wu behind** and **4 wu above** the kart, in the kart's own frame of reference
-* **And** the camera aims at a point **4 wu ahead** of the kart and **1 wu above** it
-* **And** the camera position eases toward its target with a smoothing time constant of approximately **0.2 seconds** (a factor of **0.08** per 60 Hz tick)
+* **Then** the camera's target position is `chaseBack` behind and `chaseUp` above the kart, in the kart's own frame of reference
+* **And** the camera aims at a point `aimAhead` ahead of the kart and `aimUp` above it
+* **And** the camera position eases toward its target by `chaseSmoothing` per tick (a time constant of ≈ **0.2 s**)
 * **And** the camera aim is applied without smoothing, so the horizon stays locked while the position lags
 
 ### Scenario: Lagging through a turn
@@ -531,8 +546,8 @@ So that fast driving feels fast.
 
 * **Given** the kart's speed ratio is defined as `min(|velocity| / maxSpeed, 1)`
 * **When** the camera is updated
-* **Then** the vertical field of view is set to **75° + (speed ratio × 15°)**
-* **And** at rest the field of view is **75°**
+* **Then** the vertical field of view is set to `fovBase + speedRatio × (fovMax − fovBase)`
+* **And** at rest the field of view is `fovBase`
 * **And** at steady-state top speed (ratio ≈ 0.96) it is approximately **89.4°**
 * **And** the change is continuous, producing a subtle tunnelling effect as the kart accelerates
 
@@ -555,7 +570,7 @@ So that I can see obstacles and the start line that are outside my view.
 
 * **Given** the main view has been drawn for this frame
 * **When** the minimap is drawn
-* **Then** it occupies a **200 × 200** pixel region inset **10 pixels** from the bottom-left corner of the screen
+* **Then** it occupies a `minimapSize` region inset `minimapInset` from the bottom-left corner of the screen
 * **And** it is drawn over the main image with its depth information cleared first, so it is never occluded by the main scene
 * **And** it does not scale or distort the main view
 
@@ -563,8 +578,8 @@ So that I can see obstacles and the start line that are outside my view.
 
 * **Given** the minimap uses a parallel (non-perspective) top-down projection
 * **When** it is positioned
-* **Then** it looks straight down from **100 wu** above the ground
-* **And** it frames a **100 × 100 wu** square of the world (a half-extent of **50 wu** in each direction)
+* **Then** it looks straight down from `minimapAltitude` above the ground
+* **And** it frames a square of the world of `minimapHalfExtent` in each direction
 * **And** it centres on the kart's current X and Z position, following it continuously
 
 ### Scenario: Keeping the minimap orientation fixed
@@ -602,7 +617,7 @@ So that I can judge my runs.
 * **Given** the speed ratio is `min(|velocity| / maxSpeed, 1)`
 * **When** the HUD updates
 * **Then** the needle is rotated to **(speed ratio × 180°) − 90°**, sweeping from pointing left at rest to pointing right at the clamp
-* **And** the numeric readout shows **floor(speed ratio × 120)**, labelled `KM/H`
+* **And** the numeric readout shows `floor(speedRatio × speedoMax)`, labelled `KM/H`
 * **And** at steady-state forward speed the readout settles at approximately **115**
 * **And** at steady-state reverse speed it reads approximately **57**, since the dial shows speed magnitude and not direction
 
@@ -612,6 +627,7 @@ So that I can judge my runs.
 * **When** each frame is presented
 * **Then** the `TIME` readout shows the seconds elapsed since the clock started, to **two decimal places**
 * **And** the timer runs continuously regardless of whether the kart is moving
+* **And** the only interruption is the `lapRestartDelay` window after a banked lap, during which the clock itself is stopped and the readout holds the banked time (see Lap Detection)
 
 ### Scenario: Displaying an unset best time
 
@@ -630,18 +646,20 @@ So that I can chase a personal best.
 ### Scenario: Completing a valid lap
 
 * **Given** the state is **RACING**
-* **And** at least **5.00 seconds** have elapsed on the current clock
+* **And** at least `minLapTime` has elapsed on the current clock
 * **And** no lap has already been banked for this clock
-* **When** the kart's position is within the finish band — **Z between 4 and 6** and **|X| < 5** —
-* **And** the kart's velocity is greater than **0.01 wu/tick**, i.e. it is moving forward under power rather than coasting backwards
+* **When** the kart's position is within the finish band — **Z ∈ (4, 6)** and **|X| < 5** —
+* **And** the **+Z component of the tick's step-5 integration** — that is, `v × (forward axis · +Z)` — exceeds `lapCrossingThreshold`, i.e. the kart is under its own power crossing the band in the direction the band is meant to be crossed
 * **Then** the lap is recorded and further lap detection is suppressed until the clock restarts
+
+Two things this test is deliberately **not**: it is not the sign of the scalar velocity — a kart driving forward under power but *heading south* is going the wrong way through the gate and must not bank a lap — and it is not the net change in position over the tick. Net position also moves at step 6 (boundary clamp) and step 7 (`pushDistance` push-out); a kart sitting motionless in the band against a prop on its south side is shoved +0.3 wu on +Z every tick, thirty times the threshold, and would otherwise bank a lap without the player driving anywhere.
 
 ### Scenario: Setting a new best time
 
 * **Given** a lap has just been recorded with an elapsed time lower than the current best
 * **When** the best time is updated
 * **Then** the `BEST` readout shows the new time to two decimal places
-* **And** the readout flashes green `#00FF00` for **1 second** before returning to yellow `#FFFF00`
+* **And** the readout flashes green `#00FF00` for `bestFlashDuration` before returning to yellow `#FFFF00`
 
 ### Scenario: Recording a lap slower than the best
 
@@ -653,31 +671,27 @@ So that I can chase a personal best.
 ### Scenario: Restarting the clock after a lap
 
 * **Given** a lap has just been recorded
-* **When** **0.5 seconds** have passed
-* **Then** the elapsed timer resets to **0.00** and begins counting again
-* **And** lap detection is re-armed
-* **And** the kart's position, heading, and velocity are untouched — the player drives straight on into the next lap
+* **When** the lap is banked
+* **Then** the clock **stops**, and the `TIME` readout holds the banked lap time for `lapRestartDelay`, so the player can read what they scored
+* **And** when `lapRestartDelay` has passed, the clock restarts from **0.00** and lap detection is re-armed
+* **And** the next lap's clock therefore begins `lapRestartDelay` **after** the crossing — the held window is dead time belonging to no lap
+* **And** the kart's position, heading, and velocity are untouched throughout: only the clock pauses, never the simulation, and the player drives straight on into the next lap
 
-### Scenario: Rejecting a lap taken too soon
+### Scenario Outline: Rejecting a crossing
 
-* **Given** the clock has been running for less than **5.00 seconds**
-* **When** the kart crosses the finish band moving forward
+* **Given** the state is **RACING** and lap detection runs
+* **When** \<Condition>
 * **Then** no lap is recorded and the clock keeps running
-* **And** the player therefore cannot farm times by shuttling back and forth across the line at the start
+* **And** the lap is banked only once every condition of a valid lap is satisfied simultaneously
 
-### Scenario: Rejecting a crossing that is not moving forward
+  **Examples:**
 
-* **Given** the kart is inside the finish band with all other lap conditions satisfied
-* **When** the kart's velocity is **0.01 wu/tick** or less, including any reverse velocity
-* **Then** no lap is recorded
-* **And** the lap is only banked once the kart is again driving forward through the band
-
-### Scenario: Rejecting a crossing outside the band
-
-* **Given** the kart passes the plane **Z = 5** at a lateral offset of **|X| ≥ 5**
-* **When** lap detection runs
-* **Then** no lap is recorded
-* **And** the player must pass through the visible white band, not around it
+  | Rule | Condition |
+  |---|---|
+  | Too soon | the clock has been running for less than `minLapTime` — the player cannot farm times by shuttling across the line at the start |
+  | Wrong way | the kart's **+Z** displacement is `lapCrossingThreshold` or less, including reversing and including driving forward while heading south |
+  | Outside the band | the kart passes the plane **Z = 5** at a lateral offset of **\|X\| ≥ 5** — it must go through the visible white band, not around it |
+  | Already banked | a lap has already been recorded for this clock and detection has not yet been re-armed |
 
 ### Scenario: Persisting the best time for the session
 
@@ -705,8 +719,10 @@ So that the kart always does what I am asking.
   | Reverse | `S` | Down |
   | Steer left | `A` | Left |
   | Steer right | `D` | Right |
-  | Reset kart | `R` | — |
-  | Save layout | `P` | — |
+  | Reset Kart | `R` | — |
+  | Save Layout | `P` | — |
+
+* **And** a **Regenerate World** action exists but has no required binding — how a port exposes it is unspecified
 
 ### Scenario: Tracking held inputs as continuous state
 
@@ -728,7 +744,6 @@ So that the kart always does what I am asking.
 * **When** the application loses input focus
 * **Then** every held input is cleared immediately
 * **And** the kart coasts to a stop under friction rather than driving away unattended
-* **And** the developer readout reflects the cleared state
 
 ### Scenario: Ignoring unbound keys
 
@@ -739,58 +754,30 @@ So that the kart always does what I am asking.
 
 ---
 
-## Feature: Developer Utilities and Live Tuning
+## Feature: Runtime Tuning and Player Actions
 
 As a developer tuning the game,
-I want to change handling and inspect state without restarting,
-So that I can dial in the feel quickly.
+I want handling to be adjustable while the game runs,
+So that I can dial in the feel without restarting.
 
-### Scenario: Exposing handling parameters for live tuning
+This specification defines **what must be adjustable and what the actions do**. It deliberately does not specify a tuning UI — panels, sliders, gizmos, and state readouts are developer instrumentation, and how a port surfaces them is its own business.
 
-* **Given** the tuning panel is open
-* **Then** it offers a **Handling** group with the following sliders, each taking effect on the next simulation tick:
+### Scenario: Adjusting handling without a restart
 
-  | Label | Parameter | Range | Default |
-  |---|---|---|---|
-  | Power | acceleration | 0.001 – 0.02 | 0.008 |
-  | Grip | friction | 0.90 – 0.99 | 0.96 |
-  | Steering | turn rate | 0.01 – 0.1 | 0.04 |
-  | Top Speed | max speed | 0.1 – 0.5 | 0.2 |
-
-* **And** a **Camera** group with **Height** (2 – 10, default 4) and **Distance** (3 – 15, default 8)
-* **And** buttons for **Reset Kart**, **Save Track**, and **New World**
-
-### Scenario: Reporting live state in the developer readout
-
-* **Given** the game is running
-* **When** each frame is presented
-* **Then** the readout highlights each of the four drive inputs in green while held and grey while released
-* **And** it shows the current velocity to **four decimal places**
-* **And** it shows the cumulative collision count for the session
-* **And** it shows the current game state name
+* **Given** the game is running in any state
+* **When** `accel`, `friction`, `turnRate`, or `maxSpeed` is changed by whatever means the port provides
+* **Then** the new value is in force on the very next simulation tick
+* **And** no reload, reset, or state transition is required
+* **And** the kart's current position, heading, velocity, and the running clock are unaffected by the change itself
 
 ### Scenario: Resetting the kart
 
-* **Given** the player triggers the reset action by key or by button
+* **Given** the player triggers the **Reset Kart** action
 * **When** the reset runs
 * **Then** the kart returns to **X = 0, Z = 0** with its wheels on the ground
 * **And** its heading is restored to facing world **+Z**
 * **And** its velocity is set to **0**
 * **And** the elapsed timer, the best time, and the world layout are all left unchanged
-
-### Scenario: Inspecting input history
-
-* **Given** the developer requests an input history dump
-* **When** the dump is produced
-* **Then** the most recent **50** input transitions are listed with their timestamps, the key involved, whether it was a press or a release, and the resulting state of all four drive inputs
-* **And** focus-loss clears appear in the history as their own entry type
-
-### Scenario: Force-clearing input state
-
-* **Given** input state has become inconsistent during debugging
-* **When** the developer triggers a force clear
-* **Then** all four drive inputs are set to released
-* **And** the action is recorded in the input history
 
 ---
 
@@ -803,7 +790,7 @@ So that a lucky procedural layout becomes a repeatable track.
 ### Scenario: Exporting the current layout
 
 * **Given** a world has been generated
-* **When** the player triggers the save action by key or by button
+* **When** the player triggers the **Save Layout** action
 * **Then** a layout file named `track_layout.json` is produced and delivered to the player
 * **And** it contains one record per placed prop, holding: the source asset identifier, the asset's target height, the full position (X, Y, Z), the yaw rotation, and the full scale (X, Y, Z)
 * **And** the file is human-readable, indented text
@@ -858,7 +845,7 @@ So that a frame is always internally consistent.
 * **Then** the main camera's aspect ratio is recomputed from the new dimensions
 * **And** the render surface is resized to match
 * **And** no HUD element is clipped, stretched, or left anchored to a stale corner
-* **And** the minimap keeps its **200 × 200** pixel size and **10** pixel inset from the bottom-left corner
+* **And** the minimap keeps its `minimapSize` and `minimapInset`
 
 ### Scenario: Limiting render resolution on high-density displays
 
@@ -871,65 +858,78 @@ So that a frame is always internally consistent.
 
 # Tuning Constants
 
-The canonical table. The **Per tick** column is the authored value at the **60 Hz** reference rate; the **Continuous** column is the frame-rate-independent equivalent a port should implement against.
+The canonical tables.
 
 ## Physics
 
-| Parameter | Per tick (60 Hz) | Continuous | Notes |
+**These tables are the single source of truth for every number in this document.** Each constant has a `name`; the scenarios above refer to constants by name rather than restating their values, so retuning the game means editing one row here. Values written in bold in a scenario are ones with no constant behind them.
+
+The **Per tick** column is the authored value at the **60 Hz** reference rate and is the value a port must implement. The **Continuous** column is **informative only** — see *Reference tick*.
+
+| `name` | Per tick (60 Hz) | Continuous | Notes |
 |---|---|---|---|
-| Acceleration | 0.008 wu/tick added to velocity | 28.8 wu/s² | Same magnitude for forward and reverse |
-| Max speed (forward clamp) | 0.2 wu/tick | 12.0 wu/s | Clamp, applied before friction |
-| Max speed (reverse clamp) | 0.1 wu/tick | 6.0 wu/s | Half of the forward clamp |
-| Friction | ×0.96 per tick | `v *= exp(−2.4493 · dt)` | Time constant ≈ 0.41 s |
-| Steady-state forward speed | 0.192 wu/tick | ≈11.5 wu/s | The clamp is never actually reached |
-| Steady-state reverse speed | 0.096 wu/tick | ≈5.8 wu/s | |
-| Turn rate | 0.04 rad/tick | 2.4 rad/s (137.5°/s) | Constant above the steering threshold |
-| Steering threshold | 0.01 wu/tick | 0.6 wu/s | Below this, no steering |
-| Boundary bounce factor | ×−0.3 on velocity | same | Applied once on clamp |
-| Collision push distance | 0.3 wu | same | Instantaneous displacement |
-| Collision velocity result | 0 | same | Full stop, no reflection |
-| Kart hit-volume contraction | 0.2 wu per side | same | Applied to the kart only, not props |
+| `accel` | 0.008 wu/tick added to velocity | 28.8 wu/s² | Same magnitude forward and reverse |
+| `maxSpeed` | 0.2 wu/tick | 12.0 wu/s | Forward clamp, applied *before* friction |
+| `reverseFactor` | 0.5 | same | Reverse clamp is `maxSpeed × reverseFactor` = 0.1 wu/tick |
+| `friction` | ×0.96 per tick | `v *= exp(−2.4493 · dt)` | Time constant ≈ 0.41 s |
+| `turnRate` | 0.04 rad/tick | 2.4 rad/s (137.5°/s) | Constant above `steerThreshold` |
+| `steerThreshold` | 0.01 wu/tick | 0.6 wu/s | Tested post-clamp, pre-friction |
+| `bounceFactor` | ×−0.3 on velocity | same | Applied at most once per tick, however many axes clamp |
+| `pushDistance` | 0.3 wu | same | Instantaneous collision displacement |
+| `hitboxContraction` | 0.2 wu per side | same | Applied to the kart only, not props |
+
+Derived, for reference — not independently tunable:
+
+| Quantity | Value | Notes |
+|---|---|---|
+| Steady-state forward speed | 0.192 wu/tick (≈11.5 wu/s) | `accel × friction / (1 − friction)`. The post-friction speed never reaches `maxSpeed`, though the pre-friction value converges on it exactly |
+| Steady-state reverse speed | 0.096 wu/tick (≈5.8 wu/s) | Half the above |
+| Collision velocity result | 0 | Full stop, no reflection |
 
 ## World
 
-| Parameter | Value |
+| `name` | Value |
 |---|---|
-| World size | 100 wu |
-| Prop scatter extent | ±50 wu on X and Z |
-| Drivable extent | ±90 wu on X and Z |
-| Ground plane | 200 × 200 wu |
-| Reference grid | 100 wu across, 20 divisions (5 wu cells) |
-| Start clearance radius | 8 wu (20 wu for cottages) |
-| Minimum prop separation | 3 wu |
-| Placement attempt budget | 3 × requested count |
-| Random scale variation | ×0.8 – ×1.2 |
+| `scatterExtent` | 50 wu — props are scattered over ±50 on X and Z |
+| `drivableExtent` | 90 wu — the kart is confined to ±90 on X and Z |
+| `groundSize` | 200 × 200 wu, centred on the origin |
+| `gridSize` / `gridDivisions` | 100 wu across / 20 divisions (5 wu cells) |
+| `startClearance` | 8 wu from the origin |
+| `cottageClearance` | 20 wu from the origin, for `cottage` only |
+| `minPropSeparation` | 3 wu between placed props |
+| `attemptBudget` | 3 × requested count |
+| `scaleVariation` | ×0.8 – ×1.2 |
 | Start/finish band | 10 wu (X) × 2 wu (Z), centred at Z = +5, height 0.02 wu |
 
 ## Camera and HUD
 
-| Parameter | Value |
+| `name` | Value |
 |---|---|
-| Chase offset (kart-local) | 8 wu behind, 4 wu above |
-| Chase aim offset (kart-local) | 4 wu ahead, 1 wu above |
-| Chase position smoothing | factor 0.08/tick ⇒ time constant ≈ 0.2 s |
-| Field of view | 75° at rest → 90° at the speed clamp (≈89.4° in practice) |
+| `chaseBack` / `chaseUp` | 8 wu behind, 4 wu above, in the kart's own frame |
+| `aimAhead` / `aimUp` | 4 wu ahead, 1 wu above, in the kart's own frame |
+| `chaseSmoothing` | factor 0.08/tick ⇒ time constant ≈ 0.2 s |
+| `fovBase` / `fovMax` | 75° at rest → 90° at the speed clamp (≈89.4° in practice) |
 | Near / far clip | 0.1 / 1000 wu |
-| Collision camera shake | ±0.15 wu horizontal, ±0.10 wu vertical, one-shot |
-| Minimap projection | Parallel, half-extent 50 wu, from 100 wu altitude, near 1 / far 1000 |
-| Minimap viewport | 200 × 200 px, inset 10 px bottom-left |
-| Speedometer scale | needle (ratio × 180°) − 90°; readout floor(ratio × 120) |
-| Best-time flash | 1.0 s green, then yellow |
+| `shakeHorizontal` / `shakeVertical` | ±0.15 wu / ±0.10 wu, one-shot on collision |
+| `minimapHalfExtent` / `minimapAltitude` | Parallel projection, half-extent 50 wu, from 100 wu up, near 1 / far 1000 |
+| `minimapSize` / `minimapInset` | 200 × 200 px, inset 10 px bottom-left |
+| `speedoMax` | 120 — needle is (ratio × 180°) − 90°, readout is floor(ratio × `speedoMax`) |
+
+The speedometer is **cosmetic, not calibrated**. Top speed is 11.5 wu/s ≈ 8.6 m/s ≈ 31 km/h against the 1 wu ≈ 0.75 m anchor, but the dial reads ~115 KM/H. This is deliberate arcade exaggeration — do not "fix" the units.
 
 ## Timing
 
-| Parameter | Value |
+| `name` | Value |
 |---|---|
-| Countdown step interval | 1.0 s |
-| Countdown sequence | READY → 3 → 2 → 1 → GO! → race |
-| Total pre-race delay | ≈5.0 s from world-ready |
-| Minimum lap time | 5.00 s |
-| Post-lap clock restart delay | 0.5 s |
-| Lap gate | Z ∈ (4, 6), \|X\| < 5, velocity > 0.01 wu/tick |
+| `countdownStep` | 1.0 s |
+| Countdown sequence | READY → 3 → 2 → 1 → **GO! = control released** |
+| Total pre-race delay | **4.0 s** from world-ready to control |
+| `goLinger` | 0.5 s — the GO! overlay stays up this long *after* control is released |
+| `minLapTime` | 5.00 s |
+| `lapRestartDelay` | 0.5 s — `TIME` freezes on the banked lap for this long, then resets |
+| `bestFlashDuration` | 1.0 s green, then yellow |
+| `lapCrossingThreshold` | 0.01 wu/tick of **+Z** displacement |
+| Lap gate | Z ∈ (4, 6), \|X\| < 5, +Z displacement > `lapCrossingThreshold` |
 
 ---
 
@@ -937,20 +937,22 @@ The canonical table. The **Per tick** column is the authored value at the **60 H
 
 A port is considered faithful when all of the following are demonstrable:
 
-1. The game boots to a countdown with no user interaction and no configuration.
+Where a criterion gives a tolerance, that tolerance is normative — "approximately" is not a defence.
+
+1. The game boots to a countdown with no user interaction and no configuration, and hands over control **4.0 s ± 0.1 s** later, on the GO! frame.
 2. Every prop stands exactly on the ground — none floating, none sunk — at every random scale.
 3. The kart drives in the direction it visually faces, at all headings, forward and reverse.
-4. Holding accelerate from rest reaches ~115 on the speedometer in about a second, and coasting takes about a second to fall below the steering threshold.
+4. Holding accelerate from rest passes 90% of steady-state speed — dial **103** — within **0.94 s ± 0.05 s**, and the dial first reads **115** at **2.60 s ± 0.05 s** and stays there. Coasting from steady state falls below `steerThreshold` in **1.21 s ± 0.05 s**.
 5. Steering is impossible from a standstill and reverses sense when reversing.
-6. Hitting a tree stops the kart dead, shoves it clear, shakes the camera, and increments the collision counter — and the kart never gets stuck inside anything.
+6. Hitting a tree stops the kart dead, shoves it clear, and shakes the camera — and the kart can always reverse back out of a **single** prop, at any approach angle. Being pinned between two near-touching props is accepted; Reset Kart frees it.
 7. Driving to the boundary produces a soft rebound with grass still visible beyond.
 8. The camera lags through turns and settles behind the kart, and the field of view visibly widens with speed.
 9. The minimap tracks the kart, stays north-up, shows the marker and heading arrow, and those markers are invisible in the main view.
-10. Crossing the white band forward after 5 s banks a lap, flashes a new best in green when appropriate, and restarts the clock 0.5 s later.
+10. Crossing the white band northbound after 5 s banks a lap, freezes `TIME` on it for 0.5 s, flashes a new best in green when appropriate, then restarts the clock. Crossing it southbound under power banks nothing.
 11. Releasing focus mid-throttle stops the kart from driving away.
 12. Saving and reloading a layout reproduces the identical world, repeatably.
-13. Tuning Power, Grip, Steering, and Top Speed changes handling immediately without a restart.
-14. The whole thing behaves identically at 30, 60, and 144 frames per second.
+13. Changing `accel`, `friction`, `turnRate`, or `maxSpeed` at runtime alters handling on the next tick, with no restart.
+14. A scripted 60-second input sequence replayed at 30, 60, and 144 frames per second ends with the kart **within 0.5 wu** of the same position and **within 0.05 s** of the same lap time.
 
 ---
 
@@ -961,11 +963,14 @@ The specification above is normative. These are places where the original implem
 1. **Frame-rate dependence.** The reference integrates per rendered frame with no delta-time term, so it runs proportionally faster on high-refresh displays. The specification requires frame-rate independence.
 2. **Minimap heading arrow offset.** The reference places the heading arrow 90° away from the kart's actual direction of travel, an artifact of the kart's yaw correction being applied to the marker's parent. The specification requires the arrow to indicate true heading.
 3. **Layout round-trip scale compounding.** The reference re-normalises each asset on import and then applies the saved scale on top, so an export/import cycle does not reproduce the original sizes. The specification requires the saved scale to be treated as absolute.
-4. **Free-look camera.** The reference creates an orbit/inspection camera for non-racing states and advertises "Mouse — Look (when stopped)" in the on-screen hints, but the control is never enabled, and the state never returns to a non-racing state after the countdown, so free-look is unreachable. Either implement it as a genuine inspection mode or drop the hint; do not ship the dead affordance.
-5. **The FINISHED state is unreachable.** It is defined in the state machine but never entered, because the session has no end condition. It is retained in the specification as the natural hook for an end-of-session flow.
-6. **Speedometer never reaches full scale.** Because friction is applied after the speed clamp, the achievable speed is 96% of the clamp and the dial tops out near 115 rather than 120. This is accepted behaviour and matches the tuning; do not "fix" it by moving the clamp.
-7. **Developer instrumentation is visible in normal play.** The tuning panel, key/velocity/collision readout, origin axes gizmo, and reference grid are all on-screen by default. A port targeting players should gate the first three behind a developer toggle; the grid is part of the intended look and stays.
-8. **Regeneration can spawn a prop on the kart.** Clearance is measured from the world origin, not from the kart's current position. The collision response resolves it, but a port may prefer to also clear a radius around the kart.
+4. **Speedometer never reaches full scale.** Because friction is applied after the speed clamp, the achievable speed is 96% of the clamp and the dial tops out at 115 rather than 120. This is accepted behaviour and matches the tuning; do not "fix" it by moving the clamp.
+5. **A one-second dead spell after GO!.** The reference displays `GO!` and then withholds control for a further second, for a 5.0 s total pre-race delay. The specification releases control **on** the GO! frame, at 4.0 s, and lets the overlay linger instead.
+6. **Lap direction is not actually tested.** The reference gates on the scalar velocity being positive, so a kart driving forward *southbound* through the band banks a lap. The source's own comment — "crossing Z = 5 line, moving in positive Z direction" — shows the directional test was the intent; the specification requires it.
+7. **Developer instrumentation is visible in normal play.** The reference ships a tuning panel, a key/velocity/collision readout, and an origin axes gizmo on screen by default. The specification does not define them at all — a port may build whatever instrumentation it likes, but none of it is part of the player-facing HUD. The reference grid is *not* instrumentation: it is part of the intended look and stays.
+8. **A dead free-look affordance.** The reference constructs an orbit camera and advertises "Mouse — Look (when stopped)" in the on-screen hints, but never enables the control and never re-enters a non-racing state. The specification has no free-look and no such hint; the fixed pre-race camera is the whole of it.
+9. **An unreachable FINISHED state.** The reference declares a fourth game state that is never entered, because the session has no end condition. The specification defines three states. An end-of-session flow is listed under Optional Features.
+10. **`minPropSeparation` ignores footprints.** The reference tests centre-to-centre distance only, so two large props can be placed almost touching (0.09 wu apart for a cottage pair) — a gap no kart can drive through, and one that can pin it. The specification keeps the rule as-is for world density and names Reset Kart as the escape; see the Collision feature.
+11. **Regeneration can spawn a prop on the kart.** Clearance is measured from the world origin, not from the kart's current position, so regenerating while parked away from the start can drop a prop onto the kart. The specification accepts this: the collision response pushes the kart clear on the following tick, and adding a second clearance test is not required.
 
 ---
 
@@ -1018,7 +1023,12 @@ These are additional, optional features to consider for specification and implem
 * **Requirement:** Add a time-of-day cycle that rotates the sun, shifts its colour and intensity, and re-tints the sky and fog to match.
 * **Requirement:** Add a weather variant that alters fog density and ground grip.
 
-### 9. Kart customisation
+### 9. End-of-session flow
+
+* **Requirement:** Add a fourth game state entered on some end condition — a lap target, a time limit, or a quit action — in which the simulation is suspended and a summary is shown.
+* **Requirement:** Offer a return path from that state to a fresh countdown without reloading, resetting the clock and the world but preserving the session best.
+
+### 10. Kart customisation
 
 * **Requirement:** Support alternate base-colour maps on the kart material so the vehicle can be recoloured without new geometry.
 * **Requirement:** Expose the choice on a pre-race screen, entering the countdown from that screen rather than automatically.
