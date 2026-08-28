@@ -1,0 +1,6 @@
+statuses = [
+    "not-started",
+    "in-progress",
+    "done",
+]
+default_status = "not-started"

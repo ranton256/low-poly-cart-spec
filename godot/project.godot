@@ -1,0 +1,55 @@
+; Low Poly Cart — Godot port. Settings chosen for CONFORMANCE and TESTABILITY.
+;
+; Four of these are load-bearing and must not be changed without a proposal.
+; See CONSTRAINTS.md at the repository root:
+;
+;   physics_ticks_per_second  the fixed simulation step. The simulation never
+;                             reads frame delta. CONSTRAINTS §6 Determinism and the reference frame.
+;   physics_jitter_fix        MUST be 0. Godot's 0.5 default perturbs the
+;                             physics delta to smooth frame pacing, which
+;                             drifts the race clock against wall time and
+;                             breaks acceptance item 14. CONSTRAINTS §6 Determinism and the reference frame.
+;   renderer/rendering_method one renderer on EVERY target, so one spec
+;                             produces one look and one baseline set.
+;                             CONSTRAINTS §2 Tech stack. PROVISIONAL — owned by the
+;                             change spike-compatibility-renderer-shadows,
+;                             which may reverse it. Nothing depends on it yet.
+;   config/features           the Godot SERIES (major.minor) this project is
+;                             developed against. Godot stores nothing finer
+;                             here, so the full version lives in
+;                             .godot-version and check_engine_version.py
+;                             keeps the two in step.
+;
+; Godot rewrites this file when the editor saves, and strips comments when it
+; does. If these comments vanish, restore them — they are the only place the
+; reasons live.
+
+config_version=5
+
+[application]
+
+config/name="Low Poly Cart"
+config/description="A single-player arcade go-kart time trial. A Godot port of the normative game design document at the repository root."
+config/version="0.0.1"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+
+[display]
+
+; A 3D game. The HUD's design resolution is deliberately NOT settled here —
+; it is ambiguity A1 in CONSTRAINTS §5 Conformance to the specification, owned by M5, and the stretch settings
+; below may change when it is.
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[physics]
+
+common/physics_ticks_per_second=60
+common/physics_jitter_fix=0.0
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

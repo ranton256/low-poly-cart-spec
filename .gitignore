@@ -1,0 +1,44 @@
+# Godot editor and import cache — regenerated from committed .import presets
+godot/.godot/
+godot/android/
+
+# Export output
+godot/build/
+godot/export/
+*.tmp
+
+# Python tooling environment. Package versions are pinned in requirements.txt;
+# the environment itself is never committed.
+.venv/
+__pycache__/
+*.py[cod]
+
+# Art synced into the Godot project by godot/tools/sync_assets.sh.
+# The models are single-sourced at assets/ in the repository root; these are
+# working copies. The .import presets beside them ARE committed — the pattern
+# below ends in .glb and so does not match kart.glb.import.
+godot/assets/*.glb
+
+# Textures Godot's glTF importer EXTRACTS from those models as siblings
+# (kart_0.jpg and friends — 21 files, ~37 MB), AND their .import presets.
+#
+# Both are derived. Committing the presets without the images they describe
+# makes a fresh clone reference sources that do not exist yet, which Godot
+# reports as ~40 load errors on first import. Only godot/assets/*.glb.import
+# is committed — that is the import contract for a file we actually sync in.
+# Per-texture settings (size limit, compression) are a project-level decision
+# for M3's web budget, not 21 generated files.
+godot/assets/*.jpg
+godot/assets/*.jpeg
+godot/assets/*.png
+godot/assets/*.webp
+godot/assets/*.jpg.import
+godot/assets/*.jpeg.import
+godot/assets/*.png.import
+godot/assets/*.webp.import
+
+# Scratch captures. Committed visual proof lives in godot/docs/progress/.
+godot/gallery/
+
+# macOS
+.DS_Store

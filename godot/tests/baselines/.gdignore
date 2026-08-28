@@ -1,0 +1,4 @@
+# Godot skips any directory containing this file.
+# Reference PNGs for tools/gallery_compare.py: they must never be imported as
+# game resources, or every one would gain a .import sidecar and ship inside
+# each export.

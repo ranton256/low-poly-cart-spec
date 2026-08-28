@@ -1,0 +1,5 @@
+# Godot skips any directory containing this file.
+#
+# These are copy-ready SKELETONS with TODOs, not runnable scripts. Without this
+# marker Godot parses them, reports their placeholders as script errors, and
+# ships them inside every export.

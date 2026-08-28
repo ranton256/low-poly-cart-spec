@@ -1,0 +1,44 @@
+{
+  "_about": [
+    "Project settings for gallery_compare.py, kept out of the tool so the tool",
+    "can be copied verbatim.",
+    "",
+    "CALIBRATE, DO NOT GUESS. Capture the same states twice without changing",
+    "anything, and diff the two captures. That is your noise floor. Set limits a",
+    "small multiple above it and record the measurement here, so the next person",
+    "knows whether a number is evidence or a guess.",
+    "",
+    "If the noise floor is not near zero, something is non-deterministic and the",
+    "fix belongs in the capture harness, not in these numbers. Usual suspects:",
+    "animation driven by wall-clock instead of the sim clock, unseeded particle",
+    "systems, and effects drawn from the engine RNG (see GOTCHAS: a",
+    "non-deterministic call count cannot be fixed by a seed).",
+    "",
+    "THREE criteria, because one is not enough. A whole-frame mean dilutes local",
+    "change: a band covering 3% of the screen, shifted by 40/255 and obvious to",
+    "any reviewer, averages to about 0.4 and slips under a mean-only gate. The",
+    "area criteria catch it.",
+    "",
+    "    mean          average absolute difference over all pixels, 0-255",
+    "    changed_pct   percent of pixels differing by more than 2/255",
+    "    strong_pct    percent of pixels differing by more than 32/255",
+    "",
+    "Reference numbers from the project this kit came from: noise measured",
+    "0.0436 / 0.335% / 0.026%; limits set to 0.50 / 1.00% / 0.10%."
+  ],
+
+  "current": "gallery",
+  "baseline": "tests/baselines",
+  "sheet": "gallery/_diff_sheet.png",
+
+  "limits": {
+    "mean": 0.50,
+    "changed_pct": 1.00,
+    "strong_pct": 0.10
+  },
+
+  "overrides": {
+    "_format": "state name -> partial limits, with the reason recorded here",
+    "_warning": "A state that cannot be reproduced is a harness bug worth fixing, not a threshold worth raising."
+  }
+}

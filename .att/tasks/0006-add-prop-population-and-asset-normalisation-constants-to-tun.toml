@@ -1,0 +1,6 @@
+id = 6
+title = "Add prop population and asset-normalisation constants to tuning.json"
+description = "M3/M1: the per-asset counts (tree 15, rock 10, cone 12, crate 8, tires 6, cottage 3), target heights, and clearance radii live in the GDD's Procedural World Generation and Art Specification sections, not the four Tuning Constants tables that add-godot-project-foundations transcribed. They are tuning data and must not become literals in scripts — CONSTRAINTS §3 Language and style."
+status = "not-started"
+created_at = "2026-08-28T17:57:57.985769Z"
+updated_at = "2026-08-28T17:57:57.985769Z"

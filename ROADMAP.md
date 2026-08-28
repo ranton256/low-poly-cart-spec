@@ -57,7 +57,9 @@ adjusting it for a Godot project that lives one directory down from the
 documents that describe it.
 
 **Done when**
-- `godot/tools/test.sh` is green and runs in CI on every push (**V1**)
+- `godot/tools/test.sh` is green (**V1**), and a committed pre-commit hook runs
+  the cheap checks on staged files. **No CI** — see
+  [CONSTRAINTS §15 Not applicable](CONSTRAINTS.md)
 - The two boundary greps fail the build: engine types under `scripts/core/`
   (**V3**), and any physics-body symbol anywhere under `godot/` (**V4**)
 - A tuning-literal gate fails when a GDD number appears outside
@@ -86,7 +88,7 @@ documents that describe it.
 > baselines were captured against it.
 
 **Likely changes**
-- `add-godot-project-foundations` — skeleton in, project settings pinned, CI green
+- `add-godot-project-foundations` — skeleton in, project settings pinned, suite green
 - `add-architecture-and-tuning-gates` — the four project-specific greps
 - `spike-compatibility-renderer-shadows` — settles the open renderer decision
 

@@ -15,6 +15,7 @@ enforcement status:
 | ✅ | **Enforced** — an automated gate fails when this is violated |
 | 📋 | **Planned** — agreed, not yet automated; the named milestone adds the gate |
 | 📐 | **Convention** — human-enforced by review; not mechanically checkable |
+| ⚠️ | **Partial** — something real is enforced, but not the whole criterion; the gap is named |
 | ❓ | **Open** — deliberately undecided; the named change settles it |
 
 ---
@@ -43,7 +44,7 @@ have to reach into the first one's directory to find its art.
 |---|---|
 | **No engine, framework, or language name enters the GDD's normative sections.** Godot-specific facts live here or under `godot/`, never in the spec | 📐 |
 | The spec is edited only when the *design* changes, never to match what the port happened to do | 📐 |
-| `godot/` is self-contained: `godot/tools/test.sh` runs the whole standing suite from a clean clone | 📋 M0 |
+| `godot/tools/test.sh` runs the whole standing suite from a clean clone of the **repository** — it reads `../assets/`, `../CONSTRAINTS.md` and `../ROADMAP.md`, and needs `.venv` created first | ✅ verified from a simulated fresh clone |
 | Multiple ports may coexist as sibling directories; none of them is privileged | 📐 |
 
 **Why in-repo rather than a sibling repository.** The interesting question this
@@ -60,14 +61,14 @@ Settled choices. Changing one requires a proposal that names what broke.
 
 | | | Status |
 |---|---|---|
-| **Engine** | Godot **4.6.1.stable**, pinned via `godot/project.godot` `config/features` | 📋 M0 |
-| **Language** | **GDScript only.** No C#, no GDExtension, no native modules | 📋 M0 grep gate |
+| **Engine** | Godot **4.6.1**, recorded in `godot/.godot-version` — the single source of truth. `config/features` carries only the `4.6` series, because Godot stores nothing finer there | ✅ `check_engine_version.py` |
+| **Language** | **GDScript only.** No C#, no GDExtension, no native modules | 📋 `add-architecture-and-tuning-gates` |
 | **Renderer** | **Compatibility (WebGL 2 / GLES3)**, on every target including desktop | ❓ confirmed by the M0 renderer spike |
 | **Addons** | **None.** No third-party Godot addons in the shipped project | 📐 |
-| **Physics engine** | **Not used.** No `PhysicsBody3D`, no `Area3D`, no collision shapes, no `move_and_slide` — see §4 *Architectural boundaries* | 📋 M0 grep gate |
-| **Python environment** | **`.venv` always. Never system Python.** Pinned by `godot/requirements.txt`; `test.sh` refuses to run without it | 📋 M0 |
-| **Task tracking** | [`att`](https://github.com/ranton256/agent-task-tracker) — local-first CLI, backlog in `.att/`, committed | 📋 M0 |
-| **Network** | **The game never opens a socket.** No telemetry, no analytics, no crash reporting, no asset streaming from a server | 📐, 📋 M0 grep gate |
+| **Physics engine** | **Not used.** No `PhysicsBody3D`, no `Area3D`, no collision shapes, no `move_and_slide` — see §4 *Architectural boundaries* | ⚠️ pre-commit, staged files only; full tree in `add-architecture-and-tuning-gates` |
+| **Python environment** | **`.venv` always. Never system Python.** Pinned by `godot/requirements.txt`; `test.sh` refuses to run without it | ✅ all three refusal paths verified |
+| **Task tracking** | [`att`](https://github.com/ranton256/agent-task-tracker) — local-first CLI, backlog in `.att/`, committed | 📐 initialized; nothing gates its use |
+| **Network** | **The game never opens a socket.** No telemetry, no analytics, no crash reporting, no asset streaming from a server | 📐, 📋 `add-architecture-and-tuning-gates` |
 | **Runtime dependencies** | Nothing beyond the Godot export template and the game's own assets | 📐 |
 
 **GDScript only is forced by the web target.** Godot's C# export to the web is
@@ -90,12 +91,12 @@ proposal, not as a quiet second render path.
 
 | | Status |
 |---|---|
-| Static typing on every function signature and member | 📋 M0 `gdlint` |
-| Tabs for indentation; Godot / `gdformat` defaults elsewhere | 📋 M0 `gdformat` |
+| Static typing on every function signature **and member** | ⚠️ `check_static_typing.py` covers signatures — parameters and return types. **Members are not yet checked.** **Not** `gdlint`, which ships no typing rules at all |
+| Tabs for indentation; Godot / `gdformat` defaults elsewhere | ✅ `gdformat --check` |
 | `snake_case` files and functions, `PascalCase` node and class names | 📐 |
 | Test and tool scripts **`preload` by path**, never rely on `class_name` | 📐 |
-| No trailing whitespace; newline at end of file | 📋 M0 pre-commit |
-| Every tuning constant is referred to **by the GDD's `name`**, never by its literal value, outside `godot/data/tuning.json` | 📋 M0 grep gate |
+| No trailing whitespace; newline at end of file | ✅ pre-commit (staged files) |
+| Every tuning constant is referred to **by the GDD's `name`**, never by its literal value, outside `godot/data/tuning.json` | 📋 `add-architecture-and-tuning-gates` |
 
 **Why `preload` instead of `class_name`:** global class-name registrations live
 in a cache the *editor* writes. A class added without opening the editor is
@@ -133,7 +134,7 @@ because violations are cheap to introduce and expensive to unwind.
    godot/tests/    headless, deterministic, display-free
 ```
 
-### Core purity 📋 M0
+### Core purity 📋 `add-architecture-and-tuning-gates`
 
 Nothing under `godot/scripts/core/` may reference the scene tree, engine node
 types, engine time, or engine randomness. Banned symbols:
@@ -152,7 +153,13 @@ math types with no engine dependency — subject to §6 Determinism and the refe
 This is a grep, which is exactly why it should be a gate rather than a habit,
 and the best time to land it is before `scripts/core/` has any of the game in it.
 
-### The physics engine plays no part in this game 📋 M0
+**Match whole words.** `rng.gd` defines `randf01()` and `randf_between()`, both
+of which contain the banned substring `randf` — a naive grep flags the very file
+this constraint exists to mandate. The same trap applies to `randi` inside a
+comment explaining why not to use it. Anchor on word boundaries and a following
+`(`, and verify the gate by breaking it, not by observing that it is quiet.
+
+### The physics engine plays no part in this game ⚠️ pre-commit (staged); full tree in `add-architecture-and-tuning-gates`
 
 The GDD's tick order is a scalar recurrence, not a dynamics simulation: no mass,
 no impulse, no restitution, no solver. `CharacterBody3D.move_and_slide()` cannot
@@ -259,7 +266,7 @@ time of writing:
 
 | # | Ambiguity | Port's decision |
 |---|---|---|
-| A1 | HUD sizes are in px (200×200 minimap, 160×90 speedo, ~120 px countdown) with no design resolution named | ❓ settled in M6 |
+| A1 | HUD sizes are in px (200×200 minimap, 160×90 speedo, ~120 px countdown) with no design resolution named | ❓ settled in M5, the milestone that builds the HUD |
 | A2 | "A layout file … delivered to the player" — mechanism unspecified, and it differs between desktop and web | ❓ settled in M7 |
 | A3 | Prop registration order after a layout reload — unstated, but it changes collision outcomes | ❓ settled in M7 |
 | A4 | The countdown must advance while "the physics update is skipped entirely" outside RACING | Resolved: `Sim.step()` runs every tick in every state; the kart pipeline is gated on RACING |
@@ -347,9 +354,9 @@ The AABB math confirms the mapping is right: at yaw 0 the kart's world extent is
 
 | | Status |
 |---|---|
-| `godot/tools/test.sh` green before any change is considered done | 📋 M0 |
-| The standing suite is **headless and display-free** | 📋 M0 |
-| No test touches the network or a real save file | 📋 M0 (`LPC_SAVE_FILE` override) |
+| `godot/tools/test.sh` green before any change is considered done | ✅ |
+| The standing suite is **headless and display-free** | ✅ verified with no display available |
+| No test touches the network or a real save file | ⚠️ `LPC_SAVE_FILE` is exported by every harness, but **nothing reads it yet** — there is no save system until M7. The network half has no check at all |
 | Every suite is deterministic; a flaky test is a defect in the test | 📐 |
 | Visual checks live in a separate windowed gate, never in `test.sh` | 📐 by construction |
 | Test names encode the GDD scenario they cover, so G1 can match them | 📋 M1 |
@@ -406,7 +413,7 @@ The supplied asset set is **39 MB of raw `.glb`** across seven models carrying
 | | Target | Status |
 |---|---|---|
 | Cold start → countdown begins, desktop | ≤ 2 s | 📋 M6 |
-| `godot/tools/test.sh` wall time | ≤ 60 s | 📐 |
+| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 6.2 s warm** (3 runs, 6.16–6.36 s) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
 
 The suite budget is a real constraint, not a nicety: a gate slow enough to skip
 stops being run, and a gate that is not run is not a gate.
@@ -426,21 +433,33 @@ generates, regenerates, or commits a `.glb` file.
 | | Status |
 |---|---|
 | Assets live at **`assets/` in the repository root**, shared by every port, and are referenced by the GDD's §1 inventory | ✅ committed |
-| How the Godot project reaches them — `res://` cannot traverse above the project root | ❓ settled by M0 |
+| `godot/tools/sync_assets.sh` copies the models into `godot/assets/` by content hash, and runs at the front of the standing suite | ✅ |
+| The copied `.glb` files and the textures Godot extracts from them are git-ignored; only `godot/assets/*.glb.import` is committed | ✅ `.gitignore` |
 | The normalisation contract (GDD §3) is implemented in **`scripts/core/`** and unit-tested against synthetic bounding boxes, with no `.glb` present | 📋 M1 |
 | Bounding boxes are **re-measured after scaling**, never reused from before it | 📋 M1 test |
-| glTF import presets — anisotropic filtering 16×, mipmaps, VRAM compression, per-asset texture size — are committed `.import` files, checked by a settings gate | 📋 M0 |
+| The model import contract lives in the committed `godot/assets/*.glb.import` presets; `sync_assets.sh` refuses a preset recording a failed import, which Godot never repairs | ✅ |
+| Anisotropic filtering 16×, mipmaps, VRAM compression, and per-asset texture size are set project-wide, not per generated texture file | 📋 M3 (web budget), M6 (filtering) |
 | Every supplied model both casts and receives shadows | 📋 M6 |
 | Materials are physically-based and lit. No unlit or flat substitute | 📐 |
 | No prop is authored in the scene tree; every instance is placed by the simulation's scatter or by a loaded layout | 📐 |
 
-**Reaching assets outside the project root is an unsolved detail, not a
-formality.** Godot will not import a file above `godot/`, so the shared
-`assets/` directory needs a deliberate mechanism — a symlink at `godot/assets`
-is the usual answer, but symlinks require Developer Mode on Windows, which is a
-target here. M0 settles it and records the choice; nothing in M1 depends on the
-answer, because the normalisation contract is tested against synthetic bounds
-with no `.glb` present.
+**Reaching assets outside the project root is a copy, not a symlink.** Godot
+will not import a file above `godot/`, so `godot/tools/sync_assets.sh` copies the
+seven models in and the standing suite runs it first. A symlink at `godot/assets`
+is the usual answer and was rejected: git materialises symlinks on Windows only
+with `core.symlinks=true` *and* Developer Mode, and without both, a checkout
+produces a text file containing a path and the project silently has no art.
+Windows is a shipping target. The script compares content hashes rather than
+timestamps, because a checkout, a rebase, and `touch` all move mtimes without
+changing bytes.
+
+**Only `*.glb.import` is committed.** Godot's glTF importer extracts each model's
+textures as sibling files, and those extractions plus their own `.import` presets
+are derived data. Committing a preset without the image it describes makes a
+fresh clone reference sources that do not exist yet — measured at ~40 load errors
+on first import before this was corrected. Per-texture settings for the web
+payload budget in §8 *Performance and size budgets* are therefore a project-level
+or re-import decision in M3, not twenty-one generated files.
 
 **Import settings are a gate because a re-import silently reverts them.** The
 anisotropy requirement in particular is invisible until someone drives past a
@@ -461,21 +480,26 @@ runs to decide whether a change is done. Each is pass/fail with no judgment.
 
 | # | Condition | Status |
 |---|---|---|
-| V1 | `godot/tools/test.sh` exits 0 | 📋 M0 |
-| V2 | Two runs at the same seed produce byte-identical state summaries | 📋 M1 |
-| V3 | No banned symbol from §4 *Architectural boundaries* appears under `godot/scripts/core/` | 📋 M0 |
-| V4 | No physics-body symbol from §4 *Architectural boundaries* appears anywhere under `godot/` | 📋 M0 |
-| V5 | No tuning literal appears outside `godot/data/tuning.json` | 📋 M0 |
+| V1 | `godot/tools/test.sh` exits 0 | ✅ |
+| V2 | Two runs at the same seed produce byte-identical state summaries | ✅ smoke suite (harness proven; the real simulation arrives in M1) |
+| V3 | No banned symbol from §4 *Architectural boundaries* appears under `godot/scripts/core/` | 📋 `add-architecture-and-tuning-gates` |
+| V4 | No physics-body symbol from §4 *Architectural boundaries* appears anywhere under `godot/` | ⚠️ pre-commit covers **staged** files only; the full-tree gate is `add-architecture-and-tuning-gates` |
+| V5 | No tuning literal appears outside `godot/data/tuning.json` | 📋 `add-architecture-and-tuning-gates` |
 | V6 | **G1** — every `### Scenario:` in the GDD has a named test or a visual-register entry | 📋 M1 |
 | V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | 📋 M8 |
-| V8 | Pinned project settings match §6 *Determinism and the reference frame* and §8 *Performance and size budgets* | 📋 M0 |
+| V8 | Pinned project settings match §6 *Determinism and the reference frame* and §8 *Performance and size budgets* | ⚠️ settings pinned in `project.godot`; the gate that enforces them is `add-architecture-and-tuning-gates` |
 | V9 | Gallery diffs are within recorded thresholds on all three criteria | 📋 M6 |
-| V10 | Every relative link in every Markdown file resolves | 📋 M0 |
-| V11 | Every `CONSTRAINTS §N Title` reference names the section it points at | 📋 M0 |
-| V12 | `openspec validate <change> --strict` passes | 📋 M0 |
+| V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py`, rooted at the repository root |
+| V11 | Every `CONSTRAINTS §N Title` reference names the section it points at | ✅ `check_section_refs.py`. Note it matches only `CONSTRAINTS §N`, so `docs/CONSTRAINTS.md §N` is invisible to it — stale prose stays the Critic's job |
+| V12 | `openspec validate <change> --strict` passes | ✅ |
 | V13 | The change's `tasks.md` has no unchecked box | 📋 via `/opsx:apply` |
 | V14 | A milestone has committed visual proof in `godot/docs/progress/`; a task changing what the player sees has a capture or a stated reason it would show nothing | 📐 |
 | V15 | Every ambiguity discovered during the change is in `godot/docs/AMBIGUITIES.md` before the change is archived | 📐 |
+| V16 | `godot/data/tuning.json` matches the design document's constant tables — every named constant present, none renamed, no derived values | ✅ `check_tuning_transcription.py` |
+| V17 | No placeholder marker remains in a shipped document | ✅ `check_placeholders.py --strict` |
+| V18 | Every governing document states the same engine version as `godot/.godot-version` | ✅ `check_engine_version.py` |
+| V19 | Every GDScript function signature carries parameter and return types | ⚠️ `check_static_typing.py`; members not yet covered |
+| V20 | The seven supplied models import and load | ✅ `tests/assets_test.gd` |
 
 ---
 
@@ -577,7 +601,7 @@ Committed proof lives in `godot/docs/progress/`.
 
 **Windowed, never in `test.sh`.** Godot's headless mode has no renderer and
 returns no image. The moment a capture enters the standing suite, that suite
-stops running over SSH and needs a virtual framebuffer in CI.
+stops running over SSH and needs a virtual framebuffer.
 
 **Captures must be deterministic.** Wait a fixed frame count rather than a
 duration, and seed the world explicitly. Every capture of a scattered field names
@@ -600,11 +624,11 @@ its seed.
 Inherited from `godot-game-skeleton` at M0:
 
 ```
-tools/test.sh                the standing gate — headless, every change, CI-ready
+tools/test.sh                the standing gate — headless, run on every change
 tools/check_links.py         every relative Markdown link resolves (V10)
 tools/check_section_refs.py  every "CONSTRAINTS §N Title" reference is accurate (V11)
 tools/capture.sh             windowed scene capture — visual proof (V14). NOT in test.sh
-tools/check_placeholders.py  TODO markers left in shipped documents
+tools/check_placeholders.py  placeholder markers left in shipped documents
 openspec validate --strict   planning artifacts are well-formed (V12)
 ```
 
@@ -624,10 +648,14 @@ Added by this project, in order of value:
 | Pinned project settings (V8) | `tools/check_settings.py` reads `project.godot` and `.import` | M0 |
 | Scenario coverage G1 (V6) | `tools/check_spec_coverage.py` parses the GDD | M1 |
 | GDScript lint and format | `gdtoolkit` — `gdlint`, `gdformat --check` | M0 |
-| Whitespace, EOF newline, large files | `pre-commit` standard hooks | M0 |
+| Whitespace, EOF newline, large files | the hand-rolled `godot/tools/pre-commit` — not the `pre-commit` framework, which this project does not use | ✅ M0 |
 | Visual gate (V9) | `tools/gallery.sh` + `gallery_compare.py` — windowed | M6 |
 | Acceptance conformance G2 (V7) | `tests/conformance_test.gd`, 14 named cases | M8 |
-| CI | GitHub Actions running `test.sh` on push | M0 |
+| Commit-time gate | `godot/tools/pre-commit`, installed by `tools/install-hooks.sh`. Checks the **staged blobs**, not the working tree, and is portable to bash 3.2 | ✅ M0 |
+| Asset sync and import | `godot/tools/sync_assets.sh` + `godot/tests/assets_test.gd` — content-hash sync, poisoned-preset refusal, and a load assertion (`--import` exits 0 even on failure, so it cannot be the gate) | ✅ M0 |
+| Tuning transcription | `godot/tools/check_tuning_transcription.py` — names, values, duplicates, derived-value leakage | ✅ M0 |
+| Engine version | `godot/tools/check_engine_version.py` — every governing document agrees with `.godot-version` | ✅ M0 |
+| Static typing | `godot/tools/check_static_typing.py` — signatures only; members not yet covered | ⚠️ M0 |
 
 **Reference sections by number *and* title** — `CONSTRAINTS §8 Performance and
 size budgets`, never a bare `§8`. A bare number survives a renumber while
@@ -637,9 +665,13 @@ the file still resolves.
 **Keep the pre-commit hook fast.** It runs on every commit, and a slow hook gets
 bypassed with `--no-verify`, which is worse than no hook. Lint, formatting,
 whitespace, and the boundary greps belong there; the full suite belongs in
-`test.sh` and CI.
+`test.sh`. Measured at **0.5 s** on a clean staged set (M0).
 
-**CI cannot host the visual gate** without a virtual framebuffer. Keep the split.
+**The hook is not the gate.** It sees only staged files and only the cheap
+checks — it will not catch a broken smoke suite, a stale link, or a drifted
+tuning table. `godot/tools/test.sh` decides whether work is done, and with no
+continuous integration nothing runs it automatically. That enforcement is
+§12 *Review* criterion R1, carried by a person rather than a machine.
 
 ---
 
@@ -677,6 +709,13 @@ whole risk, and it is invisible on the second load.
 
 Absent by decision, not by oversight:
 
+- **Continuous integration.** No hosted CI, no GitHub Actions. A committed
+  pre-commit hook runs the cheap checks on staged files, and `godot/tools/test.sh`
+  is run by hand and enforced by review. A workflow was built during M0 and
+  deliberately removed: for a single-developer project it is a second environment
+  to keep in step with `requirements.txt` and the pinned Godot version, buying
+  enforcement the hook and the habit already provide. The cost is stated in
+  §13 *Automation and gates* rather than hidden.
 - **Networking of any kind** — no multiplayer, no leaderboards, no telemetry, no
   crash reporting, no analytics. §2 *Tech stack* makes this checkable.
 - **Accounts, auth, API contracts, SLAs, database schemas** — there is no server.
@@ -685,6 +724,9 @@ Absent by decision, not by oversight:
   best times are an Optional Feature and stay unimplemented.
 - **Audio.** Engine and impact sound is Optional Feature 1 and stays
   unimplemented. No `AudioStreamPlayer` in the shipped project.
+- **2D sprite tooling.** The inherited skeleton shipped a sprite palette
+  auditor with envelopes from a different game. This is a 3D project with no
+  sprites; it was deleted rather than carried as decoration.
 - **Particles, boost, drifting, checkpoints, ghost replay, time-of-day, an
   end-of-session flow, kart customisation** — Optional Features 2–10. The GDD is
   explicit that these "should not be implemented until if and when they are

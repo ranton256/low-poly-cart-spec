@@ -1,0 +1,78 @@
+{
+  "_meta": {
+    "source": "low-poly-cart-game-design-document.md — the Tuning Constants section",
+    "tables": ["Physics", "World", "Camera and HUD", "Timing"],
+    "keys": "Exactly the names the design document gives. Renaming a key forks the contract.",
+    "rate": "Physics values are the Per tick column at the 60 Hz reference rate. That column is what a port implements; the design document's Continuous column is informative only and the two do not agree.",
+    "excluded_derived": "Steady-state forward speed, steady-state reverse speed, and the collision velocity result are listed in the design document as derived and NOT independently tunable. They are computed from the values below and are deliberately absent here.",
+    "excluded_out_of_scope": "Prop population counts, per-asset target heights, and clearance radii live in the Procedural World Generation and Art Specification sections rather than these four tables. M3 adds them.",
+    "readers": "None yet. M1 is the first consumer."
+  },
+
+  "physics": {
+    "accel": 0.008,
+    "maxSpeed": 0.2,
+    "reverseFactor": 0.5,
+    "friction": 0.96,
+    "turnRate": 0.04,
+    "steerThreshold": 0.01,
+    "bounceFactor": -0.3,
+    "pushDistance": 0.3,
+    "hitboxContraction": 0.2
+  },
+
+  "world": {
+    "scatterExtent": 50,
+    "drivableExtent": 90,
+    "groundSize": 200,
+    "gridSize": 100,
+    "gridDivisions": 20,
+    "startClearance": 8,
+    "cottageClearance": 20,
+    "minPropSeparation": 3,
+    "attemptBudget": 3,
+    "scaleVariation": { "min": 0.8, "max": 1.2 }
+  },
+
+  "camera_and_hud": {
+    "chaseBack": 8,
+    "chaseUp": 4,
+    "aimAhead": 4,
+    "aimUp": 1,
+    "chaseSmoothing": 0.08,
+    "fovBase": 75,
+    "fovMax": 90,
+    "shakeHorizontal": 0.15,
+    "shakeVertical": 0.1,
+    "minimapHalfExtent": 50,
+    "minimapAltitude": 100,
+    "minimapSize": 200,
+    "minimapInset": 10,
+    "speedoMax": 120
+  },
+
+  "timing": {
+    "countdownStep": 1.0,
+    "goLinger": 0.5,
+    "minLapTime": 5.0,
+    "lapRestartDelay": 0.5,
+    "bestFlashDuration": 1.0,
+    "lapCrossingThreshold": 0.01
+  },
+
+  "unnamed_in_spec": {
+    "_note": "Rows in the same four tables that the design document does not give a backticked name. Kept separate so the named set stays exactly the named set.",
+    "startFinishBandWidthX": 10,
+    "startFinishBandDepthZ": 2,
+    "startFinishBandCentreZ": 5,
+    "startFinishBandHeightY": 0.02,
+    "nearClip": 0.1,
+    "farClip": 1000,
+    "minimapNear": 1,
+    "minimapFar": 1000,
+    "totalPreRaceDelay": 4.0,
+    "lapGateZMin": 4,
+    "lapGateZMax": 6,
+    "lapGateAbsXLimit": 5
+  }
+}

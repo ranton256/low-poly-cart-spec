@@ -1,0 +1,27 @@
+# Development and verification tooling only. Nothing here ships with the game —
+# the exported binary links nothing beyond Godot's own runtime.
+#
+#   python3 -m venv .venv
+#   .venv/bin/pip install -r requirements.txt
+#
+# Never install into system Python. tools/test.sh refuses to run without .venv
+# and refuses to run if these are missing from it.
+#
+# Versions are pinned exactly, not floated. An unpinned requirement means a venv
+# built today and one built in six months differ — possibly across a major
+# version — which is the failure this file exists to prevent. Bump deliberately,
+# then re-run the suite and re-measure any threshold the change could move.
+
+# Image gate: tools/gallery_compare.py (M6)
+pillow==12.3.0
+numpy==2.5.2
+
+# Inspecting openspec/config.yaml and any other project YAML
+PyYAML==6.0.3
+
+# GDScript lint and format. CONSTRAINTS §3 Language and style.
+gdtoolkit==4.3.4
+
+# This project has no fixture generators yet. When one appears, prefer a
+# generator with no shared lineage with the implementation — expectations
+# produced from your own code agree with it by construction and verify nothing.

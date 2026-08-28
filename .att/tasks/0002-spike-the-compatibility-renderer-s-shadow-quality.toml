@@ -1,0 +1,6 @@
+id = 2
+title = "Spike the Compatibility renderer's shadow quality"
+description = "M0, change spike-compatibility-renderer-shadows: confirm a 2048 square PCF directional shadow reads acceptably under Compatibility. If it does not, the renderer decision in CONSTRAINTS §2 Tech stack comes back as a proposal. Nothing in M0 or M1 depends on the outcome."
+status = "not-started"
+created_at = "2026-08-28T17:51:19.911734Z"
+updated_at = "2026-08-28T17:51:19.911734Z"

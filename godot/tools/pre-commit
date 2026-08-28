@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# Fast pre-commit checks. Install with: godot/tools/install-hooks.sh
+#
+# DELIBERATELY FAST. This runs on every commit, and a slow hook gets bypassed
+# with --no-verify, which is worse than no hook at all. Lint, formatting,
+# whitespace, and boundary greps belong here; the full suite belongs in
+# godot/tools/test.sh.
+#
+# CHECKS THE STAGED CONTENT, NOT THE WORKING TREE. An earlier version took the
+# staged file NAMES from `git diff --cached` and then read those paths off disk,
+# which is a different thing entirely: stage a violation, clean the worktree
+# copy, and the commit sailed through with the violation in HEAD. Reproduced,
+# then fixed. Every check below runs against blobs extracted from the index, so
+# what is checked is exactly what is about to be committed.
+#
+# PORTABLE TO BASH 3.2, which is what macOS ships. No `mapfile`, no associative
+# arrays, no `${x,,}`. A hook that only runs on the author's machine is not a
+# gate. File lists travel through newline-delimited temp files rather than
+# arrays, so paths containing spaces survive.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+fail=0
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+STAGE_DIR="$WORK/staged"
+mkdir -p "$STAGE_DIR"
+
+# Newline-delimited list of staged paths matching the given pathspecs.
+#
+# ACMRT, not ACM. Git detects renames on `git diff --cached` by default, so a
+# staged rename-plus-edit reports as R and was excluded — invisible to every
+# check below, which is the worst failure mode a gate has. T (typechange, e.g.
+# file becoming a symlink) was dropped for the same reason. For a rename,
+# --name-only reports the DESTINATION path, which is the one to check.
+staged_names() {
+	git diff --cached --name-only --diff-filter=ACMRT -- "$@"
+}
+
+git diff --cached --name-only --diff-filter=ACMRT >"$WORK/all.txt"
+if [ ! -s "$WORK/all.txt" ]; then
+	exit 0
+fi
+
+# Materialise the index into $STAGE_DIR, preserving relative paths.
+while IFS= read -r f; do
+	[ -n "$f" ] || continue
+	mkdir -p "$STAGE_DIR/$(dirname "$f")"
+	if ! git show ":$f" >"$STAGE_DIR/$f" 2>/dev/null; then
+		# Silently leaving an empty file would make every [ -f ]-guarded check
+		# below pass for this path — a quiet hole rather than a loud failure.
+		echo "pre-commit: cannot read staged content for $f" >&2
+		rm -f "$STAGE_DIR/$f"
+		fail=1
+	fi
+done <"$WORK/all.txt"
+
+# --- GDScript lint and format ------------------------------------------------
+staged_names '*.gd' | grep -v '^godot/templates/' >"$WORK/gd.txt" || true
+if [ -s "$WORK/gd.txt" ]; then
+	if [ -x godot/.venv/bin/gdlint ]; then
+		: >"$WORK/gdpaths.txt"
+		while IFS= read -r f; do
+			[ -f "$STAGE_DIR/$f" ] && printf '%s\n' "$STAGE_DIR/$f" >>"$WORK/gdpaths.txt"
+		done <"$WORK/gd.txt"
+		if [ -s "$WORK/gdpaths.txt" ]; then
+			tr '\n' '\0' <"$WORK/gdpaths.txt" | xargs -0 godot/.venv/bin/gdlint || fail=1
+			tr '\n' '\0' <"$WORK/gdpaths.txt" | xargs -0 godot/.venv/bin/gdformat --check || fail=1
+		fi
+	else
+		echo "pre-commit: gdtoolkit missing from godot/.venv — cannot check GDScript" >&2
+		echo "            godot/.venv/bin/pip install -r godot/requirements.txt" >&2
+		fail=1
+	fi
+fi
+
+# --- Architectural boundaries -------------------------------------------------
+# A placeholder until add-architecture-and-tuning-gates lands the full-tree
+# greps. The single rule worth having on day one: the physics engine plays no
+# part. Word-anchored — see CONSTRAINTS §4 Architectural boundaries, "Match
+# whole words".
+banned='(RigidBody3D|StaticBody3D|CharacterBody3D|Area3D|CollisionShape3D|CollisionObject3D|PhysicsServer3D|move_and_slide|move_and_collide)'
+staged_names 'godot/*.gd' 'godot/*.tscn' | grep -v '^godot/templates/' >"$WORK/phys.txt" || true
+while IFS= read -r f; do
+	[ -n "$f" ] && [ -f "$STAGE_DIR/$f" ] || continue
+	if grep -nqE "$banned" "$STAGE_DIR/$f"; then
+		echo "pre-commit: the Godot physics engine plays no part in this game." >&2
+		echo "            See CONSTRAINTS §4 Architectural boundaries." >&2
+		grep -nE "$banned" "$STAGE_DIR/$f" | sed "s|^|            $f:|" >&2
+		fail=1
+	fi
+done <"$WORK/phys.txt"
+
+# --- Whitespace and end-of-file newline ---------------------------------------
+staged_names '*.gd' '*.py' '*.sh' '*.md' '*.json' '*.yaml' '*.yml' '*.cfg' '*.godot' >"$WORK/text.txt" || true
+while IFS= read -r f; do
+	[ -n "$f" ] && [ -f "$STAGE_DIR/$f" ] || continue
+	if grep -nq '[[:space:]]$' "$STAGE_DIR/$f"; then
+		echo "pre-commit: trailing whitespace in $f" >&2
+		grep -n '[[:space:]]$' "$STAGE_DIR/$f" | head -3 | sed "s|^|            $f:|" >&2
+		fail=1
+	fi
+	if [ -s "$STAGE_DIR/$f" ] && [ -n "$(tail -c 1 "$STAGE_DIR/$f")" ]; then
+		echo "pre-commit: no newline at end of $f" >&2
+		fail=1
+	fi
+done <"$WORK/text.txt"
+
+# --- Large files --------------------------------------------------------------
+# The models are single-sourced at assets/ and their working copies are ignored;
+# a large binary arriving anywhere else is almost certainly a mistake. Size is
+# read from the index, not from disk.
+while IFS= read -r f; do
+	[ -n "$f" ] || continue
+	size=$(git cat-file -s ":$f" 2>/dev/null) || continue
+	if [ "$size" -gt 5000000 ]; then
+		case "$f" in
+			assets/*) ;;
+			*)
+				echo "pre-commit: $f is $((size / 1000000)) MB — outside assets/, that is likely a mistake" >&2
+				fail=1
+				;;
+		esac
+	fi
+done <"$WORK/all.txt"
+
+if [ "$fail" -ne 0 ]; then
+	echo >&2
+	echo "pre-commit failed. Fix the above, or bypass deliberately with --no-verify." >&2
+	exit 1
+fi
+exit 0

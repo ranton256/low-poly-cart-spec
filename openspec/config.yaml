@@ -1,32 +1,62 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Godot 4.6.1, GDScript only, Compatibility renderer. The game is a
+  single-player arcade go-kart time trial: an open field, momentum-based
+  handling, a chase camera, and a stopwatch. No opponents, no fail state.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Design source: low-poly-cart-game-design-document.md is NORMATIVE and
+  engine-agnostic. Cite the feature or section a change implements. Never
+  restate its scenarios into a change's specs — that would create a second
+  normative document. A change's specs describe what THIS PORT must do that
+  the design document does not settle.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  Repository shape: the design document, CONSTRAINTS.md, ROADMAP.md, and the
+  supplied models in assets/ live at the repository root and belong to every
+  port. godot/ is one implementation.
+
+  Architecture: a pure simulation in godot/scripts/core/ — no engine node
+  types, seeded, fixed 60 Hz step, never reads frame delta. godot/scenes/ are
+  views that read simulation state and never write back. The Godot physics
+  engine plays no part: no physics bodies, no collision shapes, no
+  move_and_slide.
+
+  Vocabulary: godot/docs/GLOSSARY.md is canonical — read it before writing
+  artifacts, and add a term there when a change introduces one.
+
+  Constraints and standards: CONSTRAINTS.md at the repository root. Reference
+  its sections by number AND title, e.g. "CONSTRAINTS §6 Determinism and the
+  reference frame".
+
+  Tuning values live in godot/data/tuning.json under the design document's own
+  constant names, never in specs and never as literals in scripts.
+
+  Verification: godot/tools/test.sh must stay green; see godot/GOTCHAS.md.
+
+  Work tracking is three layers, and duplicating between them is the failure
+  mode: ROADMAP.md holds milestones; a change's tasks.md holds that change's
+  execution checklist and is archived with it; att (.att/) holds the backlog —
+  future work and issues found outside any active change. Never mirror
+  tasks.md into att, and never use att as a second planning system.
+
+rules:
+  proposal:
+    - "Name the design-document feature or section the change implements, or state that it implements none"
+    - "State which acceptance-checklist items the change advances, if any"
+  specs:
+    - "Requirements state observable behavior"
+    - "Describe the port's decisions, never the game's rules — the design document already specifies the game"
+    - "Constants fixed by the domain may appear in specs"
+    - "Values chosen to tune feel or difficulty live in godot/data/, never in specs"
+  design:
+    - "Record the alternatives considered for each decision, and why they lost"
+  tasks:
+    - "Every change ends with godot/tools/test.sh green"
+    - "Scope belonging to a later change is an att task, not a tasks.md line"
+    - "A gate added or changed must be verified by deliberately breaking what it guards"
+
+operations:
+  archive:
+    guidance:
+      - "Every item deferred out of scope must have an att task before archiving"
+      - "Every spec ambiguity resolved in code must be recorded in godot/docs/AMBIGUITIES.md"
