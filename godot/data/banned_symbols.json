@@ -1,0 +1,218 @@
+{
+  "_meta": {
+    "source": "CONSTRAINTS \u00a74 Architectural boundaries",
+    "why_a_data_file": "The standing suite and the commit hook both read this, so the two cannot disagree about what the project forbids. An earlier commit hook carried a private copy of the physics list, which is how they drift.",
+    "kinds": {
+      "type": "A class or node type. Matched as a whole word.",
+      "call": "A function or method. Matched as a whole word followed by '('.",
+      "namespace": "A singleton accessed with a dot. Matched as the name followed by '.'.",
+      "sigil": "GDScript's $ shorthand for get_node. Matched as '$' followed by an identifier or quote."
+    },
+    "matching": "Comments are stripped from .gd before matching (not from .tscn, where # is not a comment character); string literals are NOT stripped, because dynamic access such as get_node(\"...\") is exactly what these rules exist to prevent. Whole-word anchoring is load-bearing: rng.gd defines randf01(), which contains the banned substring 'randf', and both rng.gd and sim.gd mention randi() in comments saying not to use it \u2014 a naive grep flags the very files these rules mandate."
+  },
+  "core_purity": {
+    "_scope": "godot/scripts/core/ \u2014 the simulation must be constructible and steppable with no scene loaded.",
+    "symbols": [
+      {
+        "name": "Node",
+        "kind": "type",
+        "reason": "Scene-tree dependency"
+      },
+      {
+        "name": "Node3D",
+        "kind": "type",
+        "reason": "Scene-tree dependency"
+      },
+      {
+        "name": "Node2D",
+        "kind": "type",
+        "reason": "Scene-tree dependency"
+      },
+      {
+        "name": "MeshInstance3D",
+        "kind": "type",
+        "reason": "Presentation belongs to the view"
+      },
+      {
+        "name": "Camera3D",
+        "kind": "type",
+        "reason": "Presentation belongs to the view"
+      },
+      {
+        "name": "Control",
+        "kind": "type",
+        "reason": "Presentation belongs to the view"
+      },
+      {
+        "name": "CanvasLayer",
+        "kind": "type",
+        "reason": "Presentation belongs to the view"
+      },
+      {
+        "name": "PackedScene",
+        "kind": "type",
+        "reason": "Scene-tree dependency"
+      },
+      {
+        "name": "SubViewport",
+        "kind": "type",
+        "reason": "Presentation belongs to the view"
+      },
+      {
+        "name": "AudioStreamPlayer",
+        "kind": "type",
+        "reason": "The sim publishes effects as data; the view plays them"
+      },
+      {
+        "name": "Environment",
+        "kind": "type",
+        "reason": "Presentation belongs to the view"
+      },
+      {
+        "name": "DirectionalLight3D",
+        "kind": "type",
+        "reason": "Presentation belongs to the view"
+      },
+      {
+        "name": "get_tree",
+        "kind": "call",
+        "reason": "Scene-tree access"
+      },
+      {
+        "name": "get_node",
+        "kind": "call",
+        "reason": "Scene-tree access"
+      },
+      {
+        "name": "add_child",
+        "kind": "call",
+        "reason": "Scene-tree mutation"
+      },
+      {
+        "name": "_ready",
+        "kind": "call",
+        "reason": "Engine lifecycle callback"
+      },
+      {
+        "name": "_process",
+        "kind": "call",
+        "reason": "Engine lifecycle callback, and frame-rate dependent"
+      },
+      {
+        "name": "_physics_process",
+        "kind": "call",
+        "reason": "Engine lifecycle callback; the core is stepped explicitly"
+      },
+      {
+        "name": "Input",
+        "kind": "namespace",
+        "reason": "Input arrives as data set by the caller"
+      },
+      {
+        "name": "Engine",
+        "kind": "namespace",
+        "reason": "Engine state; the core reads no frame timing"
+      },
+      {
+        "name": "Time",
+        "kind": "namespace",
+        "reason": "Elapsed time is tick count divided by 60, never wall clock"
+      },
+      {
+        "name": "OS",
+        "kind": "namespace",
+        "reason": "Host environment access"
+      },
+      {
+        "name": "DisplayServer",
+        "kind": "namespace",
+        "reason": "Presentation belongs to the view"
+      },
+      {
+        "name": "RenderingServer",
+        "kind": "namespace",
+        "reason": "Presentation belongs to the view"
+      },
+      {
+        "name": "randi",
+        "kind": "call",
+        "reason": "Unseeded engine RNG; gameplay randomness comes from rng.gd"
+      },
+      {
+        "name": "randf",
+        "kind": "call",
+        "reason": "Unseeded engine RNG; gameplay randomness comes from rng.gd"
+      },
+      {
+        "name": "randomize",
+        "kind": "call",
+        "reason": "Reseeds the engine RNG from the clock"
+      },
+      {
+        "name": "randi_range",
+        "kind": "call",
+        "reason": "Unseeded engine RNG"
+      },
+      {
+        "name": "randf_range",
+        "kind": "call",
+        "reason": "Unseeded engine RNG"
+      },
+      {
+        "name": "$",
+        "kind": "sigil",
+        "reason": "Shorthand for get_node \u2014 scene-tree access"
+      }
+    ]
+  },
+  "physics_engine": {
+    "_scope": "the whole of godot/ \u2014 the design document's tick is a scalar recurrence with no solver, so a physics body in the tree means the port has become a different game.",
+    "symbols": [
+      {
+        "name": "RigidBody3D",
+        "kind": "type",
+        "reason": "No dynamics solver in this game"
+      },
+      {
+        "name": "StaticBody3D",
+        "kind": "type",
+        "reason": "Props are meshes plus an AABB record"
+      },
+      {
+        "name": "CharacterBody3D",
+        "kind": "type",
+        "reason": "The kart is a Node3D; movement is the eight-step tick"
+      },
+      {
+        "name": "Area3D",
+        "kind": "type",
+        "reason": "The lap gate is a coordinate test, not a trigger volume"
+      },
+      {
+        "name": "CollisionShape3D",
+        "kind": "type",
+        "reason": "Collision is the design document's own AABB test"
+      },
+      {
+        "name": "CollisionObject3D",
+        "kind": "type",
+        "reason": "Collision is the design document's own AABB test"
+      },
+      {
+        "name": "PhysicsServer3D",
+        "kind": "type",
+        "reason": "The physics engine plays no part"
+      },
+      {
+        "name": "move_and_slide",
+        "kind": "call",
+        "reason": "Cannot reproduce the normative tick order"
+      },
+      {
+        "name": "move_and_collide",
+        "kind": "call",
+        "reason": "Cannot reproduce the normative tick order"
+      }
+    ]
+  }
+}

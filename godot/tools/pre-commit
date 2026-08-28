@@ -75,21 +75,30 @@ if [ -s "$WORK/gd.txt" ]; then
 fi
 
 # --- Architectural boundaries -------------------------------------------------
-# A placeholder until add-architecture-and-tuning-gates lands the full-tree
-# greps. The single rule worth having on day one: the physics engine plays no
-# part. Word-anchored — see CONSTRAINTS §4 Architectural boundaries, "Match
-# whole words".
-banned='(RigidBody3D|StaticBody3D|CharacterBody3D|Area3D|CollisionShape3D|CollisionObject3D|PhysicsServer3D|move_and_slide|move_and_collide)'
-staged_names 'godot/*.gd' 'godot/*.tscn' | grep -v '^godot/templates/' >"$WORK/phys.txt" || true
-while IFS= read -r f; do
-	[ -n "$f" ] && [ -f "$STAGE_DIR/$f" ] || continue
-	if grep -nqE "$banned" "$STAGE_DIR/$f"; then
-		echo "pre-commit: the Godot physics engine plays no part in this game." >&2
-		echo "            See CONSTRAINTS §4 Architectural boundaries." >&2
-		grep -nE "$banned" "$STAGE_DIR/$f" | sed "s|^|            $f:|" >&2
+# Delegates to the SAME checker the standing suite runs, in --staged mode, so
+# the two cannot disagree. An earlier version shared only the symbol list and
+# rebuilt the matching as a bare grep alternation — no word anchoring, no
+# comment stripping — so it refused a comment mentioning move_and_slide that
+# the suite passed. Sharing the list is not enough; share the matcher.
+# See CONSTRAINTS §4 Architectural boundaries, "Match whole words".
+staged_names 'godot/*.gd' 'godot/*.tscn' >"$WORK/phys.txt" || true
+if [ -s "$WORK/phys.txt" ]; then
+	if [ ! -x godot/.venv/bin/python ]; then
+		echo "pre-commit: godot/.venv is missing — cannot check boundaries" >&2
 		fail=1
+	else
+		# NUL-delimited, like the gdlint block above. An unquoted $(cat …) here
+		# word-split on spaces, so "godot/scripts/bad name.gd" arrived as two
+		# unresolvable paths, the checker silently skipped both, and the commit
+		# was allowed with a CharacterBody3D in it. Reproduced, then fixed.
+		if ! tr '\n' '\0' <"$WORK/phys.txt" | xargs -0 godot/.venv/bin/python \
+			godot/tools/check_boundaries.py --staged "$STAGE_DIR"; then
+			echo "pre-commit: architectural boundary violation — see above." >&2
+			echo "            CONSTRAINTS §4 Architectural boundaries." >&2
+			fail=1
+		fi
 	fi
-done <"$WORK/phys.txt"
+fi
 
 # --- Whitespace and end-of-file newline ---------------------------------------
 staged_names '*.gd' '*.py' '*.sh' '*.md' '*.json' '*.yaml' '*.yml' '*.cfg' '*.godot' >"$WORK/text.txt" || true

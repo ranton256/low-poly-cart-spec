@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "purpose": "Numeric literals that collide with a tuning value but are genuinely not that constant.",
+    "rules": "Every entry needs file, value and a written reason. An entry without a reason fails the gate, and so does an entry that no longer matches anything — an exemption must not outlive its reason.",
+    "granularity": "An entry is keyed on (file, value), NOT on line. It therefore exempts every occurrence of that value in that file, present and future. That is deliberate — a line-keyed entry goes stale on every edit above it — but it means an entry is a broader promise than it looks. Keep the file scope narrow.",
+    "warning": "A growing allowlist means the gate is being worked around rather than obeyed. The count is printed on every run."
+  },
+  "exemptions": [
+    {
+      "file": "godot/scripts/core/sim.gd",
+      "value": "0.3",
+      "reason": "A sound volume in the inherited placeholder simulation (emit_sfx(\"bump\", 0.3)), not physics.pushDistance. M1 replaces this file wholesale; the entry should go stale then, and the gate will say so."
+    },
+    {
+      "file": "godot/scripts/core/sim.gd",
+      "value": "1000",
+      "reason": "Milliseconds per second, in the placeholder simulation's DT_MS constant and its stats line — not unnamed_in_spec.farClip or minimapFar, which are camera clip planes. M1 replaces this file wholesale."
+    }
+  ]
+}

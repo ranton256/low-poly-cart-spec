@@ -97,6 +97,19 @@ fi
 # rules — so naming it as the gate left CONSTRAINTS §3 Language and style unenforced.
 "$PY" tools/check_static_typing.py
 
+# Architectural boundaries. The simulation core stays free of the engine, and the
+# Godot physics engine appears nowhere — over the WHOLE tree, not just staged
+# files, which is what the commit hook alone cannot give us. Both read the same
+# godot/data/banned_symbols.json the hook does.
+"$PY" tools/check_boundaries.py
+
+# Tuning values are referred to by name, never written as literals in game logic.
+"$PY" tools/check_tuning_literals.py
+
+# The pinned settings and the committed import presets, both of which Godot
+# rewrites without asking.
+"$PY" tools/check_settings.py
+
 # Uncomment each as you add it (see docs/testing_toolkit.md, "As the game grows"):
 # godot --headless -s tests/balance_test.gd
 # godot --headless -s tests/rng_test.gd

@@ -62,13 +62,13 @@ Settled choices. Changing one requires a proposal that names what broke.
 | | | Status |
 |---|---|---|
 | **Engine** | Godot **4.6.1**, recorded in `godot/.godot-version` — the single source of truth. `config/features` carries only the `4.6` series, because Godot stores nothing finer there | ✅ `check_engine_version.py` |
-| **Language** | **GDScript only.** No C#, no GDExtension, no native modules | 📋 `add-architecture-and-tuning-gates` |
+| **Language** | **GDScript only.** No C#, no GDExtension, no native modules | 📐 — no compiled-language or extension file exists; not mechanically gated |
 | **Renderer** | **Compatibility (WebGL 2 / GLES3)**, on every target including desktop | ❓ confirmed by the M0 renderer spike |
 | **Addons** | **None.** No third-party Godot addons in the shipped project | 📐 |
-| **Physics engine** | **Not used.** No `PhysicsBody3D`, no `Area3D`, no collision shapes, no `move_and_slide` — see §4 *Architectural boundaries* | ⚠️ pre-commit, staged files only; full tree in `add-architecture-and-tuning-gates` |
+| **Physics engine** | **Not used.** No `PhysicsBody3D`, no `Area3D`, no collision shapes, no `move_and_slide` — see §4 *Architectural boundaries* | ✅ `check_boundaries.py`, every text file under `godot/` |
 | **Python environment** | **`.venv` always. Never system Python.** Pinned by `godot/requirements.txt`; `test.sh` refuses to run without it | ✅ all three refusal paths verified |
 | **Task tracking** | [`att`](https://github.com/ranton256/agent-task-tracker) — local-first CLI, backlog in `.att/`, committed | 📐 initialized; nothing gates its use |
-| **Network** | **The game never opens a socket.** No telemetry, no analytics, no crash reporting, no asset streaming from a server | 📐, 📋 `add-architecture-and-tuning-gates` |
+| **Network** | **The game never opens a socket.** No telemetry, no analytics, no crash reporting, no asset streaming from a server | 📐 — no gate exists; no networking API is used anywhere today |
 | **Runtime dependencies** | Nothing beyond the Godot export template and the game's own assets | 📐 |
 
 **GDScript only is forced by the web target.** Godot's C# export to the web is
@@ -96,7 +96,7 @@ proposal, not as a quiet second render path.
 | `snake_case` files and functions, `PascalCase` node and class names | 📐 |
 | Test and tool scripts **`preload` by path**, never rely on `class_name` | 📐 |
 | No trailing whitespace; newline at end of file | ✅ pre-commit (staged files) |
-| Every tuning constant is referred to **by the GDD's `name`**, never by its literal value, outside `godot/data/tuning.json` | 📋 `add-architecture-and-tuning-gates` |
+| Every tuning constant is referred to **by the GDD's `name`**, never by its literal value, outside `godot/data/tuning.json` | ✅ `check_tuning_literals.py` for distinctive values in `godot/scripts/`; small integers excluded and reported |
 
 **Why `preload` instead of `class_name`:** global class-name registrations live
 in a cache the *editor* writes. A class added without opening the editor is
@@ -134,7 +134,7 @@ because violations are cheap to introduce and expensive to unwind.
    godot/tests/    headless, deterministic, display-free
 ```
 
-### Core purity 📋 `add-architecture-and-tuning-gates`
+### Core purity ✅ `check_boundaries.py`
 
 Nothing under `godot/scripts/core/` may reference the scene tree, engine node
 types, engine time, or engine randomness. Banned symbols:
@@ -153,13 +153,14 @@ math types with no engine dependency — subject to §6 Determinism and the refe
 This is a grep, which is exactly why it should be a gate rather than a habit,
 and the best time to land it is before `scripts/core/` has any of the game in it.
 
-**Match whole words.** `rng.gd` defines `randf01()` and `randf_between()`, both
-of which contain the banned substring `randf` — a naive grep flags the very file
-this constraint exists to mandate. The same trap applies to `randi` inside a
-comment explaining why not to use it. Anchor on word boundaries and a following
-`(`, and verify the gate by breaking it, not by observing that it is quiet.
+**Match whole words.** `rng.gd` defines `randf01()`, which contains the banned
+substring `randf` — a naive grep flags the very file this constraint exists to
+mandate. The same trap applies to `randi` inside the comments in `rng.gd` and
+`sim.gd` that exist precisely to say not to use it. Anchor on word boundaries and
+a following `(`, strip comments before matching, and verify the gate by breaking
+it rather than by observing that it is quiet.
 
-### The physics engine plays no part in this game ⚠️ pre-commit (staged); full tree in `add-architecture-and-tuning-gates`
+### The physics engine plays no part in this game ✅ `check_boundaries.py` (every text file under `godot/`) and the commit hook (staged)
 
 The GDD's tick order is a scalar recurrence, not a dynamics simulation: no mass,
 no impulse, no restitution, no solver. `CharacterBody3D.move_and_slide()` cannot
@@ -175,7 +176,7 @@ reproduce it and `RigidBody3D` is not close. Specifically:
   velocity to exactly zero.
 - **The boundary is a coordinate clamp**, not a wall, not an `Area3D`.
 
-Banned under `godot/scripts/` and `godot/scenes/` alike:
+Banned **anywhere** under `godot/` — every text format that can name a type (`.gd`, `.tscn`, `.tres`, `.escn`, `.godot`, `.cfg`, `.import`); binary scenes are out of a text gate's reach:
 
 ```
 RigidBody3D  StaticBody3D  CharacterBody3D  Area3D  CollisionShape3D
@@ -287,11 +288,11 @@ relax.
 | Rule | Status |
 |---|---|
 | The simulation never reads frame `delta`; `Sim.step()` advances exactly one 1/60 s tick | 📋 M1 |
-| `physics/common/physics_ticks_per_second = 60` | 📋 M0 settings gate |
-| `physics/common/physics_jitter_fix = 0` — the default 0.5 perturbs the physics delta and drifts the race clock against wall time | 📋 M0 settings gate |
+| `physics/common/physics_ticks_per_second = 60` | ✅ `check_settings.py` |
+| `physics/common/physics_jitter_fix = 0` — the default 0.5 perturbs the physics delta and drifts the race clock against wall time | ✅ `check_settings.py` |
 | Elapsed race time is **tick count ÷ 60**, never `Time.get_ticks_msec()`. `countdownStep` is 60 ticks | 📋 M1 |
 | The view interpolates between the last two simulation states using `Engine.get_physics_interpolation_fraction()`, and never advances anything itself | 📐, 📋 M2 |
-| All gameplay randomness comes from `godot/scripts/core/rng.gd` with an explicit seed | 📋 M0 grep gate |
+| All gameplay randomness comes from `godot/scripts/core/rng.gd` with an explicit seed | ⚠️ `check_boundaries.py` bans the engine RNG from the core; that a seed is actually supplied is not checked |
 | The engine RNG may be used for **view cosmetics only**, precisely so it can never perturb the gameplay stream | 📐 |
 | Identical seed and identical inputs produce identical state summaries | 📋 M1 |
 
@@ -405,7 +406,7 @@ The supplied asset set is **39 MB of raw `.glb`** across seven models carrying
 | Total web payload, compressed | ≤ 25 MB | 📋 M6 |
 | Prop textures | Downsampled to **1024²**, which the GDD explicitly permits and calls "visually near-identical at gameplay distances" | 📋 M3 |
 | Kart textures | **2048² retained** — the GDD names the kart as the one asset not to reduce | 📐 |
-| Texture compression | VRAM-compressed on import, not raw. Committed `.import` files | 📋 M0 settings gate |
+| Texture compression | VRAM-compressed on import, not raw | 📋 M3 — `check_settings.py` asserts the presets exist and are well-formed, not their compression mode. Tracked as `att` 5 |
 | Cold load → countdown begins, web, on a warm cache | ≤ 5 s | 📋 M6 |
 
 ### Design targets — measured on the reference machine
@@ -413,7 +414,7 @@ The supplied asset set is **39 MB of raw `.glb`** across seven models carrying
 | | Target | Status |
 |---|---|---|
 | Cold start → countdown begins, desktop | ≤ 2 s | 📋 M6 |
-| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 6.2 s warm** (3 runs, 6.16–6.36 s) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
+| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 6.3 s warm** (3 runs, 6.24–6.49 s) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
 
 The suite budget is a real constraint, not a nicety: a gate slow enough to skip
 stops being run, and a gate that is not run is not a gate.
@@ -482,12 +483,12 @@ runs to decide whether a change is done. Each is pass/fail with no judgment.
 |---|---|---|
 | V1 | `godot/tools/test.sh` exits 0 | ✅ |
 | V2 | Two runs at the same seed produce byte-identical state summaries | ✅ smoke suite (harness proven; the real simulation arrives in M1) |
-| V3 | No banned symbol from §4 *Architectural boundaries* appears under `godot/scripts/core/` | 📋 `add-architecture-and-tuning-gates` |
-| V4 | No physics-body symbol from §4 *Architectural boundaries* appears anywhere under `godot/` | ⚠️ pre-commit covers **staged** files only; the full-tree gate is `add-architecture-and-tuning-gates` |
-| V5 | No tuning literal appears outside `godot/data/tuning.json` | 📋 `add-architecture-and-tuning-gates` |
+| V3 | No banned symbol from §4 *Architectural boundaries* appears under `godot/scripts/core/` | ✅ `check_boundaries.py` |
+| V4 | No physics-body symbol from §4 *Architectural boundaries* appears anywhere under `godot/` | ✅ `check_boundaries.py` over every text file under `godot/`, plus the commit hook on staged content. Binary scenes (`.scn`, `.res`) are beyond a text gate; the project authors none |
+| V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py`. Small integers are excluded and reported each run — see §3 *Language and style* |
 | V6 | **G1** — every `### Scenario:` in the GDD has a named test or a visual-register entry | 📋 M1 |
 | V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | 📋 M8 |
-| V8 | Pinned project settings match §6 *Determinism and the reference frame* and §8 *Performance and size budgets* | ⚠️ settings pinned in `project.godot`; the gate that enforces them is `add-architecture-and-tuning-gates` |
+| V8 | Pinned project settings match §6 *Determinism and the reference frame*, and every model has a valid committed import preset | ✅ `check_settings.py` |
 | V9 | Gallery diffs are within recorded thresholds on all three criteria | 📋 M6 |
 | V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py`, rooted at the repository root |
 | V11 | Every `CONSTRAINTS §N Title` reference names the section it points at | ✅ `check_section_refs.py`. Note it matches only `CONSTRAINTS §N`, so `docs/CONSTRAINTS.md §N` is invisible to it — stale prose stays the Critic's job |
@@ -500,6 +501,7 @@ runs to decide whether a change is done. Each is pass/fail with no judgment.
 | V18 | Every governing document states the same engine version as `godot/.godot-version` | ✅ `check_engine_version.py` |
 | V19 | Every GDScript function signature carries parameter and return types | ⚠️ `check_static_typing.py`; members not yet covered |
 | V20 | The seven supplied models import and load | ✅ `tests/assets_test.gd` |
+| V21 | The commit hook and the standing suite derive their banned symbols from one shared definition | ✅ both read `godot/data/banned_symbols.json`; verified by removing a symbol and confirming both stop flagging it |
 
 ---
 
@@ -642,10 +644,6 @@ Added by this project, in order of value:
 
 | Gate | Mechanism | Milestone |
 |---|---|---|
-| Core purity (V3) | `tools/check_boundaries.sh` — grep | M0 |
-| No physics bodies (V4) | same script, second symbol list | M0 |
-| No tuning literals (V5) | `tools/check_tuning_literals.py` | M0 |
-| Pinned project settings (V8) | `tools/check_settings.py` reads `project.godot` and `.import` | M0 |
 | Scenario coverage G1 (V6) | `tools/check_spec_coverage.py` parses the GDD | M1 |
 | GDScript lint and format | `gdtoolkit` — `gdlint`, `gdformat --check` | M0 |
 | Whitespace, EOF newline, large files | the hand-rolled `godot/tools/pre-commit` — not the `pre-commit` framework, which this project does not use | ✅ M0 |
@@ -656,6 +654,9 @@ Added by this project, in order of value:
 | Tuning transcription | `godot/tools/check_tuning_transcription.py` — names, values, duplicates, derived-value leakage | ✅ M0 |
 | Engine version | `godot/tools/check_engine_version.py` — every governing document agrees with `.godot-version` | ✅ M0 |
 | Static typing | `godot/tools/check_static_typing.py` — signatures only; members not yet covered | ⚠️ M0 |
+| Architectural boundaries | `godot/tools/check_boundaries.py` — core purity and the physics ban, from `godot/data/banned_symbols.json`, which the commit hook reads too | ✅ M0 |
+| Tuning literals | `godot/tools/check_tuning_literals.py` — distinctive values in `godot/scripts/`, with a justified-exemption allowlist that fails on stale entries | ✅ M0 |
+| Pinned settings | `godot/tools/check_settings.py` — determinism-critical settings and the seven import presets | ✅ M0 |
 
 **Reference sections by number *and* title** — `CONSTRAINTS §8 Performance and
 size budgets`, never a bare `§8`. A bare number survives a renumber while
@@ -665,7 +666,7 @@ the file still resolves.
 **Keep the pre-commit hook fast.** It runs on every commit, and a slow hook gets
 bypassed with `--no-verify`, which is worse than no hook. Lint, formatting,
 whitespace, and the boundary greps belong there; the full suite belongs in
-`test.sh`. Measured at **0.5 s** on a clean staged set (M0).
+`test.sh`. Measured at **0.4 s** on a clean staged set (M0).
 
 **The hook is not the gate.** It sees only staged files and only the cheap
 checks — it will not catch a broken smoke suite, a stale link, or a drifted
