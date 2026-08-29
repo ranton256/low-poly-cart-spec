@@ -16,12 +16,17 @@ Process surgery (this session, reviewed before commit):
 
 Implementation (picked up after review):
 
-- [ ] 5. `godot/tools/test.sh` green; `openspec validate streamline-process
+- [x] 5. `godot/tools/test.sh` green; `openspec validate streamline-process
        --strict`, `check_links.py`, `check_section_refs.py`,
        `check_placeholders.py` all pass over the edited documents.
-- [ ] 6. Close att 19: `tools/test.sh` fails, naming the suite, when a suite
-       prints `SCRIPT ERROR`; verified by deliberately breaking one test with
-       a runtime error and removing it again (the §7 mutation rule).
+- [x] 6. Close att 19: every suite now runs through `run_suite`, which fails
+       the run naming the suite on `SCRIPT ERROR`/`Parse Error`/`Failed to
+       load script` in its output or a non-zero exit;
+       `check_suites_registered.py` learned the wrapper counts as a run.
+       Mutation-verified both ways: an injected runtime error in
+       camera_test.gd failed the run naming the suite (after the suite
+       printed its own success line — the exact att-19 hole), and an
+       unregistered probe suite still fails the registration gate.
 - [ ] 7. Archive the five completed M2/M3 changes
        (`add-world-presentation-layer`, `add-kart-view-orientation-and-input`,
        `add-chase-camera`, `add-seeded-world-scatter`,

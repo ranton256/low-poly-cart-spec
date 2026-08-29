@@ -337,6 +337,7 @@ is facing:
 | The standing suite is **headless and display-free** | ✅ verified with no display available |
 | No test touches the network or a real save file | ⚠️ `LPC_SAVE_FILE` is exported by every harness but nothing reads it until M7; the network half has no check |
 | Every suite is deterministic; a flaky test is a defect in the test | 📐 |
+| A runtime script error inside a suite fails the run — Godot exits 0 after a mid-test `SCRIPT ERROR`, and the suite still prints its own success line, so `test.sh`'s `run_suite` wrapper scans each suite's output for the error markers | ✅ verified by mutation (former att 19) |
 | Visual checks live in a separate windowed gate, never in `test.sh` — headless Godot has no renderer | 📐 by construction |
 | ~~Test names encode the GDD scenario~~ — **withdrawn** for `# @covers` declarations; see `add-determinism-and-coverage-harness` design D1 | ⊘ |
 

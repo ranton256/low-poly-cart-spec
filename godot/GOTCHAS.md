@@ -60,6 +60,18 @@ const RVTest := preload("res://tests/harness.gd")
 
 ---
 
+### "The suite passed, but assertions I know should fail didn't run"
+
+A GDScript **runtime** error inside a `_test_` function (a parse error does
+fail) aborts that function, returns to `_init`, and the suite happily runs
+`RVTest.finish()` — printing its success line and exiting 0. Every assertion
+after the failing line was skipped and nothing said so.
+
+`tools/test.sh` guards this: every suite runs through `run_suite`, which fails
+the run (naming the suite) on `SCRIPT ERROR` in the output. If you run a suite
+directly with `godot --headless -s`, you do not get that protection — scan the
+output yourself, or run the full gate.
+
 ### "My test run wiped my actual save file"
 
 **Cause.** The suite used the real save path. This is not hypothetical: a suite

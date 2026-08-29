@@ -45,6 +45,26 @@ for tool in gdlint gdformat; do
 	fi
 done
 
+# A GDScript RUNTIME error inside a _test_ function aborts that function,
+# returns to _init, and the suite still prints its success line and exits 0 —
+# a half-run suite reads as green (former att 19; the same hole bit the
+# sibling course repos). So every suite runs through this wrapper: it fails
+# the run, naming the suite, on a non-zero exit OR on the error markers Godot
+# prints while exiting 0.
+run_suite() {
+	local suite="$1" out
+	if ! out=$(godot --headless -s "$suite" 2>&1); then
+		printf '%s\n' "$out"
+		echo "error: $suite exited non-zero" >&2
+		exit 1
+	fi
+	printf '%s\n' "$out"
+	if printf '%s' "$out" | grep -qE 'SCRIPT ERROR|Parse Error|Failed to load script'; then
+		echo "error: $suite hit a script error mid-run — its assertions after that line never ran" >&2
+		exit 1
+	fi
+}
+
 # Art is single-sourced at the repository root and copied in here. Runs first
 # so a stale or missing model is an explicit failure rather than a confusing
 # one inside a later check. Idempotent; compares content hashes, not mtimes.
@@ -56,41 +76,41 @@ tools/sync_assets.sh
 # they back the delta spec's "all seven models resolve and import successfully".
 godot --headless --import >/dev/null
 
-godot --headless -s tests/assets_test.gd
-godot --headless -s tests/smoke_test.gd
+run_suite tests/assets_test.gd
+run_suite tests/smoke_test.gd
 
 # The simulation core — the design document's tick order, the boundary, and the
 # reproducibility every other headless suite rests on.
-godot --headless -s tests/tick_test.gd
-godot --headless -s tests/boundary_test.gd
-godot --headless -s tests/determinism_test.gd
+run_suite tests/tick_test.gd
+run_suite tests/boundary_test.gd
+run_suite tests/determinism_test.gd
 
 # The SHIPPED tuning table against acceptance item 4. Every suite above builds
 # tuning from inline literals, so without this a retuned data/tuning.json would
 # leave them all green while the game violated the acceptance checklist.
-godot --headless -s tests/tuning_loader_test.gd
+run_suite tests/tuning_loader_test.gd
 
 # The design document's §3 asset normalisation contract — the arithmetic that
 # decides whether props stand on the ground or in it.
-godot --headless -s tests/normalise_test.gd
+run_suite tests/normalise_test.gd
 
 # The environment, checked in a headless scene tree — everything about §5 and §6
 # except the pixels. The captures in docs/progress/ carry the other half.
-godot --headless -s tests/world_test.gd
+run_suite tests/world_test.gd
 
 # Acceptance 14a: one input sequence, three tick batchings, one outcome.
-godot --headless -s tests/replay_test.gd
+run_suite tests/replay_test.gd
 
 # The running game rather than the core: the composition root, the kart's
 # orientation against the design document, and input. All headless — a scene
 # tree needs no renderer.
-godot --headless -s tests/driver_test.gd
-godot --headless -s tests/kart_test.gd
-godot --headless -s tests/input_test.gd
-godot --headless -s tests/camera_test.gd
-godot --headless -s tests/scatter_test.gd
-godot --headless -s tests/prop_field_test.gd
-godot --headless -s tests/collision_test.gd
+run_suite tests/driver_test.gd
+run_suite tests/kart_test.gd
+run_suite tests/input_test.gd
+run_suite tests/camera_test.gd
+run_suite tests/scatter_test.gd
+run_suite tests/prop_field_test.gd
+run_suite tests/collision_test.gd
 
 
 # Lint and format. Fast, and they keep the diff about behaviour.
@@ -162,10 +182,10 @@ fi
 "$PY" tools/check_settings.py
 
 # Uncomment each as you add it (see docs/testing_toolkit.md, "As the game grows"):
-# godot --headless -s tests/balance_test.gd
-# godot --headless -s tests/rng_test.gd
-# godot --headless -s tests/av_event_test.gd
-# godot --headless -s tests/motion_test.gd
-# godot --headless -s tests/flow_test.gd
+# run_suite tests/balance_test.gd
+# run_suite tests/rng_test.gd
+# run_suite tests/av_event_test.gd
+# run_suite tests/motion_test.gd
+# run_suite tests/flow_test.gd
 
 echo "All suites passed."
