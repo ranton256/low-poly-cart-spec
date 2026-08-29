@@ -81,6 +81,14 @@ godot --headless -s tests/world_test.gd
 # Acceptance 14a: one input sequence, three tick batchings, one outcome.
 godot --headless -s tests/replay_test.gd
 
+# The running game rather than the core: the composition root, the kart's
+# orientation against the design document, and input. All headless — a scene
+# tree needs no renderer.
+godot --headless -s tests/driver_test.gd
+godot --headless -s tests/kart_test.gd
+godot --headless -s tests/input_test.gd
+
+
 # Lint and format. Fast, and they keep the diff about behaviour.
 # Every .gd under scripts/ and tests/, not a fixed list of directories — an
 # earlier version named scripts/core/ explicitly, so a future scripts/view/
