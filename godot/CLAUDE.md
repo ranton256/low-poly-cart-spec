@@ -51,6 +51,7 @@ is expected to be rewritten when a better implementation appears.**
 ```sh
 ./tools/test.sh                            # the standing gate
 ./tools/capture.sh <scene> <out.png>       # windowed visual proof — NEVER in test.sh
+./tools/collision_capture.sh <mode> <out.png> [after] [nojolt]  # staged collision proof — windowed
 .venv/bin/python tools/check_links.py      # every relative Markdown link resolves
 .venv/bin/python tools/check_section_refs.py   # every CONSTRAINTS §N reference is accurate
 .venv/bin/python tools/check_placeholders.py   # placeholder markers in shipped docs

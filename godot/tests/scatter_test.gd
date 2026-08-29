@@ -60,7 +60,7 @@ func _check(cond: bool, msg: String) -> void:
 func _init() -> void:
 	_test_a_seed_reproduces_the_field_as_a_sequence()
 	_test_different_seeds_give_different_fields()
-	_test_unrelated_draws_do_not_change_the_field()
+	_test_scattering_does_not_disturb_the_shared_stream()
 	_test_the_start_area_stays_clear()
 	_test_props_do_not_crowd_each_other_across_assets()
 	_test_nothing_is_placed_outside_the_scatter_extent()
@@ -113,15 +113,36 @@ func _test_different_seeds_give_different_fields() -> void:
 	)
 
 
-## What seeding at the start of each generation buys (design D2): the field cannot
-## depend on how much unrelated code drew from the shared stream first.
-func _test_unrelated_draws_do_not_change_the_field() -> void:
-	var clean: String = Scatter.serialise(_field(SEED_A))
+## SCATTER DRAWS FROM ITS OWN STREAM, and this is how that is falsifiable.
+##
+## The earlier version of this test seeded the shared stream, drew from it, and
+## checked the field was unchanged. That passed whether scatter owned a stream or
+## re-seeded a global one — it could not tell the two apart, so it proved nothing
+## about isolation. Asserting the shared stream's STATE is untouched by a
+## generation does: it fails the moment scatter goes back to the static API.
+func _test_scattering_does_not_disturb_the_shared_stream() -> void:
 	Rng.seed_rng(11111)
 	for _i in range(37):
 		Rng.randf01()
-	var after: String = Scatter.serialise(_field(SEED_A))
-	_check(clean == after, "unrelated draws from the shared stream do not change the field")
+	var before: int = Rng.state()
+
+	var field: String = Scatter.serialise(_field(SEED_A))
+	_check(field.length() > 0, "a field was generated, so this is not vacuous")
+	_check(
+		Rng.state() == before,
+		"generating a field leaves the shared stream untouched (%d -> %d)" % [before, Rng.state()]
+	)
+
+	# And the field itself is unaffected by the shared stream's position, which is
+	# what the spec requires: two generations from one seed agree even if unrelated
+	# code ran in between.
+	Rng.seed_rng(4242)
+	for _i in range(9):
+		Rng.randf01()
+	_check(
+		Scatter.serialise(_field(SEED_A)) == field,
+		"and the field is the same whatever the shared stream has been doing"
+	)
 
 
 func _test_the_start_area_stays_clear() -> void:

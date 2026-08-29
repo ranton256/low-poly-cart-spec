@@ -70,48 +70,6 @@
       "unmet": true
     },
     {
-      "feature": "Collision Detection and Response",
-      "scenario": "Detecting an overlap with a prop",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Collision Detection and Response",
-      "scenario": "Responding to an impact",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Collision Detection and Response",
-      "scenario": "Not becoming trapped inside an obstacle",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Collision Detection and Response",
-      "scenario": "Passing close to a prop without contact",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Collision Detection and Response",
-      "scenario": "Growing hit volume when driving diagonally",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Collision Detection and Response",
-      "scenario": "Colliding with the kart's own start position after regeneration",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Chase Camera",
-      "scenario": "Absorbing a collision jolt",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
       "feature": "Minimap",
       "scenario": "Rendering the minimap inset",
       "kind": "deferred",

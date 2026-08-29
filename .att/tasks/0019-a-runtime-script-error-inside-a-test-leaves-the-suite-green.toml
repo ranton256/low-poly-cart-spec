@@ -1,0 +1,15 @@
+id = 19
+title = "A runtime script error inside a test leaves the suite GREEN"
+description = """
+Found in passing during add-aabb-collision-response's Critic pass (M3). A GDScript runtime error inside a _test_ function — not a parse error, which does fail — aborts that function, returns to _init, and the suite runs RVTest.finish() as though nothing happened. Godot exits 0 and tools/test.sh reports the suite passed.
+
+Reproduced: tests/camera_test.gd assigned a Vector3 to a variable typed Array. Output was 'SCRIPT ERROR: Trying to assign value of type Vector3 to a variable of type Array' followed by 'camera: trails, lags, settles, widens with speed, absorbs a jolt' and exit 0. Every assertion after the failing line was skipped and nothing said so.
+
+This undercuts CONSTRAINTS §12 Review criterion R1 and godot/CLAUDE.md rule 5 ('A green suite is not evidence on its own') for all 16 suites: any test that dies halfway reports success for the half it ran.
+
+Candidate fixes, cheapest first: have RVTest track how many _test_ functions each suite intended to run and assert the count at finish(); or scan the suite's stderr in tools/test.sh for 'SCRIPT ERROR' and fail the run. The second catches more and needs no per-suite bookkeeping.
+
+Exit criteria: a suite with a deliberate runtime error in one test FAILS tools/test.sh; the failure names the suite; demonstrated by introducing one and removing it again."""
+status = "not-started"
+created_at = "2026-08-29T22:29:41.502077Z"
+updated_at = "2026-08-29T22:29:41.502077Z"

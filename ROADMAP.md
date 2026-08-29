@@ -227,33 +227,59 @@ Props wait for M3.
 
 ---
 
-## M3 — The field
+## M3 — The field ✅ COMPLETE
+
+Shipped by `add-seeded-world-scatter` and `add-aabb-collision-response`.
+Acceptance items **2** and **6** pass as named tests; the coverage gate reports
+**zero** M3 scenarios deferred. Ambiguity **A12** was opened and settled here.
+
+Every done-when clause below carries ✅ where it shipped and ⚠️ where it did not,
+rather than the milestone being marked complete over a list nobody checked off.
+
+One clause is ⚠️ and is disclosed rather than waived: the pin between two
+near-touching props is reproduced, and driving it showed the design document's
+"cannot drive out" is not producible by the response the same document specifies.
+The kart is stopped dead on every tick of contact and is never carried past the
+pair — but the push is radial from the prop's centre, so the centred state is an
+unstable equilibrium and the kart is squeezed out sideways: after about 125 ticks
+driving along the pair's axis, and 15–20 across it. `collision_test.gd` sweeps all
+sixteen headings and asserts both what survives and that the pin **ends**, so
+neither a "fix" that resolves both overlaps nor one that makes the pin permanent
+passes.
+
+Unlike M2's ⚠️, this one has **no marker in the coverage gate** — the scenario it
+touches is genuinely verified, and the defect is in a paragraph of the design
+document rather than in a scenario. Its mechanical owners are ambiguity **A12**,
+which is Open, and **`att` 20**, which raises the proposal against the document.
+M3 is complete; that proposal is not part of it.
 
 **Goal.** The obstacle course exists, it is different every time, and hitting a
 tree feels like hitting a tree.
 
 **Done when**
-- Scatter places 15 trees, 10 rocks, 12 cones, 8 crates, 6 tyre stacks, and 3
+- ✅ Scatter places 15 trees, 10 rocks, 12 cones, 8 crates, 6 tyre stacks, and 3
   cottages under the clearance, separation, and attempt-budget rules, from a
   named seed, in a deterministic registration order
-- Every prop stands exactly on the ground — none floating, none sunk — at every
+- ✅ Every prop stands exactly on the ground — none floating, none sunk — at every
   random scale (**acceptance 2**)
-- Cottages appear only as distant landmarks, and the ring beyond `scatterExtent`
+- ✅ Cottages appear only as distant landmarks, and the ring beyond `scatterExtent`
   is empty grass with no grid and no visible boundary
-- Collision recomputes the kart's world AABB from its current yaw each tick,
+- ✅ Collision recomputes the kart's world AABB from its current yaw each tick,
   contracts it by `hitboxContraction` per side, resolves **the first intersecting
   prop in registration order only**, pushes `pushDistance`, and sets velocity to
   exactly zero
-- Hitting a tree stops the kart dead, shoves it clear, and shakes the camera —
+- ✅ Hitting a tree stops the kart dead, shoves it clear, and shakes the camera —
   and the kart can always reverse back out of a **single** prop at any approach
-  angle (**acceptance 6**)
-- Being pinned between two near-touching props is reproduced as specified, not
-  fixed — the GDD keeps the placement rule and names Reset Kart as the escape
-- Regenerating the world leaves the kart's position, heading, velocity, and the
+  angle (**acceptance 6**), swept at 16 headings rather than sampled at one
+- ⚠️ Being pinned between two near-touching props is reproduced as specified, not
+  fixed — the GDD keeps the placement rule and names Reset Kart as the escape.
+  Reproduced, and **not permanent at any heading**: see the note above, **A12**
+  and `att` 20
+- ✅ Regenerating the world leaves the kart's position, heading, velocity, and the
   running clock untouched
-- Prop textures are 1024² per
+- ✅ Prop textures are 1024² per
   [CONSTRAINTS §8 Performance and size budgets](CONSTRAINTS.md); the kart stays 2048²
-- **Visual proof:** a seeded field from the chase camera, and a capture of the
+- ✅ **Visual proof:** a seeded field from the chase camera, and a capture of the
   kart pushed clear of a tree
 
 **Likely changes**

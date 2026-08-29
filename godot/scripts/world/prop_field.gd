@@ -16,6 +16,7 @@ extends Node3D
 
 const Scatter := preload("res://scripts/core/scatter.gd")
 const Normalise := preload("res://scripts/core/normalise.gd")
+const Collision := preload("res://scripts/core/collision.gd")
 
 
 ## One prop as collision will see it: which asset, where, how big, and the
@@ -102,6 +103,21 @@ func clear() -> void:
 		remove_child(child)
 		child.free()
 	records.clear()
+
+
+## The field as collision sees it, IN REGISTRATION ORDER.
+##
+## Built here rather than in the core because the records are a view type; the
+## geometry is still the core's, through Collision.make_prop(). The order is the
+## one scatter emitted, and collision resolves the first intersecting prop in it —
+## so this must never sort, filter, or cull.
+func collision_props() -> Array:
+	var props: Array = []
+	for record in records:
+		props.append(
+			Collision.make_prop(record.asset, record.normalised, record.yaw, record.x, record.z)
+		)
+	return props
 
 
 func prop_count() -> int:

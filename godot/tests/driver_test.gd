@@ -29,11 +29,14 @@ func _init() -> void:
 	await _test_stepping_tracks_the_fixed_rate_callback()
 	_test_the_view_never_writes_back()
 	_test_the_game_looks_through_the_specified_camera()
+	await _test_the_running_game_collides_and_jolts()
 
 	get_root().remove_child(_root)
 	_root.free()
 	_root = null
-	RVTest.finish(self, "driver: one step per fixed callback, view reads only", "driver check(s)")
+	RVTest.finish(
+		self, "driver: one step per fixed callback, view reads only, props wired", "driver check(s)"
+	)
 
 
 ## THE CHANGE'S HEADLINE DELIVERABLE, AND NOTHING GUARDED IT.
@@ -146,4 +149,68 @@ func _test_the_view_never_writes_back() -> void:
 	_check(
 		is_equal_approx(sim.pos_x, 12.5) and is_equal_approx(sim.pos_z, -3.25),
 		"drawing the kart leaves the simulation's own position untouched"
+	)
+
+
+## THE WIRING BETWEEN THE FIELD AND THE SIMULATION, WHICH NOTHING GUARDED.
+##
+## Same shape as the deleted ChaseCamera above, and found the same way: review
+## deleted the line handing the scattered props to the simulation and every one of
+## the sixteen suites stayed green — including the whole of collision_test.gd,
+## which builds its own props and never loads a scene. The shipped game would have
+## had no collision at all. The capture tool did not cover it either, because it
+## used to wire sim.props itself; it now goes through main.gd's build_field().
+##
+## Two halves, because deleting either one leaves a game that looks right:
+## the props reaching the tick, and a resolved collision reaching the camera.
+func _test_the_running_game_collides_and_jolts() -> void:
+	var sim: RefCounted = _root.sim
+	var field: Node3D = _root.props
+	_check(field != null, "the running scene has a prop field")
+	if field == null:
+		return
+
+	_check(field.prop_count() > 0, "the field was populated (%d props)" % field.prop_count())
+	_check(
+		sim.props.size() == field.prop_count(),
+		(
+			"every prop the view drew reached the simulation (%d vs %d)"
+			% [sim.props.size(), field.prop_count()]
+		)
+	)
+	# IN REGISTRATION ORDER, which is what collision resolves by — asserted
+	# element by element rather than by counting, because a reordered array has
+	# the same size and collides differently.
+	var ordered := true
+	for i in range(mini(sim.props.size(), field.prop_count())):
+		if (sim.props[i] as RefCounted).asset != (field.records[i] as RefCounted).asset:
+			ordered = false
+	_check(ordered, "and in the order the view holds them, prop for prop")
+
+	# Regeneration must re-wire, not leave the simulation colliding with the
+	# previous field.
+	_root.regenerate_world()
+	_check(
+		sim.props.size() == field.prop_count() and field.prop_count() > 0,
+		(
+			"regenerating the world re-wires the simulation (%d vs %d)"
+			% [sim.props.size(), field.prop_count()]
+		)
+	)
+
+	# Now drive the RUNNING GAME onto a prop and let its own physics callback run.
+	var target: RefCounted = sim.props[0]
+	sim.pos_x = target.centre_x() + 0.2
+	sim.pos_z = target.centre_z() + 0.2
+	sim.velocity = 0.0
+	var jolts_before: int = _root.jolts()
+	var collided := false
+	for _i in range(4):
+		await physics_frame
+		if sim.last_hit != null:
+			collided = true
+	_check(collided, "a kart standing on a prop collides in the running game")
+	_check(
+		_root.jolts() > jolts_before,
+		"and the collision jolts the camera (%d jolts, was %d)" % [_root.jolts(), jolts_before]
 	)

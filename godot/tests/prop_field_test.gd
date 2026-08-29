@@ -30,7 +30,7 @@ func _init() -> void:
 	_test_records_keep_the_acceptance_order()
 	_test_records_are_in_registration_order()
 	await _test_regeneration_replaces_the_props()
-	await _test_regeneration_leaves_the_kart_alone()
+	_test_regeneration_leaves_the_kart_alone()
 
 	get_root().remove_child(_root)
 	_root.free()
@@ -141,6 +141,22 @@ func _test_regeneration_replaces_the_props() -> void:
 ## operation rather than a reset.
 func _test_regeneration_leaves_the_kart_alone() -> void:
 	var sim: RefCounted = _root.sim
+
+	# THE TICK IS PAUSED ACROSS THIS ASSERTION, and that is the test, not a
+	# convenience. `regenerate_world()` is synchronous: it scatters, rebuilds the
+	# view and re-wires the simulation without yielding, so nothing here needs a
+	# frame. What a frame WOULD do is advance the kart — friction alone takes
+	# 0.15 to 0.144 in one tick, integration moves it, and now that stage 7 has a
+	# body a prop dropped on the kart zeroes its velocity outright, which is a
+	# different scenario's specified behaviour.
+	#
+	# The first version of this test awaited a frame and asserted the kart was
+	# unchanged. It passed while stage 7 was empty and the physics frame usually
+	# missed the window; it flaked once in a full run of the gate after collision
+	# was wired, with "its velocity is untouched". A test that depends on a
+	# physics frame NOT landing is not a test of regeneration.
+	_root.set_physics_process(false)
+
 	sim.pos_x = 12.5
 	sim.pos_z = -7.25
 	sim.yaw = 1.25
@@ -148,18 +164,20 @@ func _test_regeneration_leaves_the_kart_alone() -> void:
 	var ticks_before: int = sim.ticks
 
 	_root.regenerate_world()
-	await process_frame
 
 	_check(
-		is_equal_approx(sim.pos_x, 12.5) and is_equal_approx(sim.pos_z, -7.25),
-		"the kart's position is untouched by regeneration"
+		sim.pos_x == 12.5 and sim.pos_z == -7.25,
+		"the kart's position is untouched by regeneration (%.9f, %.9f)" % [sim.pos_x, sim.pos_z]
 	)
-	_check(is_equal_approx(sim.yaw, 1.25), "its heading is untouched")
-	_check(is_equal_approx(sim.velocity, 0.15), "its velocity is untouched")
-	# The clock is the tick count; regeneration must not advance or reset it.
-	# A physics frame may land between the two reads, so this allows forward
-	# motion from stepping and forbids a reset.
+	_check(sim.yaw == 1.25, "its heading is untouched (%.9f)" % sim.yaw)
+	_check(sim.velocity == 0.15, "its velocity is untouched (%.9f)" % sim.velocity)
+	# The clock is the tick count; regeneration must neither advance nor reset it.
+	# Exact, now that nothing else can advance it.
 	_check(
-		sim.ticks >= ticks_before,
-		"the running clock was not reset (%d -> %d)" % [ticks_before, sim.ticks]
+		sim.ticks == ticks_before,
+		"the running clock is untouched (%d -> %d)" % [ticks_before, sim.ticks]
 	)
+	# And the field really was replaced, so none of the above is vacuous.
+	_check(_root.props.prop_count() == _requested_total(), "and a fresh field was built")
+
+	_root.set_physics_process(true)

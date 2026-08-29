@@ -182,6 +182,7 @@ reference images and they never enter an export.
 | `tools/check_section_refs.py` | every `CONSTRAINTS §N Title` reference is accurate |
 | `tools/check_placeholders.py` | placeholder markers left in shipped documents |
 | `tools/capture.sh` | windowed scene capture — the visual-proof tool, never in `test.sh` |
+| `tools/collision_capture.sh` | windowed capture of a staged collision, driven through the shipped game — never in `test.sh` |
 | `templates/` | skeletons for every suite type, game-specific parts marked |
 | `../CONSTRAINTS.md` `../ROADMAP.md` `CLAUDE.md` | the governing documents |
 | `../CONSTRAINTS.md` | the non-negotiables and how each is enforced |

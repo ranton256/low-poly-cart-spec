@@ -37,6 +37,12 @@ const Scatter := preload("res://scripts/core/scatter.gd")
 ## a new arrangement while every one of them stays nameable.
 const STARTING_SEED := 20260829
 
+## The camera shake's seed. A SEPARATE stream and a different value from
+## STARTING_SEED: the shudder must not depend on how many props were scattered,
+## and it must not reset when the player regenerates the world. Same value would
+## have worked and read as though the two were one thing.
+const SHAKE_SEED := 704221
+
 const DRIVE_ACTIONS := {
 	"accelerate": "forward",
 	"reverse": "reverse",
@@ -62,6 +68,7 @@ var _steps: int = 0
 var _frames: int = 0
 var _begin_frame_calls: int = 0
 var _camera_steps: int = 0
+var _jolts: int = 0
 
 ## The kart view, found in the scene rather than constructed here: the root owns
 ## the simulation, not the presentation. It is optional so a headless suite can
@@ -92,6 +99,13 @@ func _ready() -> void:
 	sim.input = input
 	camera = ChaseCamera.new()
 	camera.tuning = tuning
+	camera.seed_shake(SHAKE_SEED)
+	if kart != null:
+		# What the kart's hit volume is recomputed from each tick. The correction
+		# is included because the volume follows the model's transform, and the
+		# model is rotated a quarter turn from the simulation's forward.
+		sim.kart_normalised = kart.normalised()
+		sim.kart_yaw_offset = kart.yaw_correction()
 	_art = ArtTuning.load_art()
 	scatter = Scatter.new()
 	scatter.tuning = tuning
@@ -116,6 +130,12 @@ func _physics_process(_delta: float) -> void:
 	# frame the time constant becomes 0.4 s at 30 fps and 0.083 s at 144 fps
 	# against a stated 0.2 s.
 	camera.step(sim.pos_x, sim.pos_z, sim.yaw, sim.speed_ratio())
+	# AFTER the camera's own step, so the displacement survives into the following
+	# ticks instead of being eased away by the step that produced it. The easing
+	# absorbs it from here with no separate decay.
+	if sim.last_hit != null:
+		camera.jolt()
+		_jolts += 1
 	_steps += 1
 	_camera_steps += 1
 
@@ -153,6 +173,13 @@ func camera_steps() -> int:
 	return _camera_steps
 
 
+## How many collisions have jolted the camera. Exists for the same reason
+## camera_steps() does: "the running game jolts on a collision" is otherwise
+## invisible from outside, and deleting the call left the whole suite green.
+func jolts() -> int:
+	return _jolts
+
+
 ## How far the current frame sits between the last step and the next, 0..1.
 ##
 ## The engine's own fraction, which is meaningful precisely because the engine
@@ -174,8 +201,25 @@ func _generate_field(seed_value: int) -> void:
 	if props.authored_boxes().is_empty() and not props.load_assets():
 		push_error("main: could not load the prop models; the field is empty")
 		return
-	props.build(scatter.generate(seed_value, props.authored_boxes()))
+	build_field(scatter.generate(seed_value, props.authored_boxes()))
 	print("world: seed %d — %s" % [seed_value, scatter.shortfall_report()])
+
+
+## Instantiate a field and hand it to the simulation, in registration order.
+##
+## ONE PLACE, because the two halves must not drift: a build that draws props the
+## simulation does not know about is a field the kart drives through. Review
+## deleted the second line and every collision test stayed green, so
+## driver_test.gd now asserts this wiring against the running scene, and
+## tools/collision_capture.gd stages its arrangements THROUGH this method rather
+## than repeating it — a capture that wires its own props would show a collision
+## in a build that has none.
+func build_field(placements: Array) -> void:
+	if props == null:
+		return
+	props.build(placements)
+	# In registration order, which is what collision resolves by.
+	sim.props = props.collision_props()
 
 
 ## Regenerate World. The design document gives this action no required binding and

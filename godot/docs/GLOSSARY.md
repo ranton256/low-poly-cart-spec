@@ -34,6 +34,9 @@ something in the design document, *and* something in this codebase.
 | **speed** | Ambiguous on its own — say *velocity* (wu/tick, signed, what the simulation carries) or *the dial* (the cosmetic 0–120 readout, which tops out at 115 and is not calibrated) |
 | **normalisation** | Scaling a supplied model to its target height, re-measuring, and grounding it at Y = 0. Never vector normalisation |
 | **registration order** | The order props enter the collision registry. Observable behaviour: the first intersecting prop wins, so save/load must preserve it |
+| **the hit volume** | The kart's collision box: its world-axis-aligned extent, recomputed from its current heading every tick, then contracted by `hitboxContraction` on every side. 1.80 × 1.96 wu at rest. Larger when the kart is diagonal, which is accepted, not corrected |
+| **the pin** | The kart held between two props whose gap is smaller than its hit volume. Specified behaviour, not a defect: one collision is resolved per tick, so the push out of one drives it into the other and the kart is stopped dead on every tick of contact. **Not permanent** — the radial push makes it an unstable equilibrium and the kart is ejected sideways within 15–125 ticks depending on heading, which is ambiguity A12, open against the design document |
+| **the jolt** | The one-shot camera displacement on collision, within `±shakeHorizontal` and `±shakeVertical`. It has no decay of its own — the chase camera's ordinary easing absorbs it, which is what makes it a shudder |
 
 ## Architecture terms
 

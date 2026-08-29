@@ -25,6 +25,8 @@
 # constant becomes 0.4 s at 30 fps and 0.083 s at 144 fps against a stated 0.2 s.
 extends RefCounted
 
+const Rng := preload("res://scripts/core/rng.gd")
+
 var tuning: RefCounted = null
 
 # Where the camera is, and what it looks at. Both in world units; the position
@@ -38,6 +40,14 @@ var aim_z: float = 0.0
 var fov: float = 0.0
 
 var _placed: bool = false
+
+## The shake's own stream. NOT the process-global one: with a shared stream the
+## shudder sequence would depend on how many props the last regeneration
+## scattered, so the camera's state would stop being a function of the tick
+## sequence — which is the property camera_test.gd's grouping check rests on.
+## add-seeded-world-scatter's design D2 named this consumer as the trigger for
+## rng.gd becoming instantiable.
+var _shake: RefCounted = Rng.new()
 
 
 ## Advance one tick from the kart's post-step state.
@@ -86,6 +96,34 @@ func step(kart_x: float, kart_z: float, kart_yaw: float, speed_ratio: float) -> 
 func field_of_view(speed_ratio: float) -> float:
 	var ratio: float = clampf(speed_ratio, 0.0, 1.0)
 	return tuning.fov_base + ratio * (tuning.fov_max - tuning.fov_base)
+
+
+## Seed the shake. A run repeated from one seed reproduces the same shudder, which
+## is a property of a seeded stream and the reason this is not a hash of the tick
+## number.
+func seed_shake(seed_value: int) -> void:
+	_shake.seed_stream(seed_value)
+
+
+## A collision jolt: displace the camera POSITION by a random offset within
+## ±shakeHorizontal horizontally and ±shakeVertical vertically.
+##
+## THERE IS NO DECAY HERE, and that is the whole design. step()'s easing already
+## pulls the position toward its trailing target every tick, so a displacement
+## injected into that same position is absorbed at exactly the rate the camera
+## lags — the ~0.2 s time constant already measured. A separate decay would be a
+## second, unspecified time constant for the same visible motion.
+##
+## The AIM is untouched, so the horizon stays level through the shudder; and
+## nothing here reaches the simulation, so a jolt cannot move the kart.
+##
+## Called AFTER step() for the tick that collided, so the displacement survives
+## into the following ticks rather than being eased away by the step that
+## produced it.
+func jolt() -> void:
+	pos_x += _shake.range_between(-tuning.shake_horizontal, tuning.shake_horizontal)
+	pos_y += _shake.range_between(-tuning.shake_vertical, tuning.shake_vertical)
+	pos_z += _shake.range_between(-tuning.shake_horizontal, tuning.shake_horizontal)
 
 
 ## Place the camera without easing — used when a session starts, and by anything

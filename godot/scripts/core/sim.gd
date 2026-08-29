@@ -18,6 +18,8 @@
 # spare. Conversion to Vector3 happens at the view boundary.
 extends RefCounted
 
+const Collision := preload("res://scripts/core/collision.gd")
+
 const TICKS_PER_SECOND := 60
 
 # --- injected ---
@@ -33,6 +35,26 @@ var ticks: int = 0
 
 # --- observable outcomes of the last tick, for the view and for tests ---
 var bounced_this_tick: bool = false
+
+## The props this tick collides with, in REGISTRATION ORDER. Supplied by the
+## caller like the tuning is, so the simulation stays constructible with no scene
+## loaded and a test can place two props exactly where it wants them.
+var props: Array = []
+
+## The kart's normalised box, for recomputing its world volume each tick.
+var kart_normalised: RefCounted = null
+
+## The angle between the kart model's authored long axis and the simulation's
+## forward. The design document says the hit volume is recomputed from the kart's
+## CURRENT TRANSFORM, and the model's transform carries this correction — so a
+## volume computed from `yaw` alone would be the kart's footprint rotated a
+## quarter turn, 2.20 wu deep where the kart is 2.36. Supplied by the caller,
+## which is the only place that has seen the asset. Zero for a synthetic kart.
+var kart_yaw_offset: float = 0.0
+
+## The collision resolved this tick, or null. The view reads it to jolt the
+## camera; a test reads it to see which prop won.
+var last_hit: RefCounted = null
 
 
 ## Seconds elapsed, derived from the tick count. Never a host clock.
@@ -102,6 +124,7 @@ func begin_frame() -> void:
 ## the one that moves the kart.
 func step() -> void:
 	bounced_this_tick = false
+	last_hit = null
 
 	_stage_1_accelerate()
 	_stage_2_clamp()
@@ -162,12 +185,39 @@ func _stage_6_boundary() -> void:
 		velocity *= tuning.bounce_factor
 
 
-## Stage 7 — collision detection and response. Empty until M3
-## (add-aabb-collision-response). Its place in the order is part of the
-## contract: a collision here discards the entire tick's acceleration, and the
-## push-out must happen before the lap gate observes the position.
+## Stage 7 — collision detection and response.
+##
+## Its place in the order is part of the contract: a collision here discards the
+## entire tick's acceleration, and the push-out must happen before the lap gate
+## observes the position.
+##
+## AFTER the boundary, so a kart shoved out of a prop near the fence is not
+## clamped back this tick. The design document orders it this way and the
+## ordering tests hold it there.
+##
+## At most ONE collision per tick, against the first intersecting prop in
+## registration order — see collision.gd's header for why that is specified
+## rather than merely convenient, and what it costs.
 func _stage_7_collision() -> void:
-	pass
+	if props.is_empty() or kart_normalised == null:
+		return
+	var volume: AABB = Collision.kart_volume(
+		kart_normalised, yaw + kart_yaw_offset, pos_x, pos_z, tuning.hitbox_contraction
+	)
+	var index: int = Collision.first_overlap(volume, props)
+	if index < 0:
+		return
+
+	# The FIRST intersecting prop, and no further testing this tick.
+	var hit: RefCounted = Collision.resolve(
+		props[index] as Collision.Prop, pos_x, pos_z, yaw, tuning.push_distance
+	)
+	hit.index = index
+	pos_x += hit.push_x
+	pos_z += hit.push_z
+	# EXACTLY zero. Not reflected, not damped — the kart stops dead.
+	velocity = 0.0
+	last_hit = hit
 
 
 ## Stage 8 — the lap gate. Empty until M4 (add-lap-gate-and-timing). It runs

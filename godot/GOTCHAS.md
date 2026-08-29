@@ -163,6 +163,40 @@ number is the difference.
 
 ## Determinism
 
+### "A scene suite passes on its own and flakes in `test.sh`"
+
+**Symptom.** `godot --headless -s tests/<suite>.gd` is green every time you run it,
+and one run in several of the full gate reports a failure from that suite — often
+an assertion about simulation state that has no business varying.
+
+**Cause.** The suite loaded `main.tscn`, so the composition root's
+`_physics_process` is live and stepping the simulation. Any `await process_frame`
+in the suite may or may not have a physics tick land inside it, and whether it does
+depends on how long the run took to get there — which is exactly what changes when
+the suite runs after fifteen others instead of alone.
+
+The state then moves under the assertion by a whole tick. Friction alone takes a
+velocity of 0.15 to 0.144; integration moves the position; and since M3 wired stage
+7, a prop scattered onto the kart zeroes its velocity outright — which is a
+*different* scenario's specified behaviour arriving in the middle of this one's
+assertion.
+
+`tests/prop_field_test.gd` had this: it set the kart's state, called
+`regenerate_world()`, awaited a frame, and asserted the kart was unchanged. It
+passed for a whole milestone because the tick usually missed the window.
+
+**What to do.** Do not await at all if the operation under test is synchronous —
+most are, including `regenerate_world()`. If a frame is genuinely needed, turn the
+root's stepping off around the assertion with `set_physics_process(false)`, and say
+in the test why. Then assert exact equality rather than `is_equal_approx`: once
+nothing can advance the tick, an approximate comparison is only hiding the race
+you just removed.
+
+**Related.** A suite that "allows forward motion from stepping" in one assertion
+and forbids it in the next is the tell. `prop_field_test.gd` had exactly that
+comment on its clock check while three assertions beside it raced.
+
+
 ### "The same capture differs between identical runs"
 
 Work through these in order — they are ranked by how often they are the cause.

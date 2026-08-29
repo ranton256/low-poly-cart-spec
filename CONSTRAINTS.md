@@ -240,6 +240,39 @@ wrong to notice.
 
 The document gives a table, not an ordering rule. This is the rule.
 
+### One collision per tick, and the pin it produces 📐
+
+At most **one** collision is resolved per tick — the first intersecting prop in
+registration order — however many props the kart overlaps. That is the design
+document's rule, and it is what the ordering contract above exists to serve.
+
+It has a consequence the document states and requires a port to reproduce.
+`minPropSeparation` is measured centre to centre and does not subtract footprints,
+so two cottages at the minimum 3 wu leave a **0.09 wu gap** against a contracted
+kart hitbox of **1.80 × 1.96 wu**. A kart between such a pair overlaps both, only
+the first is resolved, and the push-out drives it into the second. It is held with
+its velocity zeroed and cannot drive out through the gap. **Reset Kart is the
+specified escape** (M7, `att` 10).
+
+**Do not "fix" this by resolving more than one collision per tick.** The document
+names the placement rule — a larger `minPropSeparation` — as the remedy and the
+response explicitly not. `godot/tests/collision_test.gd` asserts the pin, and the
+multi-resolve "fix" fails it.
+
+The pin is a **transient**, which the document does not say and driving it
+revealed: the push is radial from the prop's centre, so the centred state is an
+unstable equilibrium and the kart is squeezed out sideways. How long that takes
+depends strongly on the heading — swept over sixteen, it is **125 ticks** driving
+along the pair's axis and **15–20** across it, and roughly 1.2 s against the
+shipped cottage models rather than the test's cubes. What survives is that the
+kart is stopped dead on every tick of contact and is never carried past the pair.
+
+That makes the document's "cannot drive out" a statement its own response cannot
+produce, which is a **defect in the design document rather than a gap in it** —
+so it is raised against the document by proposal (`att` 20) and ambiguity **A12**
+stays **open** until that is settled. The measurements are in
+`godot/docs/progress/2026-08-29-m3-collision.md`.
+
 ### `scripts/core/` holds one piece of cosmetic state, deliberately 📐
 
 The chase camera lives in `scripts/core/chase_camera.gd`, and it is not gameplay.
@@ -289,22 +322,26 @@ equally on a scenario claimed twice, or a claim on a scenario the document no lo
 contains.
 
 ```
-   64 scenarios, as claimed today — the gate reports these on every run
-   ├── 13  verified by a named test
-   │        the tick order, the boundary, the input state model, runtime
-   │        tuning, and the normalisation contract
-   ├──  5  visual — cannot be checked headlessly, each with a stated reason
-   │        grass beyond the boundary · the loading indicator · minimap
-   │        markers absent from the main view · viewport resize · the DPI cap
-   └── the rest deferred, each naming the milestone that owns it
+   every scenario in the design document — the gate counts them on every run
+   ├── verified by a named test, claimed by a "# @covers" line beside it
+   ├── visual — cannot be checked headlessly, each with a stated reason and
+   │        the committed capture or the milestone that will produce one
+   ├── UNMET — specified, reachable, and not currently met; printed every run
+   └── deferred, each naming the milestone that owns it
 ```
+
+The tree gives the shape and no numbers, deliberately, and an earlier version that
+carried them proves the point: it read "13 verified, 5 visual" against a gate
+reporting 33 and 4, and the "check every governing document for drift" sweep of the
+change that moved the numbers did not catch it.
 
 **The exact counts are deliberately not written here.** `check_spec_coverage.py`
 prints them, per milestone, on every run — and a copy in this document is a second
-source that drifts. It did: an earlier version of this section guessed
-"~40 core, ~16 headless-scene, ~8 visual" before anything measured them, and the
-version after that restated a per-milestone split that was already stale by the time
-it was committed. Read the gate's output.
+source that drifts. It did, twice: an earlier version of this section guessed
+"~40 core, ~16 headless-scene, ~8 visual" before anything measured them; the version
+after that restated a per-milestone split that was already stale when committed; and
+the version after *that* left the totals in the tree above, where they went stale
+again. Read the gate's output.
 
 **A milestone cannot be called complete while it owns a deferred scenario.** That is
 what the per-milestone count is for.
@@ -347,6 +384,8 @@ lap test, on-screen developer instrumentation, or the dead free-look hint.
 Two documented behaviours the port **must** reproduce, because the spec keeps
 them: the speedometer topping out at 115 rather than 120, and a kart that can be
 pinned between two near-touching props with Reset Kart as the specified escape.
+The second of those is reproduced and is **not** permanent — see ambiguity A12,
+which raises the document's own wording against the document.
 
 ### The ambiguity register 📋 M8
 
@@ -368,6 +407,7 @@ in `AMBIGUITIES.md` is mirrored here; that file carries the reasoning:
 | A9 | Light intensities are in the reference build's units, not Godot's — at face value Compatibility saturates 59.75% of the frame | Resolved: the ratios are normative, the scale is not. One shared factor `lightScale` = 0.2809, chosen as the value minimising the ground's deviation from its specified albedo; tonemapping stays linear |
 | A10 | The camera eases **per tick** but the frame ordering updates it **per frame**; identical at 60 fps, different at every other rate | Resolved in M2: per tick. The ordering scenario's sequence is normative, its cardinality incidental. Time constant measured 0.200 s, settling 0.450 s, both predicted before measuring |
 | A11 | The design document requires that no edge of the ground be visible, and specifies a ±100 wu plane, a ±90 drivable extent and fog from 50 wu — which make the edge visible from the boundary | ❓ settled in M6 |
+| A12 | The pin between two props at the minimum separation is stated as permanent — "it oscillates in place … and cannot drive out" — but the specified radial push makes the centred state an unstable equilibrium, so the kart is ejected in 15–20 ticks at fourteen of sixteen headings and ~125 at the other two | ❓ a GDD proposal, `att` 20 |
 
 ---
 
@@ -762,6 +802,7 @@ Added by this project, in order of value:
 | Suite registration | `godot/tools/check_suites_registered.py` — every `tests/*.gd` is actually run by `tools/test.sh`. Exists because three suites once were not | ✅ M2 |
 | Exposure (A9) | `godot/tools/measure_exposure.py` and `find_light_scale.py` — windowed | 📐 M2 |
 | Contact shadow | `godot/tools/measure_contact_shadow.py` — windowed; depth gated, coverage reported | 📐 M2 |
+| Staged collision capture | `godot/tools/collision_capture.sh` + `collision_capture.gd` — windowed; stages a prop arrangement, drives the shipped game into it, and reports the resolved prop and the camera's shudder measured against an unjolted twin | 📐 M3 |
 
 **Reference sections by number *and* title** — `CONSTRAINTS §8 Performance and
 size budgets`, never a bare `§8`. A bare number survives a renumber while

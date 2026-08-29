@@ -90,6 +90,7 @@ godot --headless -s tests/input_test.gd
 godot --headless -s tests/camera_test.gd
 godot --headless -s tests/scatter_test.gd
 godot --headless -s tests/prop_field_test.gd
+godot --headless -s tests/collision_test.gd
 
 
 # Lint and format. Fast, and they keep the diff about behaviour.

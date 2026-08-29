@@ -21,6 +21,8 @@ var friction: float = 0.0
 var turn_rate: float = 0.0
 var steer_threshold: float = 0.0
 var bounce_factor: float = 0.0
+var push_distance: float = 0.0
+var hitbox_contraction: float = 0.0
 
 # --- world ---
 var drivable_extent: float = 0.0
@@ -48,6 +50,8 @@ var aim_up: float = 0.0
 var chase_smoothing: float = 0.0
 var fov_base: float = 0.0
 var fov_max: float = 0.0
+var shake_horizontal: float = 0.0
+var shake_vertical: float = 0.0
 
 # --- dial ---
 var speedo_max: float = 0.0
@@ -75,6 +79,8 @@ func apply_table(table: Dictionary) -> void:
 	turn_rate = float(physics.get("turnRate", 0.0))
 	steer_threshold = float(physics.get("steerThreshold", 0.0))
 	bounce_factor = float(physics.get("bounceFactor", 0.0))
+	push_distance = float(physics.get("pushDistance", 0.0))
+	hitbox_contraction = float(physics.get("hitboxContraction", 0.0))
 	drivable_extent = float(world.get("drivableExtent", 0.0))
 	scatter_extent = float(world.get("scatterExtent", 0.0))
 	start_clearance = float(world.get("startClearance", 0.0))
@@ -91,6 +97,8 @@ func apply_table(table: Dictionary) -> void:
 	chase_smoothing = float(hud.get("chaseSmoothing", 0.0))
 	fov_base = float(hud.get("fovBase", 0.0))
 	fov_max = float(hud.get("fovMax", 0.0))
+	shake_horizontal = float(hud.get("shakeHorizontal", 0.0))
+	shake_vertical = float(hud.get("shakeVertical", 0.0))
 	speedo_max = float(hud.get("speedoMax", 0.0))
 	var counts: Dictionary = table.get("prop_counts", {})
 	prop_counts = {}
@@ -136,6 +144,8 @@ func missing_fields() -> PackedStringArray:
 		"turn_rate",
 		"steer_threshold",
 		"bounce_factor",
+		"push_distance",
+		"hitbox_contraction",
 		"drivable_extent",
 		"scatter_extent",
 		"start_clearance",
@@ -151,6 +161,8 @@ func missing_fields() -> PackedStringArray:
 		"chase_smoothing",
 		"fov_base",
 		"fov_max",
+		"shake_horizontal",
+		"shake_vertical",
 		"speedo_max",
 	]:
 		if float(get(field)) == 0.0:

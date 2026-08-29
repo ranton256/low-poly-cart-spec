@@ -33,6 +33,16 @@ const SETTLE_TICKS := 240
 ## lagged, because the kart was barely moving.
 const SPIN_UP_TICKS := 200
 
+## The shake's seed. Any value; the tests below assert reproducibility from it,
+## not the numbers it happens to produce.
+const SHAKE_SEED := 704221
+## How far the shudder must have decayed for "brief". One time constant is 0.2 s,
+## so after three the offset is 5% of its peak — that is the document's "brief
+## shudder rather than a permanent camera offset", stated as a number before it
+## was measured.
+const SHUDDER_TICKS := 36
+const SHUDDER_RESIDUAL := 0.05
+
 
 func _check(cond: bool, msg: String) -> void:
 	RVTest.check(cond, msg)
@@ -47,7 +57,12 @@ func _init() -> void:
 	_test_it_settles_within_the_stated_time()
 	_test_the_field_of_view_at_the_documents_anchors()
 	_test_grouping_ticks_differently_changes_nothing()
-	RVTest.finish(self, "camera: trails, lags, settles, widens with speed", "camera check(s)")
+	_test_a_jolt_is_a_shudder_not_a_permanent_offset()
+	_test_a_jolt_touches_nothing_but_the_camera_position()
+	_test_the_shudder_is_within_bounds_and_reproducible()
+	RVTest.finish(
+		self, "camera: trails, lags, settles, widens with speed, absorbs a jolt", "camera check(s)"
+	)
 
 
 func _sim() -> RefCounted:
@@ -311,3 +326,187 @@ func _drive(batches: Array) -> String:
 			if ticks >= 900:
 				break
 	return "%.9f|%.9f|%.9f|%.6f" % [c.pos_x, c.pos_y, c.pos_z, c.fov]
+
+
+func _settled_camera(sim: RefCounted) -> RefCounted:
+	var c := _camera(sim)
+	c.seed_shake(SHAKE_SEED)
+	# Settle it so the jolt is measured against a stationary camera rather than
+	# against one still flying to its first target.
+	for _i in range(SETTLE_TICKS):
+		c.step(sim.pos_x, sim.pos_z, sim.yaw, 0.0)
+	return c
+
+
+# @covers Chase Camera / Absorbing a collision jolt
+## The jolt is absorbed by the EASING THAT ALREADY EXISTS, at the rate already
+## measured — not by a second decay with its own time constant.
+##
+## Asserted two ways: the offset is gone after three time constants, and the rate
+## it decays at is the same chaseSmoothing the turn lag uses. A separate decay
+## added "to make the shake feel better" fails the second one.
+func _test_a_jolt_is_a_shudder_not_a_permanent_offset() -> void:
+	var s := _sim()
+	var c := _settled_camera(s)
+	var rest_x: float = c.pos_x
+	var rest_y: float = c.pos_y
+	var rest_z: float = c.pos_z
+
+	c.jolt()
+	var peak: float = _offset(c, rest_x, rest_y, rest_z)
+	_check(peak > 0.0, "the jolt actually displaces the camera (%.4f wu)" % peak)
+
+	# One tick of easing, and the gap must have closed by exactly chaseSmoothing.
+	var before: float = _offset(c, rest_x, rest_y, rest_z)
+	c.step(s.pos_x, s.pos_z, s.yaw, 0.0)
+	var after: float = _offset(c, rest_x, rest_y, rest_z)
+	RVTest.close(
+		after / before,
+		1.0 - s.tuning.chase_smoothing,
+		1e-6,
+		"the shudder decays at the camera's OWN easing rate, with no separate decay"
+	)
+
+	for _i in range(SHUDDER_TICKS - 1):
+		c.step(s.pos_x, s.pos_z, s.yaw, 0.0)
+	var residual: float = _offset(c, rest_x, rest_y, rest_z) / peak
+	_check(
+		residual < SHUDDER_RESIDUAL,
+		(
+			"after %d ticks (%.2f s) the shudder is %.1f%% of its peak — brief, not permanent"
+			% [SHUDDER_TICKS, float(SHUDDER_TICKS) / 60.0, residual * 100.0]
+		)
+	)
+
+
+func _offset(c: RefCounted, x: float, y: float, z: float) -> float:
+	var dx: float = c.pos_x - x
+	var dy: float = c.pos_y - y
+	var dz: float = c.pos_z - z
+	return sqrt(dx * dx + dy * dy + dz * dz)
+
+
+## A jolt is cosmetic.
+## (Claimed by the shudder test above — one claim per scenario.)
+##
+## It moves the camera's POSITION and nothing else: not the
+## kart, and not the aim — the horizon stays level through the shudder, which is
+## what separates it from the whole world lurching.
+func _test_a_jolt_touches_nothing_but_the_camera_position() -> void:
+	var s := _sim()
+	s.input.forward = true
+	for _i in range(SPIN_UP_TICKS):
+		s.step()
+	var c := _camera(s)
+	c.seed_shake(SHAKE_SEED)
+	c.step(s.pos_x, s.pos_z, s.yaw, s.speed_ratio())
+
+	var kart_x: float = s.pos_x
+	var kart_z: float = s.pos_z
+	var kart_yaw: float = s.yaw
+	var kart_v: float = s.velocity
+	var aim_x: float = c.aim_x
+	var aim_y: float = c.aim_y
+	var aim_z: float = c.aim_z
+	var fov: float = c.fov
+
+	c.jolt()
+
+	_check(s.pos_x == kart_x and s.pos_z == kart_z, "a jolt leaves the kart's position unaffected")
+	_check(s.yaw == kart_yaw, "and its heading")
+	_check(s.velocity == kart_v, "and its velocity")
+	_check(
+		c.aim_x == aim_x and c.aim_y == aim_y and c.aim_z == aim_z,
+		"and the camera's aim point, so the horizon stays level"
+	)
+	_check(c.fov == fov, "and the field of view")
+
+
+## Within the stated bounds on every axis, and reproducible from a seed.
+## (Claimed by the shudder test above — one claim per scenario.)
+##
+## Swept over many jolts rather than one: a single draw lands inside any bound
+## wide enough, and a shake that used shakeHorizontal for the vertical axis too
+## would pass a one-sample check most of the time. The sweep also asserts the
+## offsets are not all identical, which is what a stream that never advances would
+## produce.
+func _test_the_shudder_is_within_bounds_and_reproducible() -> void:
+	var s := _sim()
+	var first: Array = _jolt_offsets(s, 200)
+	var second: Array = _jolt_offsets(s, 200)
+
+	var largest_horizontal := 0.0
+	var largest_vertical := 0.0
+	var distinct := {}
+	for i in range(first.size()):
+		var o: Array = first[i]
+		var ox: float = o[0]
+		var oy: float = o[1]
+		var oz: float = o[2]
+		largest_horizontal = maxf(largest_horizontal, maxf(absf(ox), absf(oz)))
+		largest_vertical = maxf(largest_vertical, absf(oy))
+		distinct["%.17f|%.17f|%.17f" % [ox, oy, oz]] = true
+		_check(
+			absf(ox) <= s.tuning.shake_horizontal and absf(oz) <= s.tuning.shake_horizontal,
+			"jolt %d is within +/-shakeHorizontal on X and Z (%.4f, %.4f)" % [i, ox, oz]
+		)
+		_check(
+			absf(oy) <= s.tuning.shake_vertical,
+			"jolt %d is within +/-shakeVertical (%.4f)" % [i, oy]
+		)
+		var twin: Array = second[i]
+		_check(
+			ox == twin[0] and oy == twin[1] and oz == twin[2],
+			"jolt %d reproduces exactly from the same seed" % i
+		)
+
+	_check(distinct.size() > first.size() / 2, "the jolts differ from one another")
+	# The bounds are USED, not merely respected: a shake of half the specified size
+	# would satisfy every check above.
+	_check(
+		largest_horizontal > s.tuning.shake_horizontal * 0.9,
+		(
+			"the horizontal shake reaches its stated limit (%.4f of %.4f)"
+			% [largest_horizontal, s.tuning.shake_horizontal]
+		)
+	)
+	_check(
+		largest_vertical > s.tuning.shake_vertical * 0.9,
+		(
+			"the vertical shake reaches its stated limit (%.4f of %.4f)"
+			% [largest_vertical, s.tuning.shake_vertical]
+		)
+	)
+	# And the two axes are not the same number: a vertical drawn from
+	# shakeHorizontal would exceed shakeVertical here.
+	_check(
+		largest_vertical < s.tuning.shake_horizontal * 0.9,
+		"the vertical limit is shakeVertical, not shakeHorizontal"
+	)
+
+
+## `count` jolt offsets from a freshly seeded camera, each measured against the
+## camera's resting position so the easing between them cannot contaminate them.
+##
+## Returned as arrays of three floats, NOT as Vector3. Vector3 is 32-bit real_t in
+## a standard build and these are compared against 64-bit tuning limits: 0.15
+## stored as float32 is 0.150000005960…, so a draw within about 1.5e-9 of the limit
+## rounds UP and fails a bound it actually respects, while an overshoot smaller
+## than about 6e-9 disappears. Neither has happened; neither should be able to.
+## The camera's own state is float64 and there is no reason to narrow it on the way
+## into an assertion.
+func _jolt_offsets(sim: RefCounted, count: int) -> Array:
+	var c := _camera(sim)
+	c.seed_shake(SHAKE_SEED)
+	c.step(sim.pos_x, sim.pos_z, sim.yaw, 0.0)
+	var rest_x: float = c.pos_x
+	var rest_y: float = c.pos_y
+	var rest_z: float = c.pos_z
+	var offsets: Array = []
+	for _i in range(count):
+		c.pos_x = rest_x
+		c.pos_y = rest_y
+		c.pos_z = rest_z
+		c.jolt()
+		offsets.append([c.pos_x - rest_x, c.pos_y - rest_y, c.pos_z - rest_z])
+	return offsets

@@ -255,7 +255,6 @@ camera is stepped again per frame and when it is not stepped at all.
 *Recorded during M2 exploration. Resolved in `add-chase-camera` (M2); see
 `docs/progress/2026-08-29-m2-camera.md`.*
 
----
 
 ## Open
 
@@ -265,6 +264,7 @@ camera is stepped again per frame and when it is not stepped at all.
 | A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
 | A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
 | A11 | The ground is specified as a finite 200 wu plane, the drivable extent as ±90, and fog as beginning at 50 wu. From the boundary the ground's edge is 10 wu away — far inside fog's start — so it renders as a hard line, while acceptance item 7 asks for grass beyond the boundary and no drawn edge | M6 |
+| A12 | The design document states that a kart pinned between two props at the minimum separation "cannot drive out", but its own collision response makes that state an unstable equilibrium: the kart is ejected in a fraction of a second at fourteen of sixteen headings, and in about two seconds at the other two | A GDD proposal — `att` 20 |
 
 ### A11 (open, detail) — A finite ground cannot have an invisible edge
 
@@ -307,6 +307,75 @@ pitch and field of view do not exist yet.
 camera change expected to sharpen the question first.
 
 *Recorded during `add-world-presentation-layer` (M2). Open.*
+
+### A12 (open, detail) — The pinned kart cannot stay pinned
+
+**The specification says**, under *Not becoming trapped inside an obstacle*, that
+two cottages at the minimum 3 wu separation leave a 0.09 wu gap against a
+contracted kart hitbox of 1.80 × 1.96 wu, and that a kart reaching such a pair
+"oscillates in place with its velocity zeroed every tick **and cannot drive
+out**". Reset Kart is named as the escape, and a port is told explicitly that the
+remedy is the placement rule and **not** the collision response.
+
+**It does not say** what holds the kart there. The response it specifies is a push
+along the horizontal unit vector from the prop's volume centre to the kart's
+position. That is *radial*, so whatever transverse offset the kart has is
+multiplied by roughly `pushDistance / separation` on every push. The centred state
+is an unstable equilibrium, not a trap — and the document's sentence describes a
+state its own rule cannot maintain.
+
+**What actually happens.** `godot/tests/collision_test.gd` drives the pair at the
+same sixteen headings the rest of that suite uses:
+
+| yaw | 0° | 22.5° | 45° | 67.5° | **90°** | 112.5° | 135° | 157.5° |
+|---|---|---|---|---|---|---|---|---|
+| ticks held | 20 | 15 | 17 | 16 | **125** | 16 | 17 | 15 |
+
+| yaw | 180° | 202.5° | 225° | 247.5° | **270°** | 292.5° | 315° | 337.5° |
+|---|---|---|---|---|---|---|---|---|
+| ticks held | 20 | 15 | 16 | 16 | **127** | 16 | 16 | 15 |
+
+The pin is **strongly heading-dependent**. It lasts about two seconds only at the
+two headings that drive along the line joining the props — where the kart is
+driving into a cottage — and about a quarter of a second at the other fourteen.
+`cos(π/2)` is `6.1e-17` rather than zero, so the transverse offset exists from the
+first tick even at the longest-lived heading, and grows until the kart is squeezed
+out sideways.
+
+**Those numbers are the test's synthetic cubes**, sized `minPropSeparation − 0.09`
+so the gap is exactly the document's. Against the **shipped cottage models**,
+`tools/collision_capture.sh pin` shows the kart still held at 60 ticks
+(`v = 0.00000`) and free by 90 (`v = 0.107`) — roughly **1.2 s**, not 2.1.
+
+**This port has NOT decided anything here, and that is deliberate.** What it has
+done is reproduce the specified response exactly and measure the consequence. Two
+things are true and both are asserted:
+
+- driving along the pair's axis never carries the kart past it — the direction the
+  document's scenario is about, and the guarantee that survives;
+- the pin ends, at every heading, and it ends transversely.
+
+`collision_test.gd` requires both, so a change that lets the kart drive through the
+pair fails, and so does one that quietly makes the pin permanent.
+
+**Why the response was not changed.** The obvious "fix" — damping the transverse
+component of the push — is a second, unspecified rule in the most prescriptive
+feature in the document, and it fails the sixteen-heading push-direction sweep,
+which is the right outcome. The document's own remedy is the placement rule. So
+the port matches the response and the document's *consequence* is what is wrong.
+
+**This is a defect in the design document, not a gap in it**, which is why it is
+filed Open rather than resolved in a delta spec. `CONSTRAINTS.md` §12 routes
+"game behaviour as designed" to the GDD by proposal; `att` 20 raises that proposal
+against the sentence "cannot drive out". Until it is settled, the delta spec in
+`add-aabb-collision-response` states the two surviving guarantees and does not
+restate the one that fails — and it does not relax the rule the document is
+emphatic about, which is that no more than one collision is resolved per tick.
+
+**Owner: a GDD proposal (`att` 20).** M7's Reset Kart (`att` 10) is unaffected
+either way: a kart held for a second with its engine dead still wants a reset.
+
+*Recorded in `add-aabb-collision-response` (M3). Open.*
 
 An open entry is not a licence to decide quietly later. Whichever change settles
 one moves it above the line, with its reasoning, before it is archived.

@@ -72,6 +72,9 @@ var requested: Dictionary = {}
 var achieved: Dictionary = {}
 var attempts: Dictionary = {}
 
+## This generator's own randomness — see generate().
+var _stream: RefCounted = Rng.new()
+
 
 ## Generate a field.
 ##
@@ -80,11 +83,16 @@ var attempts: Dictionary = {}
 ## Passing them in rather than loading models keeps this module free of the
 ## engine — the caller has already imported what it has.
 func generate(seed_value: int, authored_boxes: Dictionary) -> Array:
-	# SEED AT THE START OF EVERY GENERATION (design D2). rng.gd is a static,
-	# process-global stream; without this a field would depend on how much
-	# unrelated code had drawn from it first, and the spec requires that
-	# scattering twice from one seed agree even if something ran in between.
-	Rng.seed_rng(seed_value)
+	# ITS OWN STREAM, seeded at the start of every generation.
+	#
+	# This used to seed the process-global stream, which was fine while scatter was
+	# the only gameplay consumer of randomness. add-aabb-collision-response adds the
+	# second — the camera shake — and with one shared stream the shake sequence
+	# would depend on how many props were scattered and would reset whenever the
+	# player regenerated the world. An instance keeps the field a function of its
+	# seed and nothing else, which is what the spec requires: scattering twice from
+	# one seed agrees even if something ran in between.
+	_stream.seed_stream(seed_value)
 
 	requested = {}
 	achieved = {}
@@ -116,14 +124,14 @@ func _place_asset(asset: String, count: int, authored: AABB, placements: Array) 
 	var tried: int = 0
 	while placed < count and tried < budget:
 		tried += 1
-		var x: float = Rng.float_between(-extent, extent)
-		var z: float = Rng.float_between(-extent, extent)
+		var x: float = _stream.range_between(-extent, extent)
+		var z: float = _stream.range_between(-extent, extent)
 		if not _accepts(x, z, clearance, separation, placements):
 			continue
 
 		# Variation, then RE-GROUND. The order matters and normalise.gd owns it:
 		# the offset is recomputed from the scaled box, not carried over.
-		var factor: float = Rng.float_between(
+		var factor: float = _stream.range_between(
 			tuning.scale_variation_min, tuning.scale_variation_max
 		)
 		var varied: RefCounted = Normalise.with_variation(normalised, factor)
@@ -132,7 +140,7 @@ func _place_asset(asset: String, count: int, authored: AABB, placements: Array) 
 		placement.asset = asset
 		placement.x = x
 		placement.z = z
-		placement.yaw = Rng.float_between(0.0, TAU)
+		placement.yaw = _stream.range_between(0.0, TAU)
 		placement.scale = varied.scale
 		# The offset that takes the AUTHORED box to the grounded, centred one the
 		# specified path produced: box_final = authored * scale + offset, so
