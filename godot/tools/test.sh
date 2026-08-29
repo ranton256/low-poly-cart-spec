@@ -70,6 +70,10 @@ godot --headless -s tests/determinism_test.gd
 # leave them all green while the game violated the acceptance checklist.
 godot --headless -s tests/tuning_loader_test.gd
 
+# The design document's §3 asset normalisation contract — the arithmetic that
+# decides whether props stand on the ground or in it.
+godot --headless -s tests/normalise_test.gd
+
 # Lint and format. Fast, and they keep the diff about behaviour.
 # Every .gd under scripts/ and tests/, not a fixed list of directories — an
 # earlier version named scripts/core/ explicitly, so a future scripts/view/

@@ -6,7 +6,8 @@ one table row and scenarios refer to it by name. tuning.json is the single
 transcription of those tables, so a drifted, renamed, or missing key silently
 forks the contract — and nothing else in the suite would notice.
 
-Checks, against the four tables under "# Tuning Constants":
+Checks, against the four tables under "# Tuning Constants" AND the per-asset
+target heights in "### 3. Asset normalisation contract":
   1. Every backticked `name` in a leftmost table cell is present.
   2. No key is renamed — anything outside the named set must be declared in
      the unnamed_in_spec group, which exists for table rows the document does
@@ -28,6 +29,35 @@ GDD = ROOT / "low-poly-cart-game-design-document.md"
 TUNING = ROOT / "godot" / "data" / "tuning.json"
 
 DERIVED_MARKERS = ("steadyState", "steady_state", "collisionVelocity")
+ASSET_SECTION = "### 3. Asset normalisation contract"
+# The design document's §1 inventory and §3 table both list seven models.
+EXPECTED_ASSET_COUNT = 7
+
+
+def asset_target_heights(text: str) -> dict:
+    """Per-asset target heights from the design document's section 3 table.
+
+    A FIFTH source of named constants, outside the four Tuning Constants tables.
+    Added when add-asset-normalisation-contract transcribed these values: a gate
+    that silently ignores newly added data is worse than no gate, because it
+    reads as coverage. If this section is ever renamed, the empty result trips
+    the guard in main() rather than passing quietly.
+    """
+    if ASSET_SECTION not in text:
+        return {}
+    # Split on the NEXT heading of any kind, not on the literal "### 4.".
+    # Renaming section 4 used to break the fence, letting this "section" run to
+    # the end of the document, scrape rows out of the Tuning Constants tables,
+    # and silently report a phantom eighth asset — while overriding legitimate
+    # constants' expected values via the update() below.
+    rest = text.split(ASSET_SECTION)[1]
+    section = re.split(r"\n### ", rest)[0]
+    out = {}
+    for line in section.splitlines():
+        match = re.match(r"\|\s*`(\w+)`\s*\|\s*([\d.]+)\s*\|", line)
+        if match:
+            out[match.group(1)] = float(match.group(2))
+    return out
 
 
 def named_constants(text: str) -> list[str]:
@@ -81,7 +111,20 @@ def main() -> int:
         print(f"error: tuning file not found at {TUNING}", file=sys.stderr)
         return 1
 
-    names = named_constants(GDD.read_text())
+    gdd_text = GDD.read_text()
+    names = named_constants(gdd_text)
+    assets = asset_target_heights(gdd_text)
+    if len(assets) != EXPECTED_ASSET_COUNT:
+        print(f"error: expected {EXPECTED_ASSET_COUNT} per-asset target heights "
+              f"under {ASSET_SECTION!r}, found {len(assets)} — the table changed "
+              f"shape and this gate's scope moved with it", file=sys.stderr)
+        return 1
+    if not assets:
+        print(f"error: no per-asset target heights found under "
+              f"{ASSET_SECTION!r} — the table format changed and this gate is "
+              f"no longer checking them", file=sys.stderr)
+        return 1
+    names = names + sorted(assets)
     if not names:
         print("error: no named constants found in the design document — the "
               "table format changed and this checker is now inspecting nothing",
@@ -134,7 +177,8 @@ def main() -> int:
 
     # Values, not just names. CONSTRAINTS §3 Language and style makes tuning.json the only file
     # allowed to hold the numbers, so the numbers are exactly what needs a gate.
-    table = table_values(GDD.read_text())
+    table = table_values(gdd_text)
+    table["values"].update(assets)
     flat = {
         key: val
         for group, values in tuning.items()
@@ -156,7 +200,8 @@ def main() -> int:
             print(f"tuning: {f}", file=sys.stderr)
         return 1
 
-    print(f"tuning: {len(names)} named constants transcribed, "
+    print(f"tuning: {len(names)} named constants transcribed "
+          f"({len(assets)} of them per-asset target heights), "
           f"{len(table['values'])} values checked against the document "
           f"({len(table['unattributable'])} multi-name rows not attributable), "
           f"{len(unnamed)} unnamed table rows, {len(occurrences)} entries each appearing once, no derived values")

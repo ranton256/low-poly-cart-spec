@@ -34,6 +34,7 @@ func _check(cond: bool, msg: String) -> void:
 func _init() -> void:
 	_test_the_real_table_loads_completely()
 	_test_the_real_table_produces_the_acceptance_timings()
+	_test_the_real_table_carries_the_asset_target_heights()
 	_test_a_malformed_table_is_refused()
 	RVTest.finish(self, "tuning loader: real table meets acceptance item 4", "loader check(s)")
 
@@ -112,6 +113,31 @@ func _test_the_real_table_produces_the_acceptance_timings() -> void:
 			% [sc, COAST_BELOW_THRESHOLD_SECONDS, TIMING_TOLERANCE]
 		)
 	)
+
+
+## The §3 target heights reach the simulation through the same loader, so the
+## shipped values are asserted rather than only gated as text.
+func _test_the_real_table_carries_the_asset_target_heights() -> void:
+	var tuning: RefCounted = Loader.load_tuning()
+	if tuning == null:
+		_check(false, "cannot check target heights without the tuning table")
+		return
+	var expected := {
+		"kart": 1.2,
+		"tree": 4.0,
+		"rock": 1.5,
+		"cone": 0.8,
+		"crate": 1.0,
+		"tires": 1.2,
+		"cottage": 3.0
+	}
+	for asset in expected:
+		var got: float = tuning.target_height(asset)
+		_check(
+			absf(got - float(expected[asset])) < 0.000001,
+			"%s target height is %.2f (got %.4f)" % [asset, expected[asset], got]
+		)
+	_check(tuning.target_height("nonexistent") == 0.0, "an unknown asset yields zero, not a guess")
 
 
 ## A missing key must be refused by name, not surface later as a kart that will

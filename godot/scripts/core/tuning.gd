@@ -28,6 +28,11 @@ var drivable_extent: float = 0.0
 # --- dial ---
 var speedo_max: float = 0.0
 
+# --- per-asset target heights, from the design document's §3 table ---
+# A dictionary rather than named fields: the asset set is data, and M3 adds
+# prop counts alongside these. Empty until apply_table() fills it.
+var asset_target_heights: Dictionary = {}
+
 
 ## Populate from the design document's nested tuning table.
 ## A method rather than a static factory: a static one would have to load() its
@@ -48,6 +53,17 @@ func apply_table(table: Dictionary) -> void:
 	bounce_factor = float(physics.get("bounceFactor", 0.0))
 	drivable_extent = float(world.get("drivableExtent", 0.0))
 	speedo_max = float(hud.get("speedoMax", 0.0))
+	var heights: Dictionary = table.get("asset_target_heights", {})
+	asset_target_heights = {}
+	for asset in heights:
+		if not str(asset).begins_with("_"):
+			asset_target_heights[asset] = float(heights[asset])
+
+
+## The target height for an asset, or zero if it is not in the table. Callers
+## pass this to the normalisation rather than compiling a literal.
+func target_height(asset: String) -> float:
+	return float(asset_target_heights.get(asset, 0.0))
 
 
 ## Names any field still at zero. Used by the loader and by tests; a simulation

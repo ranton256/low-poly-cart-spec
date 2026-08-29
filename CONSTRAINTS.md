@@ -427,7 +427,7 @@ The supplied asset set is **39 MB of raw `.glb`** across seven models carrying
 | | Target | Status |
 |---|---|---|
 | Cold start → countdown begins, desktop | ≤ 2 s | 📋 M6 |
-| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 7.2 s warm** (3 runs, 6.94–7.27 s) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
+| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 7.9 s warm** (3 runs, 7.73–8.02 s across two sessions) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
 
 The suite budget is a real constraint, not a nicety: a gate slow enough to skip
 stops being run, and a gate that is not run is not a gate.
@@ -449,8 +449,8 @@ generates, regenerates, or commits a `.glb` file.
 | Assets live at **`assets/` in the repository root**, shared by every port, and are referenced by the GDD's §1 inventory | ✅ committed |
 | `godot/tools/sync_assets.sh` copies the models into `godot/assets/` by content hash, and runs at the front of the standing suite | ✅ |
 | The copied `.glb` files and the textures Godot extracts from them are git-ignored; only `godot/assets/*.glb.import` is committed | ✅ `.gitignore` |
-| The normalisation contract (GDD §3) is implemented in **`scripts/core/`** and unit-tested against synthetic bounding boxes, with no `.glb` present | 📋 M1 |
-| Bounding boxes are **re-measured after scaling**, never reused from before it | 📋 M1 test |
+| The normalisation contract (GDD §3) is implemented in **`scripts/core/`** and unit-tested against synthetic bounding boxes, with no `.glb` present | ✅ `normalise_test.gd` |
+| Bounding boxes are **re-measured after scaling**, never reused from before it | ✅ `normalise_test.gd` — an adversarial box on which the two orderings differ by 3.0 wu, verified by mutation |
 | The model import contract lives in the committed `godot/assets/*.glb.import` presets; `sync_assets.sh` refuses a preset recording a failed import, which Godot never repairs | ✅ |
 | Anisotropic filtering 16×, mipmaps, VRAM compression, and per-asset texture size are set project-wide, not per generated texture file | 📋 M3 (web budget), M6 (filtering) |
 | Every supplied model both casts and receives shadows | 📋 M6 |
