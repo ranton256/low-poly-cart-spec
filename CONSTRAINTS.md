@@ -23,9 +23,6 @@ enforcement status:
 
 ## 1. Repository shape
 
-This repository was created to hold a specification and no code. That property
-is now deliberately relaxed, not lost:
-
 ```
   low-poly-cart-spec/
     low-poly-cart-game-design-document.md   the spec — normative, engine-agnostic
@@ -36,10 +33,10 @@ is now deliberately relaxed, not lost:
       project.godot  scripts/  scenes/  data/  tests/  tools/  docs/
 ```
 
-**The models sit at the repository root, not inside `godot/`.** They are
-referenced by the GDD's own §1 inventory and normalisation contract, so they
-belong to the specification and to every port equally — a second port must not
-have to reach into the first one's directory to find its art.
+The models sit at the repository root because the GDD's §1 inventory references
+them; they belong to every port equally. The port lives in-repo so the spec and
+its implementations share one commit history — the drift between them is the
+thing this repository exists to observe.
 
 | | Status |
 |---|---|
@@ -47,12 +44,6 @@ have to reach into the first one's directory to find its art.
 | The spec is edited only when the *design* changes, never to match what the port happened to do | 📐 |
 | `godot/tools/test.sh` runs the whole standing suite from a clean clone of the **repository** — it reads `../assets/`, `../CONSTRAINTS.md` and `../ROADMAP.md`, and needs `.venv` created first | ✅ verified from a simulated fresh clone |
 | Multiple ports may coexist as sibling directories; none of them is privileged | 📐 |
-
-**Why in-repo rather than a sibling repository.** The interesting question this
-repo exists to ask — how much do two independent implementations of one spec
-agree on, and where was the spec quietly ambiguous — only stays answerable while
-the spec and the port share a commit history. A port in another repository
-drifts from the spec it was built against and nobody sees the diff.
 
 ---
 
@@ -62,45 +53,15 @@ Settled choices. Changing one requires a proposal that names what broke.
 
 | | | Status |
 |---|---|---|
-| **Engine** | Godot **4.6.1**, recorded in `godot/.godot-version` — the single source of truth. `config/features` carries only the `4.6` series, because Godot stores nothing finer there | ✅ `check_engine_version.py` |
-| **Language** | **GDScript only.** No C#, no GDExtension, no native modules | 📐 — no compiled-language or extension file exists; not mechanically gated |
-| **Renderer** | **Compatibility (WebGL 2 / GLES3)**, on every target including desktop | ✅ the pin is gated by `check_settings.py`. The *choice* is evidenced by `spike-compatibility-renderer-shadows` — see `godot/docs/progress/2026-08-28-renderer-spike.md`; no gate checks shadow quality |
+| **Engine** | Godot **4.6.1**, recorded in `godot/.godot-version` — the single source of truth. `config/features` carries only the `4.6` series | ✅ `check_engine_version.py` |
+| **Language** | **GDScript only.** No C#, no GDExtension, no native modules — the web target forces one language, so the one simulation that must produce identical numbers everywhere has one implementation | 📐 |
+| **Renderer** | **Compatibility (WebGL 2 / GLES3)**, on every target — one renderer, one baseline set, one look. Spiked in M0: passes all five shadow criteria at the specified 2048² map, provided `shadow_normal_bias` is lowered from Godot's 2.0 default (A8); light intensities need the A9 scale factor. Evidence: `godot/docs/progress/2026-08-28-renderer-spike.md`. The web target itself is untested until M8's export smoke | ✅ pin gated by `check_settings.py` |
 | **Addons** | **None.** No third-party Godot addons in the shipped project | 📐 |
 | **Physics engine** | **Not used.** No `PhysicsBody3D`, no `Area3D`, no collision shapes, no `move_and_slide` — see §4 *Architectural boundaries* | ✅ `check_boundaries.py`, every text file under `godot/` |
 | **Python environment** | **`.venv` always. Never system Python.** Pinned by `godot/requirements.txt`; `test.sh` refuses to run without it | ✅ all three refusal paths verified |
-| **Task tracking** | [`att`](https://github.com/ranton256/agent-task-tracker) — local-first CLI, backlog in `.att/`, committed | 📐 initialized; nothing gates its use |
-| **Network** | **The game never opens a socket.** No telemetry, no analytics, no crash reporting, no asset streaming from a server | 📐 — no gate exists; no networking API is used anywhere today |
+| **Work tracking** | Two layers: `ROADMAP.md` (milestones + backlog) and a change's `tasks.md` — see §11 *Work tracking*. (`att` was a third layer; retired by `streamline-process`) | 📐 |
+| **Network** | **The game never opens a socket.** No telemetry, no analytics, no crash reporting, no asset streaming | 📐 |
 | **Runtime dependencies** | Nothing beyond the Godot export template and the game's own assets | 📐 |
-
-**GDScript only is forced by the web target.** Godot's C# export to the web is
-not dependable, and a language split between targets would mean the simulation —
-the one part that must produce identical numbers everywhere — has two
-implementations. One language, one simulation, every platform.
-
-**Compatibility renderer everywhere is a look decision, not a web concession.**
-The spec calls shadows "a load-bearing part of the look". Running Forward+ on
-desktop and Compatibility on the web produces two different looks from one
-specification and doubles the visual baseline set in §7 *Testing*. One renderer,
-one set of baselines, one look — at the cost of desktop fidelity we are not
-being asked for. **M0 spiked this, and the answer is yes — with two caveats worth carrying.**
-At the specified 2048² map, Compatibility passes all five criteria: contact shadow
-attached, soft edge, no acne (lit-ground std 0.14), no peter-panning, and shadowed
-ground retaining 49% of open-ground luminance. Evidence and method are committed
-at `godot/docs/progress/2026-08-28-renderer-spike.md`.
-
-The caveats. First, the contact shadow only appears once `shadow_normal_bias` is
-lowered from Godot's default of 2.0 — the design document specifies one bias and
-Godot has two, and the default erases the cue the document calls primary
-(ambiguity A8). Second, at the document's stated light intensities Compatibility
-saturates 66.8% of the spike's probe scene against Forward+'s 0.05%. Both figures
-are re-measured with `measure_exposure.py`, which counts every pixel; the spike's
-own "67% / 0.0%" came from a region measure. The shadow verdict survives that; the
-*exposure* question did not, and was settled by `add-world-presentation-layer`
-(ambiguity A9, now resolved).
-
-**Not tested: the web target itself.** Every capture is desktop Metal-backed
-OpenGL. The platform that motivated this whole decision has never been rendered.
-M8's export smoke tests are where that gets closed.
 
 ---
 
@@ -108,30 +69,18 @@ M8's export smoke tests are where that gets closed.
 
 | | Status |
 |---|---|
-| Static typing on every function signature **and member** | ⚠️ `check_static_typing.py` covers signatures — parameters and return types. **Members are not yet checked.** **Not** `gdlint`, which ships no typing rules at all |
+| Static typing on every function signature **and member** | ⚠️ `check_static_typing.py` covers signatures — parameters and return types. **Members are not yet checked** (backlog). **Not** `gdlint`, which ships no typing rules |
 | Tabs for indentation; Godot / `gdformat` defaults elsewhere | ✅ `gdformat --check` |
 | `snake_case` files and functions, `PascalCase` node and class names | 📐 |
-| Test and tool scripts **`preload` by path**, never rely on `class_name` | 📐 |
+| Test and tool scripts **`preload` by path**, never rely on `class_name` — the class-name cache is written by the *editor*, so an unopened clone fails at parse time under `godot --headless -s` | 📐 |
 | No trailing whitespace; newline at end of file | ✅ pre-commit (staged files) |
-| Every tuning constant is referred to **by the GDD's `name`**, never by its literal value, outside `godot/data/tuning.json` | ✅ `check_tuning_literals.py` for distinctive values in `godot/scripts/`; small integers excluded and reported |
-
-**Why `preload` instead of `class_name`:** global class-name registrations live
-in a cache the *editor* writes. A class added without opening the editor is
-invisible to `godot --headless -s`, so every suite referencing it dies at parse
-time — it works on the machine with a stale cache and fails on a fresh clone.
-
-**Why constants by name.** The GDD's central discipline is that every number
-lives in exactly one table row and scenarios refer to it by name. A literal
-`0.96` in a script silently forks that contract. `godot/data/tuning.json` is the
-single transcription of those tables, and it is the only file allowed to contain
-the numbers.
+| Every tuning constant is referred to **by the GDD's `name`**, never by its literal value, outside `godot/data/tuning.json` — that file is the single transcription of the GDD's constant tables | ✅ `check_tuning_literals.py` for distinctive values in `godot/scripts/`; small integers excluded and reported |
 
 ---
 
 ## 4. Architectural boundaries
 
-The load-bearing structure. These are the constraints most worth automating,
-because violations are cheap to introduce and expensive to unwind.
+The load-bearing structure — cheap to violate, expensive to unwind, so gated.
 
 ```
    ┌──────────────────────────────────────────────────────────────┐
@@ -164,36 +113,30 @@ Input.  Engine.  Time.  OS.  DisplayServer.  RenderingServer.
 randi  randf  randomize  randi_range  randf_range
 ```
 
-`Vector3`, `AABB`, `Transform3D`, and `Basis` are permitted — they are Variant
-math types with no engine dependency — subject to §6 Determinism and the reference frame, "Numeric precision".
+`Vector3`, `AABB`, `Transform3D`, and `Basis` are permitted — Variant math types
+with no engine dependency — subject to §6 *Determinism and the reference frame*,
+"Numeric precision".
 
-This is a grep, which is exactly why it should be a gate rather than a habit,
-and the best time to land it is before `scripts/core/` has any of the game in it.
-
-**Match whole words.** `rng.gd` defines `randf01()`, which contains the banned
-substring `randf` — a naive grep flags the very file this constraint exists to
-mandate. The same trap applies to `randi` inside the comments in `rng.gd` and
-`sim.gd` that exist precisely to say not to use it. Anchor on word boundaries and
-a following `(`, strip comments before matching, and verify the gate by breaking
-it rather than by observing that it is quiet.
+The gate matches **whole words** (anchored, comment-stripped): `rng.gd`'s own
+`randf01()` contains the banned substring `randf`, and a naive grep flags the
+very file the constraint mandates. Verify the gate by breaking it.
 
 ### The physics engine plays no part in this game ✅ `check_boundaries.py` (every text file under `godot/`) and the commit hook (staged)
 
-The GDD's tick order is a scalar recurrence, not a dynamics simulation: no mass,
-no impulse, no restitution, no solver. `CharacterBody3D.move_and_slide()` cannot
-reproduce it and `RigidBody3D` is not close. Specifically:
+The GDD's tick order is a scalar recurrence, not a dynamics simulation.
+`move_and_slide()` cannot reproduce it and `RigidBody3D` is not close.
 
-- **Props are visuals plus an AABB record.** A prop is a `MeshInstance3D` in the
-  view and a `{asset_id, position, yaw, scale, aabb}` row in the simulation's
-  registry. It is never a `StaticBody3D` and never has a `CollisionShape3D`.
+- **Props are visuals plus an AABB record** — a `MeshInstance3D` in the view and
+  a `{asset_id, position, yaw, scale, aabb}` row in the simulation's registry.
+  Never a `StaticBody3D`, never a `CollisionShape3D`.
 - **The kart is a `Node3D` with a mesh.** Not a body of any kind.
 - **Collision is the GDD's own AABB test** — kart volume recomputed from current
-  yaw, contracted by `hitboxContraction` per side, tested against every
-  registered prop, first hit in registration order wins, push out `pushDistance`,
-  velocity to exactly zero.
+  yaw, contracted by `hitboxContraction` per side, first intersecting prop in
+  registration order wins, push out `pushDistance`, velocity to exactly zero.
 - **The boundary is a coordinate clamp**, not a wall, not an `Area3D`.
 
-Banned **anywhere** under `godot/` — every text format that can name a type (`.gd`, `.tscn`, `.tres`, `.escn`, `.godot`, `.cfg`, `.import`); binary scenes are out of a text gate's reach:
+Banned **anywhere** under `godot/` — every text format that can name a type
+(`.gd`, `.tscn`, `.tres`, `.escn`, `.godot`, `.cfg`, `.import`):
 
 ```
 RigidBody3D  StaticBody3D  CharacterBody3D  Area3D  CollisionShape3D
@@ -202,16 +145,18 @@ CollisionObject3D  move_and_slide  move_and_collide  PhysicsServer3D
 
 ### Registration order is observable behaviour 📐
 
-Collision resolves *the first intersecting prop in registration order*. Prop
-array order therefore changes what the game does, and:
+Collision resolves *the first intersecting prop in registration order*, so prop
+array order changes what the game does:
 
-- Scatter must append in a deterministic order for a given seed
+- Scatter must append in a deterministic order for a given seed —
+  `scripts/core/scatter.gd` emits **asset by asset in the GDD's own table
+  order** (`tree`, `rock`, `cone`, `crate`, `tires`, `cottage`), and within an
+  asset in acceptance order; `scripts/world/prop_field.gd` preserves it. The
+  GDD gives a table, not an ordering rule; this is the rule, recorded here
+  because it is a contract *between* changes.
 - **Layout save/load must preserve registration order** — a reloaded track that
-  collides differently from the one that was saved has failed acceptance item 12
-  even if every prop is in the right place
-
-The GDD's round-trip scenario does not state this. It is recorded in the
-ambiguity register (§5 *Conformance to the specification*).
+  collides differently has failed acceptance item 12 even with every prop in
+  the right place. (Ambiguity A3.)
 
 ### Other boundaries 📐
 
@@ -221,84 +166,33 @@ ambiguity register (§5 *Conformance to the specification*).
 - One-shot effects (collision shake, lap banked, best beaten) are **published by
   the simulation as data** and drained by the view — never played from the core
 
----
-
-### Registration order is a contract between two changes 📐
-
-`scripts/core/scatter.gd` emits placements **asset by asset in the design
-document's own table order** — `tree`, `rock`, `cone`, `crate`, `tires`,
-`cottage` — and within an asset in the order candidates were accepted.
-`scripts/world/prop_field.gd` preserves that order in its records.
-
-This is written here rather than only in a change's `design.md` because it is a
-contract *between* changes. The design document specifies that a collision
-resolves against "the first intersecting prop in registration order only", so the
-order one change emits decides what another change collides with. An unstated
-order would make collision outcomes depend on an implementation detail nobody
-wrote down — and they would be wrong reproducibly, which is the hardest kind of
-wrong to notice.
-
-The document gives a table, not an ordering rule. This is the rule.
-
 ### One collision per tick, and the pin it produces 📐
 
 At most **one** collision is resolved per tick — the first intersecting prop in
-registration order — however many props the kart overlaps. That is the design
-document's rule, and it is what the ordering contract above exists to serve.
+registration order — however many props the kart overlaps. Consequence, which
+the GDD states and the port reproduces: two cottages at `minPropSeparation`
+leave a 0.09 wu gap against the 1.80 × 1.96 wu contracted hitbox; a kart
+between them is held with velocity zeroed. **Do not "fix" this by resolving
+more than one collision per tick** — the GDD names placement as the remedy, and
+`godot/tests/collision_test.gd` asserts the pin (the multi-resolve "fix" fails
+it). **Reset Kart is the specified escape** (M7, backlog).
 
-It has a consequence the document states and requires a port to reproduce.
-`minPropSeparation` is measured centre to centre and does not subtract footprints,
-so two cottages at the minimum 3 wu leave a **0.09 wu gap** against a contracted
-kart hitbox of **1.80 × 1.96 wu**. A kart between such a pair overlaps both, only
-the first is resolved, and the push-out drives it into the second. It is held with
-its velocity zeroed and cannot drive out through the gap. **Reset Kart is the
-specified escape** (M7, `att` 10).
-
-**Do not "fix" this by resolving more than one collision per tick.** The document
-names the placement rule — a larger `minPropSeparation` — as the remedy and the
-response explicitly not. `godot/tests/collision_test.gd` asserts the pin, and the
-multi-resolve "fix" fails it.
-
-The pin is a **transient**, which the document does not say and driving it
-revealed: the push is radial from the prop's centre, so the centred state is an
-unstable equilibrium and the kart is squeezed out sideways. How long that takes
-depends strongly on the heading — swept over sixteen, it is **125 ticks** driving
-along the pair's axis and **15–20** across it, and roughly 1.2 s against the
-shipped cottage models rather than the test's cubes. What survives is that the
-kart is stopped dead on every tick of contact and is never carried past the pair.
-
-That makes the document's "cannot drive out" a statement its own response cannot
-produce, which is a **defect in the design document rather than a gap in it** —
-so it is raised against the document by proposal (`att` 20) and ambiguity **A12**
-stays **open** until that is settled. The measurements are in
-`godot/docs/progress/2026-08-29-m3-collision.md`.
+Driving it revealed the pin is a **transient** — the radial push makes the
+centred state an unstable equilibrium, ejection in 15–125 ticks depending on
+heading — which contradicts the GDD's "cannot drive out". That is a defect in
+the design document, raised by GDD proposal: ambiguity **A12**, open.
+Measurements: `godot/docs/progress/2026-08-29-m3-collision.md`.
 
 ### `scripts/core/` holds one piece of cosmetic state, deliberately 📐
 
-The chase camera lives in `scripts/core/chase_camera.gd`, and it is not gameplay.
-That widens what this directory means, so it is recorded here rather than left to
-be inferred from a change's `design.md`.
-
-The rule this directory enforces is **fixed-step and engine-free**, not
-**gameplay only**. The camera qualifies on both: it is a per-tick recurrence with
-no engine types, constructible and steppable from a test with no scene loaded. It
-is here because the design document states its behaviour as numbers — a time
-constant, a settling time, a field-of-view curve — and because **this is the only
-directory the boundary gate polices**. Any `RefCounted` module is constructible and
-steppable headless wherever it sits; what `scripts/core/` adds is enforcement, so
-nothing here can quietly acquire a `Node`, read a file, or start easing per frame.
-An earlier version of this paragraph said instead that this was the only place a
-per-tick recurrence could be driven without a renderer. That is false, and the
-change's own `design.md` D1 had already rejected it. Acceptance item 8 is a
-measurement because the camera is a pure recurrence; it is *here* because this is
-where the rule is enforced.
-
-**The test of whether this was right is what follows it in.** Nothing else
-cosmetic should. The HUD, the minimap and the collision shake are all per-frame or
-per-event presentation and belong to the view; if one of them asks for this
-directory, the answer is no and the camera stops being a precedent.
-
-Decided in `add-chase-camera` design D1.
+The chase camera lives in `scripts/core/chase_camera.gd`. The rule this
+directory enforces is **fixed-step and engine-free**, not **gameplay only** —
+the camera is a per-tick recurrence with no engine types, and this is the only
+directory the boundary gate polices, which is why it is here. Nothing else
+cosmetic follows: the HUD, minimap, and collision shake are per-frame
+presentation and belong to the view. If one of them asks for this directory,
+the answer is no and the camera stops being a precedent. (Decided in
+`add-chase-camera` design D1.)
 
 ## 5. Conformance to the specification
 
@@ -310,16 +204,8 @@ call.
 
 | | Status |
 |---|---|
-| **G1** — Every `### Scenario:` in the GDD is claimed exactly once: by a named test, by the visual register with a stated reason, or by a deferral naming the milestone that owns it | ✅ `check_spec_coverage.py` |
+| **G1** — Every `### Scenario:` in the GDD is claimed exactly once: by a named test (`# @covers`), by the visual register with a stated reason, or by a deferral naming the milestone that owns it | ✅ `check_spec_coverage.py` |
 | **G2** — Each of the 14 Acceptance Checklist items is one named conformance test carrying its stated tolerance as a literal | 📋 M8 |
-
-The GDD has **14 features and 64 scenarios** — 62 `### Scenario:` headings and 2
-`### Scenario Outline:`, which the gate treats alike. G1 extracts every heading and
-requires each to be claimed **exactly once**: by a `# @covers` declaration beside a
-test, or by an entry in `godot/data/scenario_register.json`. It fails for the reason
-line coverage never does — a specified behaviour that nobody verified — and it fails
-equally on a scenario claimed twice, or a claim on a scenario the document no longer
-contains.
 
 ```
    every scenario in the design document — the gate counts them on every run
@@ -330,93 +216,62 @@ contains.
    └── deferred, each naming the milestone that owns it
 ```
 
-The tree gives the shape and no numbers, deliberately, and an earlier version that
-carried them proves the point: it read "13 verified, 5 visual" against a gate
-reporting 33 and 4, and the "check every governing document for drift" sweep of the
-change that moved the numbers did not catch it.
+**The exact counts are deliberately not written here** — the gate prints them
+per milestone on every run, and a copy in this document went stale three times
+before this rule was adopted. Read the gate's output.
 
-**The exact counts are deliberately not written here.** `check_spec_coverage.py`
-prints them, per milestone, on every run — and a copy in this document is a second
-source that drifts. It did, twice: an earlier version of this section guessed
-"~40 core, ~16 headless-scene, ~8 visual" before anything measured them; the version
-after that restated a per-milestone split that was already stale when committed; and
-the version after *that* left the totals in the tree above, where they went stale
-again. Read the gate's output.
+**A milestone cannot be called complete while it owns a deferred scenario.**
 
-**A milestone cannot be called complete while it owns a deferred scenario.** That is
-what the per-milestone count is for.
-
-**What G1 cannot do.** Three things, and they are review's:
-
-1. It cannot tell whether a verified claim's test really tests that scenario. Two
-   claims were found overstating during this change's own review — a test asserting
-   the turn rate was *constant* while claiming a scenario that also fixes its
-   magnitude, and one asserting a speed stayed below a clamp when arithmetic
-   guaranteed that whether the clamp existed or not.
-2. It cannot tell whether a deferred scenario belongs to the milestone named. Four
-   were parked wrongly in the same review.
-3. **It counts a claim that never runs.** A `# @covers` line reads as coverage
-   wherever it sits: on a function `_init()` no longer calls, in a file `test.sh`
-   does not run, or in a helper with no test body at all.
-
-It raises the floor from "nobody knows" to "every scenario has a named owner and a
-named status" — no further.
-
-Each of the 5 visual scenarios carries a written reason it cannot be checked
-headlessly, and either the capture that covers it or the milestone that will produce
-one — today all five name a milestone, because the captures do not exist yet. "Not
-unit-testable" is a claim that must be written down, not an omission.
+**What G1 cannot do** — three things, and they are review's: it cannot tell
+whether a claim's test really tests that scenario; it cannot tell whether a
+deferral names the right milestone; and it counts a claim that never runs (a
+`# @covers` line in a function nothing calls). It raises the floor from "nobody
+knows" to "every scenario has a named owner and status" — no further.
 
 ### Tolerances are normative
 
 The GDD says so outright: *"where a criterion gives a tolerance, that tolerance
 is normative — 'approximately' is not a defence."* Conformance tests assert the
-stated bound, not a comfortable one. Widening a tolerance is a spec change.
+stated bound. Widening a tolerance is a spec change.
 
 ### Known Deviations are not licence
 
-The GDD lists eleven places where the reference build departs from the spec. The
-port follows **the specification**, not the reference. In particular the port
-must *not* reproduce: frame-rate dependence, the offset minimap heading arrow,
-compounding layout scale, the extra one-second delay after GO!, the undirected
-lap test, on-screen developer instrumentation, or the dead free-look hint.
-
-Two documented behaviours the port **must** reproduce, because the spec keeps
-them: the speedometer topping out at 115 rather than 120, and a kart that can be
-pinned between two near-touching props with Reset Kart as the specified escape.
-The second of those is reproduced and is **not** permanent — see ambiguity A12,
-which raises the document's own wording against the document.
+The GDD lists eleven places the reference build departs from the spec. The port
+follows **the specification**: it must *not* reproduce frame-rate dependence,
+the offset minimap arrow, compounding layout scale, the post-GO! delay, the
+undirected lap test, on-screen instrumentation, or the dead free-look hint. It
+**must** reproduce the two deviations the spec keeps: the speedometer topping
+out at 115, and the two-prop pin (see §4 and ambiguity A12).
 
 ### The ambiguity register 📋 M8
 
-`godot/docs/AMBIGUITIES.md` records every place the spec did not decide something
-the port had to. This is a **deliverable**, not a complaint file — it is the
-output the repository's README says the exercise exists to produce. Every entry
-in `AMBIGUITIES.md` is mirrored here; that file carries the reasoning:
+`godot/docs/AMBIGUITIES.md` records every place the spec did not decide
+something the port had to. It is a **deliverable** — the output the README says
+this exercise exists to produce. Every entry is mirrored here; that file
+carries the reasoning:
 
 | # | Ambiguity | Port's decision |
 |---|---|---|
-| A1 | HUD sizes are in px (200×200 minimap, 160×90 speedo, ~120 px countdown) with no design resolution named | ❓ settled in M5, the milestone that builds the HUD |
-| A2 | "A layout file … delivered to the player" — mechanism unspecified, and it differs between desktop and web | ❓ settled in M7 |
+| A1 | HUD sizes are in px with no design resolution named | ❓ settled in M5 |
+| A2 | Layout file delivery mechanism unspecified; differs desktop/web | ❓ settled in M7 |
 | A3 | Prop registration order after a layout reload — unstated, but it changes collision outcomes | ❓ settled in M7 |
-| A4 | The countdown must advance while "the physics update is skipped entirely" outside RACING | Resolved: `Sim.step()` runs every tick in every state; the kart pipeline is gated on RACING |
-| A5 | Whether the lap gate and minimap read the stepped position or the interpolated render position | Resolved: the stepped position. The view may lag it by up to one tick |
-| A6 | The kart's "+90° yaw correction" is stated in the reference build's frame, not Godot's | Resolved in M2: axis derived from the imported bounds (local X, as §3 says); sign from a committed capture, the mesh's vertex centroid, and agreement with §4's figure — because bounds are symmetric and a 16-heading test passes on a 180° error. Derived as +90°, never copied |
+| A4 | The countdown must advance while "the physics update is skipped entirely" | Resolved: `Sim.step()` runs every tick in every state; the kart pipeline is gated on RACING |
+| A5 | Whether the lap gate and minimap read the stepped or interpolated position | Resolved: the stepped position; the view may lag it by up to one tick |
+| A6 | The kart's "+90° yaw correction" is stated in the reference build's frame | Resolved in M2: derived from the imported bounds and a committed capture, never copied |
 | A7 | The sun's orthographic shadow volume has no direct Godot equivalent | Resolved in `spike-compatibility-renderer-shadows` |
-| A8 | Godot has two shadow bias parameters; the design document specifies one | Resolved in `spike-compatibility-renderer-shadows` |
-| A9 | Light intensities are in the reference build's units, not Godot's — at face value Compatibility saturates 59.75% of the frame | Resolved: the ratios are normative, the scale is not. One shared factor `lightScale` = 0.2809, chosen as the value minimising the ground's deviation from its specified albedo; tonemapping stays linear |
-| A10 | The camera eases **per tick** but the frame ordering updates it **per frame**; identical at 60 fps, different at every other rate | Resolved in M2: per tick. The ordering scenario's sequence is normative, its cardinality incidental. Time constant measured 0.200 s, settling 0.450 s, both predicted before measuring |
-| A11 | The design document requires that no edge of the ground be visible, and specifies a ±100 wu plane, a ±90 drivable extent and fog from 50 wu — which make the edge visible from the boundary | ❓ settled in M6 |
-| A12 | The pin between two props at the minimum separation is stated as permanent — "it oscillates in place … and cannot drive out" — but the specified radial push makes the centred state an unstable equilibrium, so the kart is ejected in 15–20 ticks at fourteen of sixteen headings and ~125 at the other two | ❓ a GDD proposal, `att` 20 |
+| A8 | Godot has two shadow bias parameters; the GDD specifies one | Resolved in `spike-compatibility-renderer-shadows` |
+| A9 | Light intensities are in the reference build's units | Resolved: the ratios are normative, the scale is not; one shared `lightScale` = 0.2809; tonemapping linear |
+| A10 | The camera eases per tick but frame ordering updates per frame | Resolved in M2: per tick. Time constant measured 0.200 s, settling 0.450 s, both predicted before measuring |
+| A11 | The GDD requires no ground edge be visible, and specifies numbers that make it visible from the boundary | ❓ settled in M6 |
+| A12 | The two-prop pin is stated as permanent, but the specified radial push ejects the kart in 15–125 ticks | ❓ a GDD proposal (backlog) |
 
 ---
 
 ## 6. Determinism and the reference frame
 
-Determinism is not a testing nicety — it is what makes headless suites and
-screenshot baselines possible at all, and here it is also **acceptance item 14**.
-Treat a non-reproducible result as a defect in the code, never as a threshold to
-relax.
+Determinism is what makes headless suites and screenshot baselines possible,
+and it is **acceptance item 14**. A non-reproducible result is a defect, never
+a threshold to relax.
 
 ### The fixed step
 
@@ -424,46 +279,38 @@ relax.
 |---|---|
 | The simulation never reads frame `delta`; `Sim.step()` advances exactly one 1/60 s tick | 📋 M1 |
 | `physics/common/physics_ticks_per_second = 60` | ✅ `check_settings.py` |
-| `physics/common/physics_jitter_fix = 0` — the default 0.5 perturbs the physics delta and drifts the race clock against wall time | ✅ `check_settings.py` |
+| `physics/common/physics_jitter_fix = 0` — the default 0.5 perturbs the physics delta and drifts the race clock | ✅ `check_settings.py` |
 | Elapsed race time is **tick count ÷ 60**, never `Time.get_ticks_msec()`. `countdownStep` is 60 ticks | 📋 M1 |
 | The view interpolates between the last two simulation states using `Engine.get_physics_interpolation_fraction()`, and never advances anything itself | 📐, 📋 M2 |
-| All gameplay randomness comes from `godot/scripts/core/rng.gd` with an explicit seed | ⚠️ `check_boundaries.py` bans the engine RNG from the core; that a seed is actually supplied is not checked |
-| The engine RNG may be used for **view cosmetics only**, precisely so it can never perturb the gameplay stream | 📐 |
+| All gameplay randomness comes from `godot/scripts/core/rng.gd` with an explicit seed | ⚠️ `check_boundaries.py` bans the engine RNG from the core; that a seed is supplied is not checked |
+| The engine RNG may be used for **view cosmetics only** | 📐 |
 | Identical seed and identical inputs produce identical state summaries | 📋 M1 |
 
-**A seed cannot fix a non-deterministic call count.** If the *number* of random
-draws depends on timing, seeding is not enough. Scatter draws candidates in a
-fixed order and consumes exactly one draw per attempt, including rejected ones —
-the attempt budget is part of the stream.
+**A seed cannot fix a non-deterministic call count.** Scatter draws candidates
+in a fixed order and consumes exactly one draw per attempt, including rejected
+ones — the attempt budget is part of the stream.
 
-**Acceptance item 14 splits in two.** The claim "identical at 30, 60 and 144 fps"
-cannot be proven through the engine's frame pacing, because
-`max_physics_steps_per_frame` discards time debt under a hitch and would make the
-test flaky for a reason that is not the simulation's fault. So:
+**Acceptance item 14 splits in two**, because the engine's frame pacing
+(`max_physics_steps_per_frame`) would make a through-the-engine test flaky for
+reasons that are not the simulation's fault:
 
-- **14a, in the standing suite** — the harness calls `Sim.step()` 3600 times
-  directly from three differently-constructed drivers and compares state
-  summaries byte for byte. Deterministic, display-free, milliseconds.
-- **14b, in the windowed gate** — the game is actually run at three refresh
-  rates with a scripted input sequence and the ±0.5 wu / ±0.05 s bounds are
-  asserted.
+- **14a, standing suite** — the harness calls `Sim.step()` 3600 times from
+  three differently-constructed drivers and compares summaries byte for byte.
+- **14b, windowed gate** — the game runs at three refresh rates with scripted
+  input; the ±0.5 wu / ±0.05 s bounds are asserted.
 
 ### Numeric precision
 
 | Rule | Status |
 |---|---|
 | Velocity, yaw, and the elapsed clock are **`float` (64-bit) scalars** in the core | 📐 |
-| `Vector3`/`AABB` (32-bit `real_t`) appear at the view boundary and in the AABB registry, never in the velocity recurrence | 📐 |
-
-The spin-up curve settles at `accel × friction / (1 − friction)` = 0.192 wu/tick
-and acceptance item 4 asserts three timings to ±0.05 s. Accumulating that
-recurrence in `real_t` throws away precision the tolerance cannot spare.
+| `Vector3`/`AABB` (32-bit `real_t`) appear at the view boundary and in the AABB registry, never in the velocity recurrence — item 4's ±0.05 s tolerance cannot spare the precision | 📐 |
 
 ### The reference frame
 
-The GDD's world frame and Godot's world frame are both right-handed and Y-up, so
-**positions map one to one** — the start band sits at Z = +5, the drivable extent
-is ±90, nothing is mirrored or swapped. What differs is the *facing convention*:
+Both frames are right-handed and Y-up, so **positions map one to one** — the
+start band at Z = +5, the drivable extent ±90, nothing mirrored. What differs
+is facing:
 
 ```
    Spec forward          +Z          the kart spawns facing +Z
@@ -476,13 +323,9 @@ is ±90, nothing is mirrored or swapped. What differs is the *facing convention*
 
 | Rule | Status |
 |---|---|
-| The simulation is expressed in the **spec's frame**, verbatim. No conversion layer, no transposed axes | 📐 |
-| Simulation forward is `+basis.z`. Any π offset needed to point a mesh or a camera the Godot way lives in the **view**, in one named constant | 📐 |
-| The kart's authored yaw correction is **derived from the imported bounds and pinned by a test**, never transcribed from the spec's "+90°" — that figure is stated in the reference build's frame | 📋 M2 |
-
-The AABB math confirms the mapping is right: at yaw 0 the kart's world extent is
-2.20 on X and 2.36 on Z, and contracting by `hitboxContraction` per side gives
-1.80 × 1.96 wu — exactly the contracted hitbox the GDD's collision feature cites.
+| The simulation is expressed in the **spec's frame**, verbatim. No conversion layer | 📐 |
+| Simulation forward is `+basis.z`. Any π offset to point a mesh or camera the Godot way lives in the **view**, in one named constant | 📐 |
+| The kart's authored yaw correction is **derived from the imported bounds and pinned by a test**, never transcribed from the spec's "+90°" (stated in the reference build's frame — A6) | 📋 M2 |
 
 ---
 
@@ -492,262 +335,204 @@ The AABB math confirms the mapping is right: at yaw 0 the kart's world extent is
 |---|---|
 | `godot/tools/test.sh` green before any change is considered done | ✅ |
 | The standing suite is **headless and display-free** | ✅ verified with no display available |
-| No test touches the network or a real save file | ⚠️ `LPC_SAVE_FILE` is exported by every harness, but **nothing reads it yet** — there is no save system until M7. The network half has no check at all |
+| No test touches the network or a real save file | ⚠️ `LPC_SAVE_FILE` is exported by every harness but nothing reads it until M7; the network half has no check |
 | Every suite is deterministic; a flaky test is a defect in the test | 📐 |
-| Visual checks live in a separate windowed gate, never in `test.sh` | 📐 by construction |
-| ~~Test names encode the GDD scenario they cover~~ — **withdrawn**. G1 matches an explicit `# @covers` declaration beside the test instead: GDScript identifiers cannot carry the document's punctuation, and coupling a test's name to a heading means rewording the heading breaks the name. See `add-determinism-and-coverage-harness` design D1 | ⊘ withdrawn |
+| Visual checks live in a separate windowed gate, never in `test.sh` — headless Godot has no renderer | 📐 by construction |
+| ~~Test names encode the GDD scenario~~ — **withdrawn** for `# @covers` declarations; see `add-determinism-and-coverage-harness` design D1 | ⊘ |
 
-**Coverage** is G1 and G2 in §5 *Conformance to the specification*, not a
-percentage. GDScript has no mature line-coverage tooling and a percentage would
-be a poor proxy for "every specified behaviour is verified" anyway.
+**Coverage** is G1 and G2 in §5, not a percentage.
 
-**Mutation checking** 📐. A green suite after a harness change is not evidence: a
-`check()` accidentally turned into a no-op leaves everything green and verifies
-nothing. Whenever the harness itself changes, deliberately break what each gate
-guards and confirm the right gate fails with the right message.
+**Mutation checking** 📐. Whenever the harness itself changes, deliberately
+break what each gate guards and confirm the right gate fails with the right
+message — a `check()` turned no-op leaves everything green and verifies nothing.
 
-**Image diffs use three criteria, never a mean alone** 📋 M6. A whole-frame mean
-dilutes local change — a band over 3% of the screen shifted by 40/255 is obvious
-to a reviewer and averages to ~0.4, slipping under a 0.5 threshold. Gate on mean,
-percentage of pixels changed, and percentage changed strongly.
+**Image diffs use three criteria, never a mean alone** 📋 M6 — mean, percentage
+of pixels changed, and percentage changed strongly; a local band obvious to a
+reviewer can average under a whole-frame threshold.
 
-**Thresholds are measured, never guessed** 📐. Capture twice with nothing changed
-and diff; that is the noise floor. Set the limit a small multiple above it and
-record the measurement beside the number. If the floor is not near zero, the
-harness is non-deterministic — fix it rather than raising the threshold.
+**Thresholds are measured, never guessed** 📐. Capture twice unchanged, diff;
+that is the noise floor. Set the limit a small multiple above it and record the
+measurement beside the number.
 
 ---
 
 ## 8. Performance and size budgets
 
-**Reference machine.** Apple M3 Ultra, 96 GB RAM, macOS 26.6. Every time-based
-figure below is measured there and re-measured when it changes.
+**Reference machine.** Apple M3 Ultra, 96 GB RAM, macOS 26.6.
 
 ### Hard constraints — must hold on any target
 
 | | Budget | Status |
 |---|---|---|
 | Frame budget while racing | 16.7 ms (60 fps) on the reference machine | 📋 M6 |
-| Simulation step cost | The full 8-step tick over 54 registered props runs well inside one 60 Hz slice at 144 fps, i.e. ≤ 2.3 ms for 2–3 steps | 📋 M6 |
+| Simulation step cost | The full 8-step tick over 54 props inside one 60 Hz slice at 144 fps, i.e. ≤ 2.3 ms for 2–3 steps | 📋 M6 |
 | Input to visible response | One simulation tick. Never gated on a render frame | 📐 |
 
 ### Web target — the binding constraint
 
-The supplied asset set is **39 MB of raw `.glb`** across seven models carrying
-21 textures at 2048². That is an unremarkable desktop load and a hostile web one.
+The supplied assets are **39 MB of raw `.glb`** — unremarkable on desktop,
+hostile on the web.
 
 | | Budget | Status |
 |---|---|---|
 | Total web payload, compressed | ≤ 25 MB | 📋 M6 |
-| Prop textures | Downsampled to **1024²**, which the GDD explicitly permits and calls "visually near-identical at gameplay distances" | 📋 M3 |
-| Kart textures | **2048² retained** — the GDD names the kart as the one asset not to reduce | 📐 |
-| Texture compression | VRAM-compressed on import, not raw | 📋 M3 — `check_settings.py` asserts the presets exist and are well-formed, not their compression mode. Tracked as `att` 5 |
-| Cold load → countdown begins, web, on a warm cache | ≤ 5 s | 📋 M6 |
+| Prop textures | Downsampled to **1024²** (GDD-permitted) | 📋 M3 |
+| Kart textures | **2048² retained** — the one asset the GDD says not to reduce | 📐 |
+| Texture compression | VRAM-compressed on import, not raw | 📋 M3 — `check_settings.py` asserts the presets exist, not their compression mode. Backlog |
+| Cold load → countdown, web, warm cache | ≤ 5 s | 📋 M6 |
 
 ### Design targets — measured on the reference machine
 
 | | Target | Status |
 |---|---|---|
-| Cold start → countdown begins, desktop | ≤ 2 s | 📋 M6 |
-| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 8.4 s warm** (3 runs, 8.42–8.45 s) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
+| Cold start → countdown, desktop | ≤ 2 s | 📋 M6 |
+| `godot/tools/test.sh` wall time | ≤ 60 s. Measured 8.4 s warm, 10.9 s cold; re-measure whenever a check is added | 📐 |
 
-The suite budget is a real constraint, not a nicety: a gate slow enough to skip
-stops being run, and a gate that is not run is not a gate.
-
-> **If any budget is enforced at runtime, prefer a machine-independent bound.**
-> A wall-clock budget makes results differ between machines and destroys
-> reproducibility. Count work done — steps, nodes, iterations — not milliseconds.
+A gate slow enough to skip stops being run, and a gate that is not run is not a
+gate. If a budget is enforced at runtime, prefer a machine-independent bound —
+count work done, not milliseconds.
 
 ---
 
 ## 9. Assets
 
 The seven supplied models are **provided and committed separately by the
-repository owner**. No change proposal, task, or tool in this project copies,
-generates, regenerates, or commits a `.glb` file.
+repository owner**. No change, task, or tool copies, generates, or commits a
+`.glb`.
 
 | | Status |
 |---|---|
-| Assets live at **`assets/` in the repository root**, shared by every port, and are referenced by the GDD's §1 inventory | ✅ committed |
-| `godot/tools/sync_assets.sh` copies the models into `godot/assets/` by content hash, and runs at the front of the standing suite | ✅ |
-| The copied `.glb` files and the textures Godot extracts from them are git-ignored; only `godot/assets/*.glb.import` is committed | ✅ `.gitignore` |
-| The normalisation contract (GDD §3) is implemented in **`scripts/core/`** and unit-tested against synthetic bounding boxes, with no `.glb` present | ✅ `normalise_test.gd` |
-| Bounding boxes are **re-measured after scaling**, never reused from before it | ✅ `normalise_test.gd` — an adversarial box on which the two orderings differ by 3.0 wu, verified by mutation |
-| The model import contract lives in the committed `godot/assets/*.glb.import` presets; `sync_assets.sh` refuses a preset recording a failed import, which Godot never repairs | ✅ |
-| Anisotropic filtering 16×, mipmaps, VRAM compression, and per-asset texture size are set project-wide, not per generated texture file | 📋 M3 (web budget), M6 (filtering) |
+| Assets live at **`assets/`** in the repository root, shared by every port | ✅ committed |
+| `godot/tools/sync_assets.sh` copies the models into `godot/assets/` by content hash, at the front of the standing suite | ✅ |
+| The copied `.glb` files and Godot's extracted textures are git-ignored; only `godot/assets/*.glb.import` is committed | ✅ `.gitignore` |
+| The normalisation contract (GDD §3) is implemented in **`scripts/core/`** and unit-tested against synthetic boxes, with no `.glb` present | ✅ `normalise_test.gd` |
+| Bounding boxes are **re-measured after scaling**, never reused from before it | ✅ `normalise_test.gd`, verified by mutation |
+| `sync_assets.sh` refuses a preset recording a failed import, which Godot never repairs | ✅ |
+| Anisotropic 16×, mipmaps, VRAM compression, per-asset texture size — set project-wide, not per generated file | 📋 M3 (web budget), M6 (filtering) |
 | Every supplied model both casts and receives shadows | 📋 M6 |
-| Materials are physically-based and lit. No unlit or flat substitute | 📐 |
-| No prop is authored in the scene tree; every instance is placed by the simulation's scatter or by a loaded layout | 📐 |
+| Materials are physically-based and lit. No unlit substitute | 📐 |
+| No prop is authored in the scene tree; every instance is placed by scatter or a loaded layout | 📐 |
 
-**Reaching assets outside the project root is a copy, not a symlink.** Godot
-will not import a file above `godot/`, so `godot/tools/sync_assets.sh` copies the
-seven models in and the standing suite runs it first. A symlink at `godot/assets`
-is the usual answer and was rejected: git materialises symlinks on Windows only
-with `core.symlinks=true` *and* Developer Mode, and without both, a checkout
-produces a text file containing a path and the project silently has no art.
-Windows is a shipping target. The script compares content hashes rather than
-timestamps, because a checkout, a rebase, and `touch` all move mtimes without
-changing bytes.
-
-**Only `*.glb.import` is committed.** Godot's glTF importer extracts each model's
-textures as sibling files, and those extractions plus their own `.import` presets
-are derived data. Committing a preset without the image it describes makes a
-fresh clone reference sources that do not exist yet — measured at ~40 load errors
-on first import before this was corrected. Per-texture settings for the web
-payload budget in §8 *Performance and size budgets* are therefore a project-level
-or re-import decision in M3, not twenty-one generated files.
-
-**Import settings are a gate because a re-import silently reverts them.** The
-anisotropy requirement in particular is invisible until someone drives past a
-cone at a grazing angle, which is exactly the situation the visual gate exists
-for and the standing suite cannot see.
-
-**Placing the normalisation contract in the core is what unblocks M1.** It is
-pure arithmetic on a bounding box, a target height, and a scale factor — it needs
-no mesh to be written or tested, so the milestone that proves it does not wait on
-the milestone that supplies the art.
+Operational notes, each learned the hard way: the sync is a **copy, not a
+symlink** (git materialises symlinks on Windows only under conditions a
+checkout cannot assume, and Windows ships); it compares **content hashes, not
+mtimes**; only `*.glb.import` is committed because extracted textures are
+derived data (committing their presets without the images produced ~40 load
+errors on a fresh clone); and import settings are a gate because a re-import
+silently reverts them.
 
 ---
 
 ## 10. Verification criteria
 
-Deterministic acceptance conditions — the checks a reviewer, human or automated,
-runs to decide whether a change is done. Each is pass/fail with no judgment.
+Deterministic acceptance conditions — pass/fail with no judgment.
 
 | # | Condition | Status |
 |---|---|---|
 | V1 | `godot/tools/test.sh` exits 0 | ✅ |
-| V2 | Two runs at the same seed produce byte-identical state summaries | ✅ `determinism_test.gd` over 3000 ticks of scripted input against the real simulation, plus the smoke suite |
-| V3 | No banned symbol from §4 *Architectural boundaries* appears under `godot/scripts/core/` | ✅ `check_boundaries.py` |
-| V4 | No physics-body symbol from §4 *Architectural boundaries* appears anywhere under `godot/` | ✅ `check_boundaries.py` over every text file under `godot/`, plus the commit hook on staged content. Binary scenes (`.scn`, `.res`) are beyond a text gate; the project authors none |
-| V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py`. Small integers are excluded and reported each run — see §3 *Language and style* |
-| V6 | **G1** — every `### Scenario:` in the GDD is claimed exactly once, and a claim on a scenario the document does not contain also fails | ✅ `check_spec_coverage.py` |
+| V2 | Two runs at the same seed produce byte-identical state summaries | ✅ `determinism_test.gd`, 3000 ticks of scripted input |
+| V3 | No banned symbol from §4 appears under `godot/scripts/core/` | ✅ `check_boundaries.py` |
+| V4 | No physics-body symbol from §4 appears anywhere under `godot/` | ✅ `check_boundaries.py` + the commit hook on staged content |
+| V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py` |
+| V6 | **G1** — every GDD scenario claimed exactly once; a claim on a scenario the document lacks also fails | ✅ `check_spec_coverage.py` |
 | V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | 📋 M8 |
-| V8 | Pinned project settings match §6 *Determinism and the reference frame*, and every model has a valid committed import preset | ✅ `check_settings.py` |
-| V9 | Gallery diffs are within recorded thresholds on all three criteria | 📋 M6 |
-| V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py`, rooted at the repository root |
-| V11 | Every `CONSTRAINTS §N Title` reference names the section it points at | ✅ `check_section_refs.py`. Note it matches only `CONSTRAINTS §N`, so `docs/CONSTRAINTS.md §N` is invisible to it — stale prose stays the Critic's job |
+| V8 | Pinned project settings match §6, and every model has a valid committed import preset | ✅ `check_settings.py` |
+| V9 | Gallery diffs within recorded thresholds on all three criteria | 📋 M6 |
+| V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py` |
+| V11 | Every `CONSTRAINTS §N Title` reference names the section it points at | ✅ `check_section_refs.py` — bare `docs/CONSTRAINTS.md §N` forms are invisible to it; stale prose stays review's job |
 | V12 | `openspec validate <change> --strict` passes | ✅ |
 | V13 | The change's `tasks.md` has no unchecked box | 📋 via `/opsx:apply` |
-| V14 | A milestone has committed visual proof in `godot/docs/progress/`; a task changing what the player sees has a capture or a stated reason it would show nothing | 📐 |
-| V15 | Every ambiguity discovered during the change is in `godot/docs/AMBIGUITIES.md` before the change is archived | 📐 |
-| V16 | `godot/data/tuning.json` matches the design document's constant tables — every named constant present, none renamed, no derived values | ✅ `check_tuning_transcription.py` |
+| V14 | A milestone has committed visual proof in `godot/docs/progress/` | 📐 |
+| V15 | Every ambiguity discovered during a change is in `godot/docs/AMBIGUITIES.md` before it is archived | 📐 |
+| V16 | `godot/data/tuning.json` matches the GDD's constant tables — every name present, none renamed, no derived values | ✅ `check_tuning_transcription.py` |
 | V17 | No placeholder marker remains in a shipped document | ✅ `check_placeholders.py --strict` |
 | V18 | Every governing document states the same engine version as `godot/.godot-version` | ✅ `check_engine_version.py` |
-| V19 | Every GDScript function signature carries parameter and return types | ⚠️ `check_static_typing.py`; members not yet covered |
+| V19 | Every GDScript function signature carries parameter and return types | ⚠️ `check_static_typing.py`; members not yet covered (backlog) |
 | V20 | The seven supplied models import and load | ✅ `tests/assets_test.gd` |
-| V21 | The commit hook and the standing suite derive their banned symbols from one shared definition | ✅ both read `godot/data/banned_symbols.json`; verified by removing a symbol and confirming both stop flagging it |
-| V22 | The rendered environment satisfies the exposure criteria: nothing saturated, the unlit sky exact, the ground at its specified albedo | 📐 `measure_exposure.py`, windowed — it needs a renderer, so it cannot join `test.sh`. Run it against a committed capture |
-| V23 | The design document's specified colours are not written as literals in scripts | ✅ `check_tuning_literals.py` scans quoted hex strings as a separate pass; the numeric pass cannot see them, because it cuts each line at the first `#` |
-| V24 | The built kart matches the design document's own figures for it — authored box, final dimensions, world footprint at the start line, and yaw correction | ✅ `check_kart_conformance.py`. One of two gates whose expected values come from the design document rather than from `data/tuning.json`, so the two sides share no ancestor — see V26 for the other |
-| V25 | The kart's contact shadow survives — the cue the design document calls primary | 📐 `measure_contact_shadow.py`, windowed. Depth is gated; coverage is reported, because the margin A8 turned on does not reproduce at this framing |
-| V26 | A generated field matches the design document's own population table, clearance radii, grounding and asset ordering | ✅ `check_scatter_conformance.py`. Reads the *Scattering the standard prop population* table and the *Rejecting a candidate placement* rules from the design document. The ordering half compared the port against its own constant until review caught it; it now reads the table's key order. The WITHIN-asset half is not this gate's — `scatter_test.gd` and `prop_field_test.gd` assert it against the recorded acceptance index |
+| V21 | The commit hook and the standing suite derive their banned symbols from one shared definition | ✅ both read `godot/data/banned_symbols.json` |
+| V22 | The rendered environment satisfies the exposure criteria | 📐 `measure_exposure.py`, windowed, against a committed capture |
+| V23 | The GDD's specified colours are not written as literals in scripts | ✅ `check_tuning_literals.py`, hex-string pass |
+| V24 | The built kart matches the GDD's own figures — authored box, dimensions, footprint, yaw correction | ✅ `check_kart_conformance.py`; expectations come from the GDD, sharing no ancestor with `tuning.json` |
+| V25 | The kart's contact shadow survives — the cue the GDD calls primary | 📐 `measure_contact_shadow.py`, windowed |
+| V26 | A generated field matches the GDD's population table, clearance radii, grounding and asset ordering | ✅ `check_scatter_conformance.py`, reading the GDD's own tables |
 
 ---
 
 ## 11. Work tracking
 
-Three layers, each owning something the others do not. Duplicating between them
-is the failure mode to avoid.
+Two layers. Duplicating between them is the failure mode to avoid.
 
 ```
-   ROADMAP.md          milestones — where we are going, and in what order
-        │
+   ROADMAP.md          milestones — where we are going, in what order
+     ## Backlog        everything outside an accepted change: future work,
+        │              issues found in passing, deferred scope
         ▼
    openspec/changes/   one unit of work: why, design, specs, tasks
-        │
-        ▼
-   .att/  (att)        the backlog — future work, issues found, deferred items
 ```
 
 | Layer | Owns | Lifetime |
 |---|---|---|
-| `ROADMAP.md` | Milestones and their order | Long-lived; revised deliberately |
-| `openspec/changes/<name>/` | A single change: proposal, design, specs, tasks | Until archived |
-| `.att/` via `att` | Detailed tasks outside any active change | Long-lived |
-
-**The boundary that matters.** A change's `tasks.md` is the execution checklist
-for *that accepted change* — worked through by `/opsx:apply` and archived with
-it. `att` holds everything else: work discovered but not yet proposed, issues
-found in passing, scope deliberately deferred.
-
-- Do **not** mirror `tasks.md` into `att`. One work item, one home.
-- Do **not** use `att` as a second planning system.
+| `ROADMAP.md` | Milestones and their order; the **Backlog** section for work no accepted change covers | Long-lived; revised deliberately |
+| `openspec/changes/<name>/` | A single change: proposal, design, specs, tasks — `tasks.md` is that change's execution checklist, archived with it | Until archived |
 
 **Nothing leaves scope untracked** 📐. Every item deferred out of a change gets
-an `att` task before that change is archived.
+a Backlog line (one line — a pointer, not a memo) before that change is
+archived. If an item needs a page of analysis, that page belongs in the change
+that will do the work, when it is proposed.
 
 **Delta specs describe the port, not the game.** The GDD already specifies the
 game. A change's `specs/` say what *this implementation* must do that the GDD
-does not settle — the tick source for the countdown, the layout file's delivery
-mechanism, the derived yaw constant. Restating GDD scenarios into delta specs
-creates a second normative document, which is the one outcome this repository
-exists to avoid.
+does not settle. Restating GDD scenarios into delta specs creates a second
+normative document — the one outcome this repository exists to avoid.
+
+*(A third layer, the `att` backlog CLI, was retired by `streamline-process`:
+its backlog jobs moved to ROADMAP's Backlog section, and its per-task review
+ceremony was absorbed into §12's two moments. History: `.att/` at that change's
+parent commit.)*
 
 ---
 
 ## 12. Review
 
-Every gate in this document is mechanical. Review is what catches the things no
-grep can: work that passes its tests and still does not do what was specified.
+Every gate in this document is mechanical. Review catches what no grep can:
+work that passes its tests and still does not do what was specified. It happens
+at **two moments**.
 
-| Role | Does |
-|---|---|
-| **Writer** | Produces the work — code, specs, documents |
-| **Critic** | Reviews it adversarially, against the specification rather than against taste |
+### Archiving a change — the author's checklist
 
-**The Writer never approves their own work.** This is the rule most likely to be
-skipped when a change looks obviously fine, which is exactly when a second pass
-is cheapest and most often finds something.
+Before `/opsx:archive`, the author verifies, and the archive commit asserts:
 
-### When review is mandatory
+1. `godot/tools/test.sh` is green (V1), `openspec validate --strict` passes
+   (V12), no unchecked task box (V13).
+2. Scenario coverage is current (V6) and honest — each claim's test actually
+   tests its scenario.
+3. Documentation is current per the drift table below; every deferral has a
+   Backlog line; every resolved ambiguity is registered (V15).
+4. Tolerances were met, not widened (§5).
 
-- Every `att` task, before `att done`
-- Every change, before `/opsx:archive`
-- Every milestone, before it is called complete
-- Any change to the test harness itself — see the mutation requirement in §7 *Testing*
+### Completing a milestone — the adversarial pass
 
-### What the Critic checks
-
-Work is marked **REJECTED** if any of the following holds:
-
-| | Rejection criterion |
-|---|---|
-| R1 | `godot/tools/test.sh` is not green |
-| R2 | A GDD scenario in scope has no test and no visual-register entry |
-| R3 | The work does not match its specification — the GDD for behaviour, the change's `specs/` for port decisions, `ROADMAP.md` for a milestone |
-| R4 | Any constraint in this document is violated |
-| R5 | A tolerance was widened rather than met |
-| R6 | An ambiguity was resolved in code without being recorded in `AMBIGUITIES.md` |
-| R7 | Documentation has drifted |
-| R8 | Visual proof is missing where it is required |
-
-The verdict is explicit: **[APPROVED]** or **[REJECTED]** with findings. Silence
-is not approval, and "looks good" is not a verdict.
+A milestone is called complete only after a **Critic pass**: a review conducted
+adversarially, against the specification rather than against taste, by a fresh
+pass that did not produce the work. The verdict is explicit — **[APPROVED]** or
+**[REJECTED]** with findings; silence is not approval. The Critic checks the
+archive checklist above across the milestone's changes, ROADMAP's "done when"
+items, and the two things G1 cannot see: claims that overstate, and deferrals
+parked on the wrong milestone. Any harness change since the last milestone must
+have its mutation check (§7) on record.
 
 ### Visual proof
-
-A green suite proves behaviour. It says nothing about whether the kart's shadow
-lands under the kart, whether the fog reads, or whether the needle sweeps.
-Different failures, different evidence.
 
 | When | Requirement |
 |---|---|
 | Completing a **milestone** | **Mandatory.** A committed capture showing what it delivered |
-| A task changing **what the player sees or how the game plays** | **Expected**, unless there is a stated reason a capture would show nothing |
-| Anything else | Not required |
+| Anything else | At the author's discretion |
 
 Captures come from `godot/tools/capture.sh`, never from dragging a window — a
-screenshot that cannot be re-run is a memory of a verification, not one.
-Committed proof lives in `godot/docs/progress/`.
-
-**Windowed, never in `test.sh`.** Godot's headless mode has no renderer and
-returns no image. The moment a capture enters the standing suite, that suite
-stops running over SSH and needs a virtual framebuffer.
-
-**Captures must be deterministic.** Wait a fixed frame count rather than a
-duration, and seed the world explicitly. Every capture of a scattered field names
-its seed.
+screenshot that cannot be re-run is a memory of a verification. Committed proof
+lives in `godot/docs/progress/`. **Windowed, never in `test.sh`** (headless
+Godot has no renderer). **Captures must be deterministic**: wait a fixed frame
+count, seed the world explicitly, name the seed.
 
 ### Documentation drift is a review finding
 
@@ -763,7 +548,9 @@ its seed.
 
 ## 13. Automation and gates
 
-Inherited from `godot-game-skeleton` at M0:
+Inherited from `godot-game-skeleton` at M0 (paths adjusted — the skeleton
+expects the Godot project at the repo root; left unadjusted its checkers pass
+by finding nothing):
 
 ```
 tools/test.sh                the standing gate — headless, run on every change
@@ -774,58 +561,46 @@ tools/check_placeholders.py  placeholder markers left in shipped documents
 openspec validate --strict   planning artifacts are well-formed (V12)
 ```
 
-The skeleton expects `docs/CONSTRAINTS.md` and a project root that is also the
-Godot root. Here the two documents live at the repository root and the Godot
-project lives under `godot/` — **M0 adjusts the checkers' paths**. Left
-unadjusted they pass by finding nothing, which is the worst failure mode a gate
-has.
-
-Added by this project, in order of value:
+Added by this project:
 
 | Gate | Mechanism | Milestone |
 |---|---|---|
 | Scenario coverage G1 (V6) | `tools/check_spec_coverage.py` parses the GDD | M1 |
 | GDScript lint and format | `gdtoolkit` — `gdlint`, `gdformat --check` | M0 |
-| Whitespace, EOF newline, large files | the hand-rolled `godot/tools/pre-commit` — not the `pre-commit` framework, which this project does not use | ✅ M0 |
+| Whitespace, EOF newline, large files | the hand-rolled `godot/tools/pre-commit` | ✅ M0 |
 | Visual gate (V9) | `tools/gallery.sh` + `gallery_compare.py` — windowed | M6 |
 | Acceptance conformance G2 (V7) | `tests/conformance_test.gd`, 14 named cases | M8 |
-| Commit-time gate | `godot/tools/pre-commit`, installed by `tools/install-hooks.sh`. Checks the **staged blobs**, not the working tree, and is portable to bash 3.2 | ✅ M0 |
-| Asset sync and import | `godot/tools/sync_assets.sh` + `godot/tests/assets_test.gd` — content-hash sync, poisoned-preset refusal, and a load assertion (`--import` exits 0 even on failure, so it cannot be the gate) | ✅ M0 |
-| Tuning transcription | `godot/tools/check_tuning_transcription.py` — names, values, duplicates, derived-value leakage | ✅ M0 |
-| Engine version | `godot/tools/check_engine_version.py` — every governing document agrees with `.godot-version` | ✅ M0 |
-| Static typing | `godot/tools/check_static_typing.py` — signatures only; members not yet covered | ⚠️ M0 |
-| Architectural boundaries | `godot/tools/check_boundaries.py` — core purity and the physics ban, from `godot/data/banned_symbols.json`, which the commit hook reads too | ✅ M0 |
-| Tuning literals | `godot/tools/check_tuning_literals.py` — distinctive values in `godot/scripts/`, with a justified-exemption allowlist that fails on stale entries | ✅ M0 |
-| Pinned settings | `godot/tools/check_settings.py` — determinism-critical settings and the seven import presets | ✅ M0 |
-| Design-document conformance: the kart | `godot/tools/check_kart_conformance.py` — the built kart against §1, §3 and §4's own figures, so the expectation shares no ancestor with `data/tuning.json` | ✅ M2 |
-| Design-document conformance: the field | `godot/tools/check_scatter_conformance.py` — a generated field against the *Scattering the standard prop population* table and the *Rejecting a candidate placement* rules | ✅ M3 |
-| Suite registration | `godot/tools/check_suites_registered.py` — every `tests/*.gd` is actually run by `tools/test.sh`. Exists because three suites once were not | ✅ M2 |
-| Exposure (A9) | `godot/tools/measure_exposure.py` and `find_light_scale.py` — windowed | 📐 M2 |
-| Contact shadow | `godot/tools/measure_contact_shadow.py` — windowed; depth gated, coverage reported | 📐 M2 |
-| Staged collision capture | `godot/tools/collision_capture.sh` + `collision_capture.gd` — windowed; stages a prop arrangement, drives the shipped game into it, and reports the resolved prop and the camera's shudder measured against an unjolted twin | 📐 M3 |
+| Commit-time gate | `godot/tools/pre-commit`, installed by `tools/install-hooks.sh`; checks **staged blobs**, bash-3.2-portable | ✅ M0 |
+| Asset sync and import | `godot/tools/sync_assets.sh` + `tests/assets_test.gd` — content-hash sync, poisoned-preset refusal, load assertion | ✅ M0 |
+| Tuning transcription | `godot/tools/check_tuning_transcription.py` | ✅ M0 |
+| Engine version | `godot/tools/check_engine_version.py` | ✅ M0 |
+| Static typing | `godot/tools/check_static_typing.py` — signatures only | ⚠️ M0 |
+| Architectural boundaries | `godot/tools/check_boundaries.py`, from `godot/data/banned_symbols.json`, which the commit hook reads too | ✅ M0 |
+| Tuning literals | `godot/tools/check_tuning_literals.py`, with a justified-exemption allowlist that fails on stale entries | ✅ M0 |
+| Pinned settings | `godot/tools/check_settings.py` | ✅ M0 |
+| Kart conformance | `godot/tools/check_kart_conformance.py` — against the GDD's own figures | ✅ M2 |
+| Field conformance | `godot/tools/check_scatter_conformance.py` — against the GDD's own tables | ✅ M3 |
+| Suite registration | `godot/tools/check_suites_registered.py` — every `tests/*.gd` runs in `test.sh`; exists because three suites once were not | ✅ M2 |
+| Exposure (A9) | `godot/tools/measure_exposure.py`, `find_light_scale.py` — windowed | 📐 M2 |
+| Contact shadow | `godot/tools/measure_contact_shadow.py` — windowed | 📐 M2 |
+| Staged collision capture | `godot/tools/collision_capture.sh` — windowed, stages an arrangement and measures the shudder against an unjolted twin | 📐 M3 |
 
 **Reference sections by number *and* title** — `CONSTRAINTS §8 Performance and
-size budgets`, never a bare `§8`. A bare number survives a renumber while
-silently pointing at a different section, and no link checker can see it because
-the file still resolves.
+size budgets`, never a bare `§8`; a bare number survives a renumber while
+silently pointing elsewhere.
 
-**Keep the pre-commit hook fast.** It runs on every commit, and a slow hook gets
-bypassed with `--no-verify`, which is worse than no hook. Lint, formatting,
-whitespace, and the boundary greps belong there; the full suite belongs in
-`test.sh`. Measured at **0.4 s** on a clean staged set (M0).
-
-**The hook is not the gate.** It sees only staged files and only the cheap
-checks — it will not catch a broken smoke suite, a stale link, or a drifted
-tuning table. `godot/tools/test.sh` decides whether work is done, and with no
-continuous integration nothing runs it automatically. That enforcement is
-§12 *Review* criterion R1, carried by a person rather than a machine.
+**Keep the pre-commit hook fast** (measured 0.4 s) — a slow hook gets bypassed
+with `--no-verify`, which is worse than no hook. **The hook is not the gate**:
+it sees staged files and cheap checks only. `godot/tools/test.sh` decides
+whether work is done, and with no CI, running it is carried by §12's archive
+checklist.
 
 ---
 
 ## 14. Release and packaging
 
-**Targets.** macOS (Apple Silicon), Windows, Linux, and Web — all from one
-commit, one language, and one renderer.
+**Targets.** macOS (Apple Silicon), Windows, Linux, and Web — one commit, one
+language, one renderer.
 
 **Versioning.** `godot/project.godot` `config/version` is the source of truth;
 annotated tags match it.
@@ -841,14 +616,11 @@ annotated tags match it.
   4  tag         annotated tag, release notes, ambiguity register published
 ```
 
-**macOS signing is a hazard, not a formality.** Anything bundled beside the game
-binary must be signed with the same certificate under the hardened runtime, or
-Gatekeeper kills it at launch — and it fails only on a *clean* machine, never on
-the one that built it. Validate on a machine that has never seen the certificate.
-
-**The web build is smoke-tested on a cold cache.** A warm-cache test measures
-nothing: the 39 MB asset payload in §8 *Performance and size budgets* is the
-whole risk, and it is invisible on the second load.
+**macOS signing is a hazard, not a formality** — anything bundled beside the
+binary must be signed with the same certificate under the hardened runtime, and
+it fails only on a *clean* machine. Validate on one that has never seen the
+certificate. **The web build is smoke-tested on a cold cache** — the 39 MB
+payload is the whole risk and it is invisible on the second load.
 
 ---
 
@@ -856,36 +628,28 @@ whole risk, and it is invisible on the second load.
 
 Absent by decision, not by oversight:
 
-- **Continuous integration.** No hosted CI, no GitHub Actions. A committed
-  pre-commit hook runs the cheap checks on staged files, and `godot/tools/test.sh`
-  is run by hand and enforced by review. A workflow was built during M0 and
-  deliberately removed: for a single-developer project it is a second environment
-  to keep in step with `requirements.txt` and the pinned Godot version, buying
-  enforcement the hook and the habit already provide. The cost is stated in
-  §13 *Automation and gates* rather than hidden.
-- **Networking of any kind** — no multiplayer, no leaderboards, no telemetry, no
-  crash reporting, no analytics. §2 *Tech stack* makes this checkable.
+- **Continuous integration.** No hosted CI. A committed pre-commit hook runs
+  the cheap checks; `godot/tools/test.sh` is run by hand, enforced by §12's
+  archive checklist. A workflow was built during M0 and deliberately removed —
+  for a single-developer project it is a second environment to keep in step,
+  buying enforcement the hook and the habit already provide.
+- **Networking of any kind** — no multiplayer, leaderboards, telemetry, crash
+  reporting, or analytics.
 - **Accounts, auth, API contracts, SLAs, database schemas** — there is no server.
-- **Persistent storage.** The best time is explicitly session-only in the GDD;
-  `track_layout.json` is player-initiated file export, not a save system. Durable
-  best times are an Optional Feature and stay unimplemented.
-- **Audio.** Engine and impact sound is Optional Feature 1 and stays
-  unimplemented. No `AudioStreamPlayer` in the shipped project.
-- **2D sprite tooling.** The inherited skeleton shipped a sprite palette
-  auditor with envelopes from a different game. This is a 3D project with no
-  sprites; it was deleted rather than carried as decoration.
-- **Particles, boost, drifting, checkpoints, ghost replay, time-of-day, an
-  end-of-session flow, kart customisation** — Optional Features 2–10. The GDD is
-  explicit that these "should not be implemented until if and when they are
-  specifically requested."
+- **Persistent storage.** The best time is session-only in the GDD;
+  `track_layout.json` is player-initiated export, not a save system.
+- **Audio** — Optional Feature 1, unimplemented. No `AudioStreamPlayer` ships.
+- **2D sprite tooling** — the inherited skeleton's sprite auditor was deleted;
+  this is a 3D project with no sprites.
+- **Particles, boost, drifting, checkpoints, ghost replay, time-of-day,
+  end-of-session flow, kart customisation** — Optional Features 2–10; the GDD
+  is explicit they wait to be "specifically requested."
 - **A menu, a pause state, a settings screen, a fail state, an end condition.**
-  The session shape is load → countdown → drive forever.
+  Load → countdown → drive forever.
 - **A fourth game state.** The spec defines three.
-- **Free-look, orbit camera, or any mouse control.** The reference build's dead
-  affordance is a listed deviation.
-- **On-screen developer instrumentation in the shipped build.** The port may
-  build whatever tuning surface it likes; none of it is player-facing, and the
-  reference grid is *not* instrumentation — it is part of the intended look.
+- **Free-look, orbit camera, or any mouse control** — a listed deviation.
+- **On-screen developer instrumentation in the shipped build.** The reference
+  grid is not instrumentation — it is part of the intended look.
 
 ---
 

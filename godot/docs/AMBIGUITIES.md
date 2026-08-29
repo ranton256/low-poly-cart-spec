@@ -264,7 +264,7 @@ camera is stepped again per frame and when it is not stepped at all.
 | A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
 | A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
 | A11 | The ground is specified as a finite 200 wu plane, the drivable extent as ±90, and fog as beginning at 50 wu. From the boundary the ground's edge is 10 wu away — far inside fog's start — so it renders as a hard line, while acceptance item 7 asks for grass beyond the boundary and no drawn edge | M6 |
-| A12 | The design document states that a kart pinned between two props at the minimum separation "cannot drive out", but its own collision response makes that state an unstable equilibrium: the kart is ejected in a fraction of a second at fourteen of sixteen headings, and in about two seconds at the other two | A GDD proposal — `att` 20 |
+| A12 | The design document states that a kart pinned between two props at the minimum separation "cannot drive out", but its own collision response makes that state an unstable equilibrium: the kart is ejected in a fraction of a second at fourteen of sixteen headings, and in about two seconds at the other two | A GDD proposal — ROADMAP Backlog |
 
 ### A11 (open, detail) — A finite ground cannot have an invisible edge
 
@@ -366,13 +366,13 @@ the port matches the response and the document's *consequence* is what is wrong.
 
 **This is a defect in the design document, not a gap in it**, which is why it is
 filed Open rather than resolved in a delta spec. `CONSTRAINTS.md` §12 routes
-"game behaviour as designed" to the GDD by proposal; `att` 20 raises that proposal
+"game behaviour as designed" to the GDD by proposal; the ROADMAP Backlog carries that proposal
 against the sentence "cannot drive out". Until it is settled, the delta spec in
 `add-aabb-collision-response` states the two surviving guarantees and does not
 restate the one that fails — and it does not relax the rule the document is
 emphatic about, which is that no more than one collision is resolved per tick.
 
-**Owner: a GDD proposal (`att` 20).** M7's Reset Kart (`att` 10) is unaffected
+**Owner: a GDD proposal (ROADMAP Backlog).** M7's Reset Kart (also Backlog) is unaffected
 either way: a kart held for a second with its engine dead still wants a reset.
 
 *Recorded in `add-aabb-collision-response` (M3). Open.*

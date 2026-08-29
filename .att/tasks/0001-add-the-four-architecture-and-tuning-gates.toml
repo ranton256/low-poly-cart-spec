@@ -1,6 +1,0 @@
-id = 1
-title = "Add the four architecture and tuning gates"
-description = "M0, change add-architecture-and-tuning-gates: core purity grep on godot/scripts/core/, physics-body grep across godot/, tuning-literal grep outside godot/data/tuning.json, and a project-settings gate. Each verified by deliberately breaking what it guards. CONSTRAINTS V3, V4, V5, V8."
-status = "done"
-created_at = "2026-08-28T17:51:19.908708Z"
-updated_at = "2026-08-28T20:40:35.424821Z"

@@ -1,6 +1,0 @@
-id = 13
-title = "Wire the tuning loader into the running game"
-description = "ROADMAP M1 exit criterion: all tuning values are read from godot/data/tuning.json. add-simulation-tick-core built scripts/tuning_loader.gd and tests/tuning_loader_test.gd, so the shipped table is now asserted against acceptance item 4 — but nothing in the running game calls the loader yet, because there is no composition root until the view arrives in M2. M1 cannot be called complete on this change alone."
-status = "done"
-created_at = "2026-08-29T00:12:54.590182Z"
-updated_at = "2026-08-29T17:57:21.931782Z"

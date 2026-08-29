@@ -1,6 +1,0 @@
-id = 15
-title = "Decide A11: the ground's visible edge at the boundary"
-description = "add-world-presentation-layer measured that the design document's 200 wu ground, +/-90 drivable extent and 50 wu fog start leave the ground's edge 10 wu beyond the boundary. The document REQUIRES no edge be visible (line 460, Keeping the boundary invisible), so its own numbers do not compose. add-chase-camera captured the boundary through the camera the document specifies — docs/progress/2026-08-29-m2-camera-boundary.png, kart at z=89.997 — and from that viewpoint the transition reads as a plain horizon with no wall, fence or discontinuity. That is the most favourable evidence so far and does not settle it: M6 owns the decision on the whole look. A fourth resolution exists that breaks none of the document's numbers, noted in A11: a distant grass skirt beyond about +/-240."
-status = "not-started"
-created_at = "2026-08-29T15:51:16.311498Z"
-updated_at = "2026-08-29T18:40:28.873308Z"

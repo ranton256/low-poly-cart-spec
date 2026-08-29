@@ -33,11 +33,10 @@ context: |
 
   Verification: godot/tools/test.sh must stay green; see godot/GOTCHAS.md.
 
-  Work tracking is three layers, and duplicating between them is the failure
-  mode: ROADMAP.md holds milestones; a change's tasks.md holds that change's
-  execution checklist and is archived with it; att (.att/) holds the backlog —
-  future work and issues found outside any active change. Never mirror
-  tasks.md into att, and never use att as a second planning system.
+  Work tracking is two layers, and duplicating between them is the failure
+  mode: ROADMAP.md holds milestones and a one-line-per-item Backlog section
+  for anything outside an accepted change; a change's tasks.md holds that
+  change's execution checklist and is archived with it.
 
 rules:
   proposal:
@@ -52,11 +51,11 @@ rules:
     - "Record the alternatives considered for each decision, and why they lost"
   tasks:
     - "Every change ends with godot/tools/test.sh green"
-    - "Scope belonging to a later change is an att task, not a tasks.md line"
+    - "Scope belonging to a later change is a ROADMAP Backlog line, not a tasks.md line"
     - "A gate added or changed must be verified by deliberately breaking what it guards"
 
 operations:
   archive:
     guidance:
-      - "Every item deferred out of scope must have an att task before archiving"
+      - "Every item deferred out of scope must have a ROADMAP Backlog line before archiving"
       - "Every spec ambiguity resolved in code must be recorded in godot/docs/AMBIGUITIES.md"

@@ -68,39 +68,33 @@ cheap once it exists and awkward until it does.
 ## The process, already set up
 
 The spec-driven workflow is set up rather than described. `openspec/` at the
-repository root and `.att/` are initialized and committed.
+repository root is initialized and committed.
 
 ```
   ROADMAP.md          milestones — where you are going, in what order
+    ## Backlog        one line per item outside any accepted change
        │
   openspec/changes/   one unit of work: proposal, design, specs, tasks
-       │
-  .att/  (att)        the backlog — future work, issues found, deferred items
 ```
 
-**Three layers, and duplicating between them is the failure mode.** A change's
+**Two layers, and duplicating between them is the failure mode.** A change's
 `tasks.md` is the execution checklist for that accepted change and is archived
-with it. [`att`](https://github.com/ranton256/agent-task-tracker) holds
-everything else — work discovered but not yet proposed, issues found in passing,
-scope deliberately deferred. Never mirror one into the other.
+with it. ROADMAP's Backlog holds everything else — work discovered but not yet
+proposed, issues found in passing, scope deliberately deferred — one line each.
 
 ```bash
 /opsx:explore    think through a problem — no code written
 /opsx:propose    create a change: proposal, design, specs, tasks
 /opsx:apply      implement it, task by task
 /opsx:archive    fold its specs into openspec/specs/ when done
-
-att list --ready        # what can be worked now
-att start <id>
-att status <id> in-review   # the Critic pass is not skippable
-att done <id>
 ```
 
-`../CONSTRAINTS.md` §12 Review carries the Writer/Critic split: the Writer never
-approves their own work, and there are eight explicit rejection criteria. That is
-the part most likely to be skipped and most likely to catch something.
+`../CONSTRAINTS.md` §12 Review carries the two review moments: the author's
+archive checklist on every change, and an adversarial Writer/Critic pass with an
+explicit verdict at every milestone. The milestone pass is the part most likely
+to be skipped and most likely to catch something.
 
-Commit `.claude/commands/`, `.claude/skills/`, and `.att/` — they are project
+Commit `.claude/commands/` and `.claude/skills/` — they are project
 state, not personal. The repository-root `.gitignore` excludes `.venv/`,
 `godot/.godot/`, the synced `*.glb` working copies and the textures Godot
 extracts from them.
@@ -187,7 +181,7 @@ reference images and they never enter an export.
 | `../CONSTRAINTS.md` `../ROADMAP.md` `CLAUDE.md` | the governing documents |
 | `../CONSTRAINTS.md` | the non-negotiables and how each is enforced |
 | `docs/GLOSSARY.md` | one definition per term, linked from everywhere else |
-| `openspec/` `.att/` | the planning and tracking layers, initialized |
+| `openspec/` | the planning layer, initialized |
 | `GOTCHAS.md` | **read before debugging anything** |
 
 The Python tools carry no game knowledge; everything project-specific lives in

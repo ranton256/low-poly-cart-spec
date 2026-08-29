@@ -71,7 +71,7 @@ documents that describe it.
 - `gdlint` / `gdformat --check` and a pre-commit hook pass
 - Every verification criterion in
   [CONSTRAINTS §10 Verification criteria](CONSTRAINTS.md) is ✅ or has a tracked
-  `att` task
+  Backlog line
 - **Visual proof:** an empty Godot window at the pinned renderer, plus the
   renderer spike's shadow comparison — both committed in `godot/docs/progress/`
 
@@ -208,7 +208,7 @@ Props wait for M3.
 - `add-world-presentation-layer` — ground, grid, band, sky, fog, lights; settles
   **A9**; adds the §5/§6 art constants to `tuning.json` and gives that file its
   first reader in the running game, through a new `art_tuning.gd` rather than the
-  simulation's loader, so `att` 13 stays open; ships a **static camera** so this
+  simulation's loader, with the simulation-loader wiring deferred (since closed); ships a **static camera** so this
   milestone's first two changes have any visual proof at all
 - `add-kart-view-orientation-and-input` — the composition root and its accumulator,
   the kart mesh, the derived yaw constant, render interpolation, start-line
@@ -250,7 +250,7 @@ passes.
 Unlike M2's ⚠️, this one has **no marker in the coverage gate** — the scenario it
 touches is genuinely verified, and the defect is in a paragraph of the design
 document rather than in a scenario. Its mechanical owners are ambiguity **A12**,
-which is Open, and **`att` 20**, which raises the proposal against the document.
+which is Open, and the Backlog's GDD-proposal line, which raises it against the document.
 M3 is complete; that proposal is not part of it.
 
 **Goal.** The obstacle course exists, it is different every time, and hitting a
@@ -273,8 +273,8 @@ tree feels like hitting a tree.
   angle (**acceptance 6**), swept at 16 headings rather than sampled at one
 - ⚠️ Being pinned between two near-touching props is reproduced as specified, not
   fixed — the GDD keeps the placement rule and names Reset Kart as the escape.
-  Reproduced, and **not permanent at any heading**: see the note above, **A12**
-  and `att` 20
+  Reproduced, and **not permanent at any heading**: see the note above and **A12**
+  (GDD proposal, in the Backlog)
 - ✅ Regenerating the world leaves the kart's position, heading, velocity, and the
   running clock untouched
 - ✅ Prop textures are 1024² per
@@ -449,6 +449,33 @@ and the ambiguity register is published.
 
 ---
 
+## Backlog
+
+Work no accepted change covers: deferred scope, issues found in passing, and
+cross-document proposals. One line each — a pointer, not a memo; the analysis
+belongs in the change that does the work. Milestone tags say where each most
+plausibly lands. (Numbered items migrated from the retired `att` tracker;
+their full histories are in git at `streamline-process`'s parent commit.)
+
+- **M6** — Pin per-texture import settings for the web payload budget: prop
+  textures to 1024², VRAM compression mode asserted, anisotropic 16× — as a
+  project-level or re-import decision, not 21 generated files. *(was att 5)*
+- **M7** — Reset Kart action: R returns the kart to X=0 Z=0 facing +Z with
+  zero velocity, timer and world untouched. The start pose and the binding
+  exist; the runtime action does not. *(was att 10)*
+- **M5/M6** — Fold the capture input re-press pattern (unfocused windows clear
+  held input) into a shared helper before more driving captures are written.
+  *(was att 16)*
+- **M6** — Measure `drive_capture.gd`'s settle-frame floor and black-frame
+  threshold instead of the guessed 12 frames / 20%. *(was att 17)*
+- Extend `check_static_typing.py` to member variables; V19 stays ⚠️ until
+  then. *(was att 18)*
+- **GDD proposal** — A12: the two-prop pin's "cannot drive out" is not
+  producible by the specified response; raise the wording fix against the
+  design document. *(was att 20)*
+
+---
+
 ## Not on this roadmap
 
 Absent by decision. The full list with reasoning is in
@@ -458,8 +485,8 @@ asked about:
 - **All ten Optional Features** — audio, particles, boost, drifting, checkpoints,
   ghost replay, persistent best times, time-of-day, an end-of-session flow, kart
   customisation. The GDD is explicit that these "should not be implemented until
-  if and when they are specifically requested." Each is an `att` backlog entry,
-  not a milestone.
+  if and when they are specifically requested." Each waits for a specific
+  request; none is a milestone or a Backlog line.
 - **Networking of any kind**, including leaderboards and telemetry.
 - **A menu, a pause, a settings screen, a fail state, or an end condition.** The
   session shape is load → countdown → drive forever.
@@ -474,7 +501,7 @@ asked about:
 ## How this connects to the other layers
 
 Milestones here group **changes**; a change carries its own `tasks.md`; anything
-outside an accepted change lives in the `att` backlog. See
+outside an accepted change is a one-line entry in the **Backlog** above. See
 [CONSTRAINTS §11 Work tracking](CONSTRAINTS.md).
 
 Change names above are **indicative, not committed** — they are how the work

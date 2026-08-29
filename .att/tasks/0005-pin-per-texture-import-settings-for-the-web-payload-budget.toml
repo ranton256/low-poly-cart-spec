@@ -1,6 +1,0 @@
-id = 5
-title = "Pin per-texture import settings for the web payload budget"
-description = "CONSTRAINTS §8 Performance and size budgets caps the web payload at 25 MB compressed; the GDD permits 1024 square prop textures but requires the kart stay 2048. Extracted glTF textures and their .import presets are git-ignored (see .gitignore rationale), so the size limit must be set as a project-level or re-import decision in M3, not via 21 generated files. Also covers anisotropic filtering 16x from CONSTRAINTS §9 Assets."
-status = "not-started"
-created_at = "2026-08-28T17:55:51.39998Z"
-updated_at = "2026-08-28T17:55:51.39998Z"

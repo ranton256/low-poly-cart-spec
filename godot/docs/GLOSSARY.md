@@ -58,9 +58,9 @@ These describe the architecture this project inherited and is bound to by
 | **gate** | An automated check that fails a change. `tools/test.sh` is the standing gate; the visual gate is separate and windowed. |
 | **change** | One unit of planned work under `openspec/changes/<name>/` — proposal, design, specs, tasks. |
 | **capability** | A behavior area with its own spec file. |
-| **backlog** | Work tracked in `.att/` that no accepted change covers. |
+| **backlog** | Work no accepted change covers, tracked as one-line entries in `ROADMAP.md`'s Backlog section. |
 | **visual proof** | A capture from `tools/capture.sh`, committed to `docs/progress/`, showing what the game actually looked like. Mandatory for a milestone, expected for anything changing what the player sees. |
-| **Writer / Critic** | The two review roles. The Writer produces work; the Critic reviews it adversarially, and never in the same pass. See [CONSTRAINTS §12 Review](../../CONSTRAINTS.md). |
+| **Writer / Critic** | The two review roles at a milestone boundary. The Writer produces work; the Critic reviews it adversarially, and never in the same pass. See [CONSTRAINTS §12 Review](../../CONSTRAINTS.md). |
 
 ## Verification terms
 

@@ -46,7 +46,7 @@ is expected to be rewritten when a better implementation appears.**
 | Gate | `./tools/test.sh` — headless, display-free, must be green before anything is done |
 | Python | **`.venv` always — never system Python.** Pinned by `requirements.txt` |
 | Planning | `openspec` — see below |
-| Tasks | `att` — see below |
+| Backlog | `../ROADMAP.md` `## Backlog` — one line per item outside any accepted change |
 
 ```sh
 ./tools/test.sh                            # the standing gate
@@ -135,59 +135,41 @@ Never hand-create a change directory — `openspec new change "<name>"` scaffold
 required metadata. Use `skip_specs: true` only when behavior genuinely does not
 change (tooling, docs).
 
-## Working on a task: att
+## Which tracker owns this work
 
-Detailed work lives in `att`, not in this file and not in ad-hoc lists. That is
-the installed CLI name of `https://github.com/ranton256/agent-task-tracker`.
-
-```sh
-att list --ready            # what can be worked now — dependencies satisfied
-att list --blocked          # what is waiting, and on what
-att show <id>               # exit criteria + ROADMAP references
-att start <id>
-att status <id> in-review   # hand to the Critic — never skip
-att done <id>               # only after [APPROVED] + doc drift check
-```
-
-### Which tracker owns this work
-
-Three layers. Duplicating between them is the failure mode.
+Two layers. Duplicating between them is the failure mode.
 
 | Layer | Owns |
 |---|---|
-| `../ROADMAP.md` | Milestones — where we are going, in what order |
+| `../ROADMAP.md` | Milestones — where we are going, in what order — and the **Backlog**: one line per item outside any accepted change |
 | `openspec/changes/<name>/tasks.md` | The execution checklist for one **accepted** change; archived with it |
-| `.att/` via `att` | Everything else — backlog, issues found in passing, scope deferred out of a change |
 
-**Work is tracked in exactly one of `att` or an accepted change's `tasks.md` —
-never both.** Do not mirror `tasks.md` into `att`. Do not use `att` as a second
-planning system; proposing, designing, and specifying stay in openspec.
+**A work item lives in exactly one place.** A Backlog entry is a pointer, not a
+memo — if it needs a page of analysis, that page belongs in the change that
+will do the work, when it is proposed.
 
-Nothing leaves scope untracked: every item deferred out of a change gets an `att`
-task before that change is archived.
+Nothing leaves scope untracked: every item deferred out of a change gets a
+Backlog line before that change is archived.
 
 ## Five rules that erode first under pressure
 
 Full detail in `../CONSTRAINTS.md`. These are process gates carried by review
 and status transitions, not by a linter, which is exactly why they need saying.
 
-1. **Keep the tracker current, always.** `att start` when you begin, log the RED
-   failure to the description, `att status <id> in-review` when green, `att done`
-   only after approval. For work inside an accepted change, the equivalent is
-   checking off `tasks.md` as each task completes. No code is committed against
-   work that appears in neither. Commit `.att/` alongside the code it describes.
+1. **Keep the tracker current, always.** Check off a change's `tasks.md` as
+   each task completes; give every deferred item its Backlog line before the
+   change is archived. No code is committed against work that appears in
+   neither.
 
-2. **Every completed task or milestone gets an adversarial review pass
-   (Critic).** The Writer never approves their own work, and `in-review` is never
-   skipped. Work is **REJECTED** on any of eight criteria — suite not green, a
-   specified scenario with no test, work not matching its specification, a
-   constraint violated, a tolerance widened rather than met, an ambiguity
-   resolved without being recorded, documentation drifted, or visual proof
-   missing. Full criteria and verdict format in CONSTRAINTS §12 Review.
+2. **Review happens at two moments — never zero.** Before every archive, the
+   author runs the four-item checklist in CONSTRAINTS §12 Review (gate green,
+   coverage current and honest, docs current, tolerances met). Before a
+   milestone is called complete, an adversarial Critic pass reviews it against
+   the specification with an explicit [APPROVED]/[REJECTED] verdict — the
+   Writer never approves their own milestone.
 
-3. **Show the work, do not just assert it.** Visual proof is **mandatory** for a
-   milestone and **expected** for any task that changes what the player sees or
-   how the game plays. `tools/capture.sh` produces it; committed proof lives in
+3. **Show the work, do not just assert it.** Visual proof is **mandatory** for
+   a milestone. `tools/capture.sh` produces it; committed proof lives in
    `docs/progress/`. A green suite proves behaviour and says nothing about
    whether what is on screen looks right. Never hand-cropped: a screenshot that
    cannot be re-run is a memory of a verification, not one.

@@ -1,6 +1,0 @@
-id = 17
-title = "drive_capture settle frames: find the real floor"
-description = "tools/drive_capture.gd waited 3 rendered frames before grabbing the viewport and produced a pure-black capture after a 420-tick drive; two re-runs of the identical command were correct. Raised to 12 and added a guard that refuses to write a frame more than 20% pure black. Neither number is measured: 12 was chosen as comfortably more than 3, and 20% as comfortably more than a dark scene. Worth finding the actual floor — how many frames Godot needs after a long physics-only run — rather than leaving two guessed constants in a tool that produces evidence. Found during add-seeded-world-scatter."
-status = "not-started"
-created_at = "2026-08-29T20:39:44.199221Z"
-updated_at = "2026-08-29T20:39:44.199221Z"

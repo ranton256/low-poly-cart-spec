@@ -1,9 +1,0 @@
-id = 7
-title = "Full-tree physics-body and core-purity gates in test.sh"
-description = """
-V3 and V4. The pre-commit hook added in add-godot-project-foundations checks STAGED files only, so a violation already in the tree passes. add-architecture-and-tuning-gates must add the full-tree greps to test.sh. Until then V4 is marked partial in CONSTRAINTS §10 Verification criteria.
-
-IMPORTANT - match whole words. rng.gd defines randf01(), which contains the banned substring 'randf', and comments in sim.gd and rng.gd mention randi() precisely to say not to use it. A naive grep flags the very file the constraint exists to mandate. Anchor on word boundaries plus a following open-paren, and verify the gate by deliberately breaking it. See CONSTRAINTS §4 Architectural boundaries, 'Match whole words'."""
-status = "done"
-created_at = "2026-08-28T18:06:32.541201Z"
-updated_at = "2026-08-28T20:40:35.428332Z"
