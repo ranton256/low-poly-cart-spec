@@ -1,6 +1,6 @@
 id = 9
 title = "Track V6, V7, V9 and V13 to closure before M0 is called complete"
-description = "ROADMAP M0 requires every verification criterion in CONSTRAINTS §10 Verification criteria to be either enforced or carried by a tracked task. V6 (G1 scenario coverage) is M1, V7 (G2 acceptance conformance) is M8, V9 (visual gallery diffs) is M6, V13 (no unchecked task box) is carried by the apply workflow rather than a gate. None had a backlog entry; this is it. Not blocking add-godot-project-foundations, but it blocks calling M0 complete."
+description = "ROADMAP M0 requires every verification criterion in CONSTRAINTS §10 Verification criteria to be enforced or carried by a tracked task. V6 (G1 scenario coverage) is now ENFORCED by check_spec_coverage.py, closed by add-determinism-and-coverage-harness. Remaining: V7 (G2 acceptance conformance, M8), V9 (visual gallery diffs, M6), V13 (no unchecked task box, carried by the apply workflow rather than a gate). None blocks M0, which is complete; this tracks them to M8."
 status = "not-started"
 created_at = "2026-08-28T19:54:37.306058Z"
-updated_at = "2026-08-28T19:54:37.306058Z"
+updated_at = "2026-08-29T02:12:23.92708Z"

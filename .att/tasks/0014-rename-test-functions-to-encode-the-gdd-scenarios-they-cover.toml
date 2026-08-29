@@ -1,6 +1,6 @@
 id = 14
 title = "Rename test functions to encode the GDD scenarios they cover, for G1"
 description = "CONSTRAINTS section 7 Testing requires test names to encode the design-document scenario they cover so G1 can match them, marked planned for M1. Neither add-simulation-tick-core nor add-asset-normalisation-contract does this: _test_offset_comes_from_the_scaled_box covers 'Scenario: Normalising a supplied model to its target height', and _test_variation_regrounds_at_both_extremes covers 'Scenario: Varying repeated instances so the field does not look tiled', but neither is discoverable by a matcher. Supersedes and widens att 12. add-determinism-and-coverage-harness must either rename them or maintain an explicit mapping."
-status = "not-started"
+status = "done"
 created_at = "2026-08-29T01:25:28.681009Z"
-updated_at = "2026-08-29T01:25:28.681009Z"
+updated_at = "2026-08-29T02:12:23.91997Z"

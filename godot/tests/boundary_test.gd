@@ -41,6 +41,7 @@ func _sim() -> RefCounted:
 	return s
 
 
+# @covers World Boundary Containment / Bouncing off the invisible boundary
 func _test_single_axis_clamps_and_rebounds() -> void:
 	var s := _sim()
 	var limit: float = s.tuning.drivable_extent

@@ -66,6 +66,26 @@ func forward_z() -> float:
 	return cos(yaw)
 
 
+## Called once per rendered frame, before that frame's ticks.
+##
+## A NO-OP, AND THAT IS THE POINT. A real composition root has a per-frame entry
+## point, and this is the only surface through which frame-dependence could
+## reach the core.
+##
+## Be precise about what replay_test.gd proves today: with this method empty,
+## batch-independence still holds by construction — the three drivers run the
+## same sequence of step() calls and differ only in where no-op calls fall. The
+## harness is therefore a REGRESSION GUARD for a property that cannot currently
+## be violated, not a present-tense proof. That is worth having, and it is not
+## the same claim.
+##
+## If this ever stops being empty, the replay harness is what will notice — and
+## it is the only suite that will. determinism_test.gd is blind to per-frame
+## effects by design.
+func begin_frame() -> void:
+	pass
+
+
 ## One tick: the design document's eight stages, in its order.
 ##
 ## THE ORDER IS THE CONTRACT. Several of the document's statements are true only

@@ -15,6 +15,7 @@ enforcement status:
 | ✅ | **Enforced** — an automated gate fails when this is violated |
 | 📋 | **Planned** — agreed, not yet automated; the named milestone adds the gate |
 | 📐 | **Convention** — human-enforced by review; not mechanically checkable |
+| ⊘ | **Withdrawn** — decided against; the row records what replaced it |
 | ⚠️ | **Partial** — something real is enforced, but not the whole criterion; the gap is named |
 | ❓ | **Open** — deliberately undecided; the named change settles it |
 
@@ -229,29 +230,58 @@ call.
 
 | | Status |
 |---|---|
-| **G1** — Every `### Scenario:` in the GDD maps to a named test, or appears in the visual register with a stated reason | 📋 M1 |
+| **G1** — Every `### Scenario:` in the GDD is claimed exactly once: by a named test, by the visual register with a stated reason, or by a deferral naming the milestone that owns it | ✅ `check_spec_coverage.py` |
 | **G2** — Each of the 14 Acceptance Checklist items is one named conformance test carrying its stated tolerance as a literal | 📋 M8 |
 
-The GDD has **14 features and 64 scenarios**. G1 parses the document, extracts
-every scenario heading, and fails when one has neither a matching test name nor a
-register entry. It fails for the reason line coverage never does: a specified
-behaviour that nobody verified.
+The GDD has **14 features and 64 scenarios** — 62 `### Scenario:` headings and 2
+`### Scenario Outline:`, which the gate treats alike. G1 extracts every heading and
+requires each to be claimed **exactly once**: by a `# @covers` declaration beside a
+test, or by an entry in `godot/data/scenario_register.json`. It fails for the reason
+line coverage never does — a specified behaviour that nobody verified — and it fails
+equally on a scenario claimed twice, or a claim on a scenario the document no longer
+contains.
 
 ```
-   64 scenarios
-   ├── ~40  pure core, headless, no scene loaded
-   │        physics · boundary · collision · lap gate · scatter
-   │        normalisation · layout · input model · state machine
-   ├── ~16  headless scene tree, no renderer
-   │        camera math · minimap centring · HUD values · frame ordering
-   └──  ~8  pixels only — the windowed visual gate
-            shadows · fog · anisotropy · grass beyond the boundary
-            minimap markers hidden from the main view · HUD appearance
+   64 scenarios, as claimed today — the gate reports these on every run
+   ├── 13  verified by a named test
+   │        the tick order, the boundary, the input state model, runtime
+   │        tuning, and the normalisation contract
+   ├──  5  visual — cannot be checked headlessly, each with a stated reason
+   │        grass beyond the boundary · the loading indicator · minimap
+   │        markers absent from the main view · viewport resize · the DPI cap
+   └── the rest deferred, each naming the milestone that owns it
 ```
 
-Every scenario in the third group is listed by name in the visual register with
-the capture that covers it. "Not unit-testable" is a claim that must be written
-down, not an omission.
+**The exact counts are deliberately not written here.** `check_spec_coverage.py`
+prints them, per milestone, on every run — and a copy in this document is a second
+source that drifts. It did: an earlier version of this section guessed
+"~40 core, ~16 headless-scene, ~8 visual" before anything measured them, and the
+version after that restated a per-milestone split that was already stale by the time
+it was committed. Read the gate's output.
+
+**A milestone cannot be called complete while it owns a deferred scenario.** That is
+what the per-milestone count is for.
+
+**What G1 cannot do.** Three things, and they are review's:
+
+1. It cannot tell whether a verified claim's test really tests that scenario. Two
+   claims were found overstating during this change's own review — a test asserting
+   the turn rate was *constant* while claiming a scenario that also fixes its
+   magnitude, and one asserting a speed stayed below a clamp when arithmetic
+   guaranteed that whether the clamp existed or not.
+2. It cannot tell whether a deferred scenario belongs to the milestone named. Four
+   were parked wrongly in the same review.
+3. **It counts a claim that never runs.** A `# @covers` line reads as coverage
+   wherever it sits: on a function `_init()` no longer calls, in a file `test.sh`
+   does not run, or in a helper with no test body at all.
+
+It raises the floor from "nobody knows" to "every scenario has a named owner and a
+named status" — no further.
+
+Each of the 5 visual scenarios carries a written reason it cannot be checked
+headlessly, and either the capture that covers it or the milestone that will produce
+one — today all five name a milestone, because the captures do not exist yet. "Not
+unit-testable" is a claim that must be written down, not an omission.
 
 ### Tolerances are normative
 
@@ -373,7 +403,7 @@ The AABB math confirms the mapping is right: at yaw 0 the kart's world extent is
 | No test touches the network or a real save file | ⚠️ `LPC_SAVE_FILE` is exported by every harness, but **nothing reads it yet** — there is no save system until M7. The network half has no check at all |
 | Every suite is deterministic; a flaky test is a defect in the test | 📐 |
 | Visual checks live in a separate windowed gate, never in `test.sh` | 📐 by construction |
-| Test names encode the GDD scenario they cover, so G1 can match them | 📋 M1 |
+| ~~Test names encode the GDD scenario they cover~~ — **withdrawn**. G1 matches an explicit `# @covers` declaration beside the test instead: GDScript identifiers cannot carry the document's punctuation, and coupling a test's name to a heading means rewording the heading breaks the name. See `add-determinism-and-coverage-harness` design D1 | ⊘ withdrawn |
 
 **Coverage** is G1 and G2 in §5 *Conformance to the specification*, not a
 percentage. GDScript has no mature line-coverage tooling and a percentage would
@@ -427,7 +457,7 @@ The supplied asset set is **39 MB of raw `.glb`** across seven models carrying
 | | Target | Status |
 |---|---|---|
 | Cold start → countdown begins, desktop | ≤ 2 s | 📋 M6 |
-| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 7.9 s warm** (3 runs, 7.73–8.02 s across two sessions) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
+| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 8.4 s warm** (3 runs, 8.42–8.45 s) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
 
 The suite budget is a real constraint, not a nicety: a gate slow enough to skip
 stops being run, and a gate that is not run is not a gate.
@@ -499,7 +529,7 @@ runs to decide whether a change is done. Each is pass/fail with no judgment.
 | V3 | No banned symbol from §4 *Architectural boundaries* appears under `godot/scripts/core/` | ✅ `check_boundaries.py` |
 | V4 | No physics-body symbol from §4 *Architectural boundaries* appears anywhere under `godot/` | ✅ `check_boundaries.py` over every text file under `godot/`, plus the commit hook on staged content. Binary scenes (`.scn`, `.res`) are beyond a text gate; the project authors none |
 | V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py`. Small integers are excluded and reported each run — see §3 *Language and style* |
-| V6 | **G1** — every `### Scenario:` in the GDD has a named test or a visual-register entry | 📋 M1 |
+| V6 | **G1** — every `### Scenario:` in the GDD is claimed exactly once, and a claim on a scenario the document does not contain also fails | ✅ `check_spec_coverage.py` |
 | V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | 📋 M8 |
 | V8 | Pinned project settings match §6 *Determinism and the reference frame*, and every model has a valid committed import preset | ✅ `check_settings.py` |
 | V9 | Gallery diffs are within recorded thresholds on all three criteria | 📋 M6 |

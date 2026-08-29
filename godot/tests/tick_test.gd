@@ -20,6 +20,9 @@ const DIAL_NINE_TENTHS_SECONDS := 0.94
 const DIAL_STEADY := 115
 const DIAL_STEADY_SECONDS := 2.60
 const COAST_BELOW_THRESHOLD_SECONDS := 1.21
+## Long enough that a snap-to-halt cutoff must have been crossed; short enough
+## that 0.98^n stays a normal f64. See _test_coast_falls_below_threshold_on_time.
+const COAST_DECAY_TICKS := 12000
 const TIMING_TOLERANCE := 0.05
 
 # Curve tests must finish before the kart reaches the world boundary, or the
@@ -39,12 +42,14 @@ func _init() -> void:
 	_test_dial_settles_and_stays()
 	_test_coast_falls_below_threshold_on_time()
 	_test_steady_speed_is_below_the_clamp()
+	_test_the_clamp_actually_clamps()
 	_test_reverse_is_half()
 	_test_no_steering_at_rest()
 	_test_no_steering_below_the_threshold()
 	_test_steering_reads_pre_friction_velocity()
 	_test_steering_reverses_in_reverse()
 	_test_turn_rate_independent_of_speed()
+	_test_steering_magnitude_and_both_directions()
 	_test_travel_matches_heading()
 	_test_input_combinations()
 	RVTest.finish(self, "tick: order, curve, steering, heading, input", "tick check(s)")
@@ -85,6 +90,7 @@ func _within(actual: float, expected: float, tol: float) -> bool:
 	return absf(actual - expected) <= tol
 
 
+# @covers Kart Driving Physics / Accumulating forward speed
 func _test_spin_up_reaches_nine_tenths_on_time() -> void:
 	var s := _sim()
 	s.input.forward = true
@@ -123,6 +129,7 @@ func _test_dial_settles_and_stays() -> void:
 	_check(not left_steady, "dial stays at %d and never exceeds it" % DIAL_STEADY)
 
 
+# @covers Kart Driving Physics / Coasting to a stop
 func _test_coast_falls_below_threshold_on_time() -> void:
 	var s := _sim()
 	s.input.forward = true
@@ -145,12 +152,68 @@ func _test_coast_falls_below_threshold_on_time() -> void:
 			% [seconds, COAST_BELOW_THRESHOLD_SECONDS, TIMING_TOLERANCE]
 		)
 	)
-	# asymptotic, never snapping to a halt
-	_check(absf(s.velocity) > 0.0, "velocity approaches zero without reaching it")
+	# "asymptotically approaches zero without ever snapping to a halt" — the third
+	# clause, and the one that needs care. Asserting velocity > 0 HERE proves
+	# nothing: at this point velocity is still steerThreshold-sized, far above any
+	# cutoff a snap-to-halt would plausibly use. Review demonstrated the gap by
+	# adding `if absf(velocity) < 0.005: velocity = 0.0` after the friction stage
+	# and watching the whole suite stay green.
+	#
+	# So coast far past every plausible cutoff and pin the exact recurrence. With
+	# no input, stages 1-3 are all no-ops below steerThreshold, so each tick is
+	# exactly `velocity *= friction` in f64 — bit-exact equality is the right
+	# assertion, and any snap, floor, epsilon, or clamp breaks it.
+	var v: float = s.velocity
+	for _i in range(COAST_DECAY_TICKS):
+		var want: float = v * s.tuning.friction
+		s.step()
+		if s.velocity != want:
+			_check(
+				false,
+				"coast tick decays by exactly friction (want %s, got %s)" % [want, s.velocity]
+			)
+			return
+		v = s.velocity
+	# 0.98^12000 is about 1e-105: small enough that any snap-to-halt cutoff has
+	# been crossed, large enough to stay a normal f64.
+	_check(
+		v > 0.0,
+		(
+			"velocity approaches zero asymptotically and never reaches it (got %s after %d coasting ticks)"
+			% [v, COAST_DECAY_TICKS]
+		)
+	)
 
 
 ## Friction is applied AFTER the clamp, so the achievable speed is below it.
 ## This is why the dial tops out short of its nominal maximum.
+# @covers Kart Driving Physics / Clamping to the configured speed limits
+## Steady state is 0.192 against a clamp of 0.2, so "speed stays below the
+## clamp" is arithmetic — it held whether or not stage 2 existed, and deleting
+## the forward clamp passed the whole suite. This drives velocity ABOVE the
+## clamp and asserts it is pulled back. Review caught it.
+func _test_the_clamp_actually_clamps() -> void:
+	var forward := _sim()
+	forward.velocity = 5.0  # far above maxSpeed
+	forward.input.forward = true
+	forward.step()
+	# clamped to maxSpeed at stage 2, then friction at stage 4
+	_check(
+		absf(forward.velocity - forward.tuning.max_speed * forward.tuning.friction) < 1e-12,
+		"forward velocity above the clamp is pulled back to maxSpeed (got %.9f)" % forward.velocity
+	)
+
+	var reverse := _sim()
+	reverse.velocity = -5.0
+	reverse.input.reverse = true
+	reverse.step()
+	var reverse_limit: float = reverse.tuning.max_speed * reverse.tuning.reverse_factor
+	_check(
+		absf(reverse.velocity + reverse_limit * reverse.tuning.friction) < 1e-12,
+		"reverse velocity is clamped to maxSpeed x reverseFactor (got %.9f)" % reverse.velocity
+	)
+
+
 func _test_steady_speed_is_below_the_clamp() -> void:
 	var s := _sim()
 	s.input.forward = true
@@ -160,6 +223,7 @@ func _test_steady_speed_is_below_the_clamp() -> void:
 	_check(s.speedo_readout() < int(s.tuning.speedo_max), "dial tops out below its nominal maximum")
 
 
+# @covers Kart Driving Physics / Reversing
 func _test_reverse_is_half() -> void:
 	var forward_sim := _sim()
 	forward_sim.input.forward = true
@@ -190,6 +254,7 @@ func _test_no_steering_at_rest() -> void:
 ## threshold exists. Deleting the threshold entirely left the whole suite green.
 ## This is the case that actually tests it — moving, but at or below the
 ## threshold, which the design document specifies as "steerThreshold or less".
+# @covers Kart Driving Physics / Refusing to steer while stationary
 func _test_no_steering_below_the_threshold() -> void:
 	var s := _sim()
 	var threshold: float = s.tuning.steer_threshold
@@ -231,6 +296,7 @@ func _test_steering_reads_pre_friction_velocity() -> void:
 	)
 
 
+# @covers Kart Driving Physics / Reversing the steering sense when driving backwards
 func _test_steering_reverses_in_reverse() -> void:
 	var fwd := _sim()
 	fwd.input.forward = true
@@ -244,6 +310,41 @@ func _test_steering_reverses_in_reverse() -> void:
 		rev.step()
 	_check(fwd.yaw > 0.0, "left while moving forward turns one way")
 	_check(rev.yaw < 0.0, "the same input in reverse turns the other (acceptance 5)")
+
+
+# @covers Kart Driving Physics / Steering while rolling
+## The scenario has three clauses: left rotates by +turnRate per tick, right by
+## the same magnitude the other way, and the rate is constant above the
+## threshold. An earlier version tested only the third — halving turnRate passed
+## the entire suite, and the right input was never pressed anywhere. Review
+## caught it.
+func _test_steering_magnitude_and_both_directions() -> void:
+	var left := _sim()
+	left.velocity = 0.15
+	left.input.left = true
+	var before_left: float = left.yaw
+	left.step()
+	_check(
+		absf((left.yaw - before_left) - left.tuning.turn_rate) < 1e-12,
+		(
+			"left rotates by exactly turnRate per tick (got %.9f, want %.9f)"
+			% [left.yaw - before_left, left.tuning.turn_rate]
+		)
+	)
+
+	var right := _sim()
+	right.velocity = 0.15
+	right.input.right = true
+	var before_right: float = right.yaw
+	right.step()
+	_check(
+		absf((right.yaw - before_right) + right.tuning.turn_rate) < 1e-12,
+		"right rotates by the same magnitude the other way (got %.9f)" % [right.yaw - before_right]
+	)
+	_check(
+		absf(left.yaw - before_left) - absf(right.yaw - before_right) == 0.0,
+		"the two directions are equal in magnitude"
+	)
 
 
 func _test_turn_rate_independent_of_speed() -> void:
@@ -275,6 +376,7 @@ func _test_turn_rate_independent_of_speed() -> void:
 
 
 ## Travel is along the heading at every angle, with no lateral component.
+# @covers Kart Driving Physics / Translating heading into motion
 func _test_travel_matches_heading() -> void:
 	for step_index in range(16):
 		var heading := TAU * float(step_index) / 16.0
@@ -303,6 +405,8 @@ func _test_travel_matches_heading() -> void:
 	)
 
 
+# @covers Input Handling / Combining simultaneous inputs
+# @covers Input Handling / Tracking held inputs as continuous state
 func _test_input_combinations() -> void:
 	# opposing drive inputs cancel, leaving only friction
 	var both := _sim()

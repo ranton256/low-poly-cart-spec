@@ -1,0 +1,327 @@
+{
+  "_meta": {
+    "purpose": "Design-document scenarios that no test claims, and why.",
+    "kinds": {
+      "visual": "Cannot be verified headlessly. Needs a stated reason and the committed capture that covers it, or the milestone that will produce one.",
+      "deferred": "Not yet due. Needs the milestone that owns it."
+    },
+    "the_other_kind": "A scenario VERIFIED by a test is not listed here. Its claim lives beside the test, as a '# @covers <Feature> / <Scenario>' line, so it moves with the code it describes.",
+    "matching": "Feature and scenario text are quoted from the design document VERBATIM. check_spec_coverage.py requires a bijection, so rewording a heading in the document breaks every claim on it \u2014 deliberately. A fuzzy match would absorb the rename silently, which is the failure the gate exists to prevent.",
+    "honesty": "The gate can check that every scenario is claimed and that a deferral names a milestone. It CANNOT check that a deferred scenario really belongs to the milestone named, nor that a verified claim's test really tests that scenario. Those are review's job \u2014 see design D4 of add-determinism-and-coverage-harness."
+  },
+  "entries": [
+    {
+      "feature": "Session Bootstrap and Asset Normalisation",
+      "scenario": "Presenting a loading state while assets stream in",
+      "kind": "visual",
+      "reason": "The loading indicator's presence and text are on-screen facts; the state machine half is covered separately.",
+      "milestone": "M5"
+    },
+    {
+      "feature": "Session Bootstrap and Asset Normalisation",
+      "scenario": "Placing the kart at the start line",
+      "kind": "deferred",
+      "milestone": "M2"
+    },
+    {
+      "feature": "Session Bootstrap and Asset Normalisation",
+      "scenario": "Completing bootstrap and handing off to the start sequence",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Session Bootstrap and Asset Normalisation",
+      "scenario": "Failing to load an asset",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Procedural World Generation",
+      "scenario": "Scattering the standard prop population",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Procedural World Generation",
+      "scenario": "Rejecting a candidate placement",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Procedural World Generation",
+      "scenario": "Giving up gracefully when placements cannot be found",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Procedural World Generation",
+      "scenario": "Varying repeated instances so the field does not look tiled",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Procedural World Generation",
+      "scenario": "Leaving an empty outer ring",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Procedural World Generation",
+      "scenario": "Regenerating the world on demand",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Race Start Sequence and Game State Machine",
+      "scenario": "Enumerating the game states",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Race Start Sequence and Game State Machine",
+      "scenario": "Running the countdown",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Race Start Sequence and Game State Machine",
+      "scenario": "Releasing control on the GO frame",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Race Start Sequence and Game State Machine",
+      "scenario": "Freezing the kart during the countdown",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Race Start Sequence and Game State Machine",
+      "scenario": "Viewing the kart before the start",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "World Boundary Containment",
+      "scenario": "Keeping the boundary invisible",
+      "kind": "visual",
+      "reason": "Requires seeing that grass is still visible beyond the kart and that no wall or ground edge is drawn. Nothing about that is measurable from state.",
+      "milestone": "M2"
+    },
+    {
+      "feature": "Collision Detection and Response",
+      "scenario": "Detecting an overlap with a prop",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Collision Detection and Response",
+      "scenario": "Responding to an impact",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Collision Detection and Response",
+      "scenario": "Not becoming trapped inside an obstacle",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Collision Detection and Response",
+      "scenario": "Passing close to a prop without contact",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Collision Detection and Response",
+      "scenario": "Growing hit volume when driving diagonally",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Collision Detection and Response",
+      "scenario": "Colliding with the kart's own start position after regeneration",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Chase Camera",
+      "scenario": "Trailing the kart",
+      "kind": "deferred",
+      "milestone": "M2"
+    },
+    {
+      "feature": "Chase Camera",
+      "scenario": "Lagging through a turn",
+      "kind": "deferred",
+      "milestone": "M2"
+    },
+    {
+      "feature": "Chase Camera",
+      "scenario": "Widening the field of view with speed",
+      "kind": "deferred",
+      "milestone": "M2"
+    },
+    {
+      "feature": "Chase Camera",
+      "scenario": "Absorbing a collision jolt",
+      "kind": "deferred",
+      "milestone": "M3"
+    },
+    {
+      "feature": "Minimap",
+      "scenario": "Rendering the minimap inset",
+      "kind": "deferred",
+      "milestone": "M5"
+    },
+    {
+      "feature": "Minimap",
+      "scenario": "Framing the minimap view",
+      "kind": "deferred",
+      "milestone": "M5"
+    },
+    {
+      "feature": "Minimap",
+      "scenario": "Keeping the minimap orientation fixed",
+      "kind": "deferred",
+      "milestone": "M5"
+    },
+    {
+      "feature": "Minimap",
+      "scenario": "Marking the kart on the minimap",
+      "kind": "deferred",
+      "milestone": "M5"
+    },
+    {
+      "feature": "Minimap",
+      "scenario": "Hiding minimap markers from the main view",
+      "kind": "visual",
+      "reason": "Whether a marker is absent from the MAIN view is a property of what was rendered, not of any value the simulation holds.",
+      "milestone": "M5"
+    },
+    {
+      "feature": "Heads-Up Display",
+      "scenario": "Driving the speedometer needle",
+      "kind": "deferred",
+      "milestone": "M5"
+    },
+    {
+      "feature": "Heads-Up Display",
+      "scenario": "Running the race timer",
+      "kind": "deferred",
+      "milestone": "M5"
+    },
+    {
+      "feature": "Heads-Up Display",
+      "scenario": "Displaying an unset best time",
+      "kind": "deferred",
+      "milestone": "M5"
+    },
+    {
+      "feature": "Lap Detection and Best-Time Tracking",
+      "scenario": "Completing a valid lap",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Lap Detection and Best-Time Tracking",
+      "scenario": "Setting a new best time",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Lap Detection and Best-Time Tracking",
+      "scenario": "Recording a lap slower than the best",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Lap Detection and Best-Time Tracking",
+      "scenario": "Restarting the clock after a lap",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Lap Detection and Best-Time Tracking",
+      "scenario": "Rejecting a crossing",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Lap Detection and Best-Time Tracking",
+      "scenario": "Persisting the best time for the session",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Input Handling",
+      "scenario": "Mapping the control scheme",
+      "kind": "deferred",
+      "milestone": "M2",
+      "note": "Deferred to M2, which declares the bindings. Two of them \u2014 R Reset Kart and P Save Layout \u2014 invoke actions that do not exist until M7; M2 verifies the bindings, not their effects."
+    },
+    {
+      "feature": "Input Handling",
+      "scenario": "Clearing stuck inputs on focus loss",
+      "kind": "deferred",
+      "milestone": "M2"
+    },
+    {
+      "feature": "Input Handling",
+      "scenario": "Ignoring unbound keys",
+      "kind": "deferred",
+      "milestone": "M2"
+    },
+    {
+      "feature": "Runtime Tuning and Player Actions",
+      "scenario": "Resetting the kart",
+      "kind": "deferred",
+      "milestone": "M7"
+    },
+    {
+      "feature": "Track Layout Persistence",
+      "scenario": "Exporting the current layout",
+      "kind": "deferred",
+      "milestone": "M7"
+    },
+    {
+      "feature": "Track Layout Persistence",
+      "scenario": "Restoring a saved layout",
+      "kind": "deferred",
+      "milestone": "M7"
+    },
+    {
+      "feature": "Track Layout Persistence",
+      "scenario": "Round-tripping a layout without drift",
+      "kind": "deferred",
+      "milestone": "M7"
+    },
+    {
+      "feature": "Frame Loop and Render Pipeline",
+      "scenario": "Ordering the work within a frame",
+      "kind": "deferred",
+      "milestone": "M5",
+      "note": "The scenario requires the camera, the minimap re-centre AND the HUD update to be ordered after post-physics, and closes on the kart's position, the speedometer and the minimap marker agreeing within a frame. Neither a minimap nor a HUD exists before M5, which owns that clause almost verbatim. M2 can verify at most the physics-then-camera half."
+    },
+    {
+      "feature": "Frame Loop and Render Pipeline",
+      "scenario": "Suspending the simulation outside the racing state",
+      "kind": "deferred",
+      "milestone": "M4"
+    },
+    {
+      "feature": "Frame Loop and Render Pipeline",
+      "scenario": "Adapting to a resized viewport",
+      "kind": "visual",
+      "reason": "Requires observing that no HUD element is clipped, stretched or left on a stale corner after a resize.",
+      "milestone": "M6"
+    },
+    {
+      "feature": "Frame Loop and Render Pipeline",
+      "scenario": "Limiting render resolution on high-density displays",
+      "kind": "visual",
+      "reason": "Requires a high-DPI display reporting a device pixel ratio above 2; the cap is only observable in what is actually rendered.",
+      "milestone": "M6"
+    }
+  ]
+}

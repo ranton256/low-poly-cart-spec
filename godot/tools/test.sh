@@ -74,6 +74,9 @@ godot --headless -s tests/tuning_loader_test.gd
 # decides whether props stand on the ground or in it.
 godot --headless -s tests/normalise_test.gd
 
+# Acceptance 14a: one input sequence, three tick batchings, one outcome.
+godot --headless -s tests/replay_test.gd
+
 # Lint and format. Fast, and they keep the diff about behaviour.
 # Every .gd under scripts/ and tests/, not a fixed list of directories — an
 # earlier version named scripts/core/ explicitly, so a future scripts/view/
@@ -111,6 +114,10 @@ fi
 # Static typing on every signature. gdlint cannot do this — it ships no typing
 # rules — so naming it as the gate left CONSTRAINTS §3 Language and style unenforced.
 "$PY" tools/check_static_typing.py
+
+# G1 — every scenario in the design document is claimed by a test, the visual
+# register, or a dated deferral. CONSTRAINTS §5 Conformance to the specification.
+"$PY" tools/check_spec_coverage.py
 
 # Architectural boundaries. The simulation core stays free of the engine, and the
 # Godot physics engine appears nowhere — over the WHOLE tree, not just staged

@@ -90,6 +90,8 @@ func _adversarial() -> AABB:
 	return AABB(Vector3(-1.0, 3.0, -0.5), Vector3(2.0, 2.0, 1.0))
 
 
+# @covers
+#   Session Bootstrap and Asset Normalisation / Normalising a supplied model to its target height
 func _test_offset_comes_from_the_scaled_box() -> void:
 	var authored := _adversarial()
 	var n = Normalise.to_target_height(authored, 4.0)

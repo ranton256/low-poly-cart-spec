@@ -103,6 +103,7 @@ func _test_precision_is_far_below_the_tolerance() -> void:
 	)
 
 
+# @covers Runtime Tuning and Player Actions / Adjusting handling without a restart
 func _test_tuning_change_applies_next_tick() -> void:
 	var s := _sim()
 	s.input.forward = true

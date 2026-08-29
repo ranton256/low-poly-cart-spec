@@ -1,6 +1,6 @@
 id = 12
 title = "Test names should encode the GDD scenario they cover, for G1"
 description = "CONSTRAINTS section 7 Testing states that test names encode the design-document scenario they cover so G1 can match them, marked planned for M1. The suites added by add-simulation-tick-core use descriptive names (_test_spin_up_reaches_nine_tenths_on_time) that do not map to GDD headings (### Scenario: Accumulating forward speed). add-determinism-and-coverage-harness must either rename them or maintain an explicit mapping; a hand-maintained mapping is the weaker option because nothing keeps it honest."
-status = "not-started"
+status = "done"
 created_at = "2026-08-29T00:12:54.586728Z"
-updated_at = "2026-08-29T00:12:54.586728Z"
+updated_at = "2026-08-29T02:12:23.923639Z"
