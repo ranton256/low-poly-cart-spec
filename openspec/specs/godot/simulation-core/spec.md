@@ -158,22 +158,29 @@ contact with that limit SHALL cost it speed exactly once per tick.
 
 ### Requirement: Tuning is supplied to the simulation, not fetched by it
 
-The simulation SHALL receive its tuning values from its caller, and a changed value
-SHALL take effect on the next tick.
+The simulation SHALL receive the values and the world state it needs, rather than
+locating or loading them, so that it stays constructible and steppable with no
+scene loaded and no files present.
 
 #### Scenario: A changed value applies immediately
 
-- **WHEN** a tuning value is changed while the simulation is running
+- **WHEN** a tuning value is changed at run time
 - **THEN** the next tick uses the new value
-- **AND** no reset, reload or state transition is required
-- **AND** the kart's position, heading, velocity and elapsed tick count are
-  unaffected by the change itself
+- **AND** no restart, reload or reconstruction is needed
 
 #### Scenario: The simulation reads no files
 
-- **WHEN** the simulation is constructed in a test
-- **THEN** it can be given tuning values directly
-- **AND** it does not open, locate or parse any file to obtain them
+- **WHEN** the simulation is constructed and stepped
+- **THEN** it opens nothing and locates nothing
+- **AND** a test can drive it with values it constructed itself
+
+#### Scenario: The props the tick collides with are supplied in order
+
+- **WHEN** the simulation resolves a collision
+- **THEN** the props it tests were handed to it, in registration order, rather than
+  read back out of a scene
+- **AND** a test can therefore place two props exactly where it wants them and step
+  the tick, with nothing loaded
 
 ### Requirement: A run is reproducible
 

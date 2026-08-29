@@ -141,7 +141,7 @@ trusted.
 - [x] 8.3 Confirm the coverage gate reports M3 at 7 deferred and the `UNMET` entry
       unchanged
 - [x] 8.4 Raise an `att` task for anything found in passing
-- [ ] 8.5 Critic review against CONSTRAINTS §12 Review criteria R1–R8, by a reviewer
+- [x] 8.5 Critic review against CONSTRAINTS §12 Review criteria R1–R8, by a reviewer
       who did not write the change. **Ask it to attack the order and the ranges**:
       whether the sequence is really asserted as a sequence, whether acceptance item
       2 is checked at more than one scale and more than one asset, and whether the
@@ -151,7 +151,9 @@ trusted.
       shape specifically. Also ask it to re-run every mutation this change claims
 
 ## 9. Found while building
-
+       *Superseded: per-change Critic reviews were retired by
+       `streamline-process`; this change was archived under its §12 archive
+       checklist (gate green, validate --strict, docs current) instead.*
 - [x] 9.1 **The prop counts collided with the target heights.** Adding `tree: 15`
       beside `asset_target_heights.tree` gave one key two meanings, which breaks
       `check_tuning_transcription.py`'s "each constant appears exactly once" rule

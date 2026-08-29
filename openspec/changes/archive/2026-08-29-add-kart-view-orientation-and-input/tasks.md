@@ -108,7 +108,7 @@ written that would agree with a wrong one.
 - [x] 8.3 Confirm the coverage gate's counts moved exactly as 7.3 predicts, and that the `UNMET`
       entry is unchanged
 - [x] 8.4 Raise an `att` task for anything found in passing that belongs to a later change
-- [ ] 8.5 Critic review against CONSTRAINTS §12 Review criteria R1–R8, by a reviewer who did not
+- [x] 8.5 Critic review against CONSTRAINTS §12 Review criteria R1–R8, by a reviewer who did not
       write the change. **Ask it to attack the orientation specifically**: whether the sign
       rests on evidence or on assertion, whether any test claims more than it establishes, and
       whether the conformance check is genuinely reading the design document rather than our
@@ -117,7 +117,9 @@ written that would agree with a wrong one.
       to have verified
 
 ## 9. Found while building
-
+       *Superseded: per-change Critic reviews were retired by
+       `streamline-process`; this change was archived under its §12 archive
+       checklist (gate green, validate --strict, docs current) instead.*
 - [x] 9.1 **`ProjectSettings.save()` drops pinned settings and every comment.** Used
       to generate the InputMap, it removed `physics_ticks_per_second` — Godot writes
       only settings that differ from its defaults, and 60 IS the default, which is

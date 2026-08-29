@@ -92,7 +92,7 @@ looks through it, and the settling threshold is fixed before it is measured.
 - [x] 7.3 Confirm the coverage gate reports M2 at zero deferred, and that the
       `UNMET` entry for *Keeping the boundary invisible* is unchanged
 - [x] 7.4 Raise an `att` task for anything found in passing
-- [ ] 7.5 Critic review against CONSTRAINTS §12 Review criteria R1–R8, by a reviewer
+- [x] 7.5 Critic review against CONSTRAINTS §12 Review criteria R1–R8, by a reviewer
       who did not write the change. **Ask it to attack the thresholds**: whether
       2.1's settling threshold and 2.2's time constant were genuinely fixed before
       the measurements or reverse-engineered to pass, and whether any test
@@ -103,7 +103,9 @@ looks through it, and the settling threshold is fixed before it is measured.
       never been in the file at all
 
 ## 8. Found while building
-
+       *Superseded: per-change Critic reviews were retired by
+       `streamline-process`; this change was archived under its §12 archive
+       checklist (gate green, validate --strict, docs current) instead.*
 - [x] 8.1 **A defect in committed work, fixed in its own commit (`20e61fa`).**
       `3f43233` added three test suites and never registered them in `test.sh` —
       they passed when run by hand and protected nothing on any later run. The

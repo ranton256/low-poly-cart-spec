@@ -123,14 +123,16 @@ lit, and the lighting is measured before it is judged.
       it now reports `13 verified, 4 visual, 1 UNMET, 46 deferred`. **Treating an
       unchanged count as proof nothing was over-claimed is what this task originally
       did, and it was wrong**
-- [ ] 6.5 Critic review against CONSTRAINTS §12 Review criteria R1–R8 by a reviewer who did not write
+- [x] 6.5 Critic review against CONSTRAINTS §12 Review criteria R1–R8 by a reviewer who did not write
       the change, with an explicit [APPROVED] or [REJECTED] verdict. **Ask it to
       attack the exposure result specifically**: whether the criteria were really
       fixed before the captures, whether `k` is reproducible from the committed tool,
       and whether every number in the A9 entry came from a named region
 
 ## 7. Found while building
-
+       *Superseded: per-change Critic reviews were retired by
+       `streamline-process`; this change was archived under its §12 archive
+       checklist (gate green, validate --strict, docs current) instead.*
 - [x] 7.1 Added `tests/world_test.gd` — the scene tree is headless-testable, so
       everything about §5 and §6 except the pixels is now checked on every run:
       element presence, ground material, derived grid geometry, band placement,

@@ -27,8 +27,8 @@ Implementation (picked up after review):
        camera_test.gd failed the run naming the suite (after the suite
        printed its own success line — the exact att-19 hole), and an
        unregistered probe suite still fails the registration gate.
-- [ ] 7. Archive the five completed M2/M3 changes
+- [x] 7. Archive the five completed M2/M3 changes
        (`add-world-presentation-layer`, `add-kart-view-orientation-and-input`,
        `add-chase-camera`, `add-seeded-world-scatter`,
        `add-aabb-collision-response`) under the new archive checklist.
-- [ ] 8. Archive this change.
+- [x] 8. Archive this change.
