@@ -1,16 +1,18 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 ; The game's entry scene: the world, the composition root that drives the
-; simulation, and the kart that shows it.
+; simulation, the kart, and the chase camera the design document specifies.
 ;
 ; The root lives HERE and not in world.tscn, so that world.tscn keeps its
 ; committed property of rendering with nothing stepping — which is what lets it
-; be loaded and captured on its own. See design D1 of
-; add-kart-view-orientation-and-input.
+; be loaded and captured on its own, and what kart_front_view.tscn and
+; kart_overhead_view.tscn depend on. Those scenes keep the PLACEHOLDER viewpoint;
+; this one uses the specified camera. See design D4 of add-chase-camera.
 
 [ext_resource type="PackedScene" path="res://scenes/world.tscn" id="1_world"]
 [ext_resource type="Script" path="res://scripts/main.gd" id="2_main"]
 [ext_resource type="Script" path="res://scripts/view/kart_view.gd" id="3_kart"]
+[ext_resource type="Script" path="res://scripts/view/camera_view.gd" id="4_camera"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("2_main")
@@ -19,3 +21,6 @@ script = ExtResource("2_main")
 
 [node name="Kart" type="Node3D" parent="."]
 script = ExtResource("3_kart")
+
+[node name="ChaseCamera" type="Camera3D" parent="."]
+script = ExtResource("4_camera")

@@ -140,7 +140,24 @@ scene loaded. This is the milestone that makes every later one fast.
 
 ---
 
-## M2 — First drive
+## M2 — First drive ✅ COMPLETE
+
+Shipped by `add-world-presentation-layer`, `add-kart-view-orientation-and-input`
+and `add-chase-camera`. Acceptance items **3**, **8** and **11** pass as named
+tests; the coverage gate reports **zero** M2 scenarios deferred. Ambiguities
+**A6**, **A9** and **A10** were settled, each with committed evidence; **A11** was
+opened and belongs to M6.
+
+Every done-when clause below carries ✅ where it shipped and ⚠️ where it did not,
+rather than the milestone being marked complete over a list nobody checked off.
+
+One clause is ⚠️ and is disclosed rather than waived: *Keeping the boundary
+invisible* requires that no edge of the ground be visible, and the design
+document's own ±100 wu plane, ±90 drivable extent and 50 wu fog start cannot
+jointly deliver it. The register records it as `unmet`, the coverage gate prints
+it on every run, and A11 owns the decision. Through the specified chase camera at
+the boundary the transition reads as a plain horizon, which is the most favourable
+evidence so far — and still M6's call.
 
 **Goal.** You can drive the kart across a sunlit green field with a camera behind
 it. The thinnest end-to-end slice: input reaching the simulation, the simulation
@@ -151,35 +168,35 @@ hazard, and the acceptance item that catches it (3) cannot be proven without it.
 Props wait for M3.
 
 **Done when**
-- Ground plane, reference grid, start/finish band, sky colour, linear fog, and
+- ✅ Ground plane, reference grid, start/finish band, sky colour, linear fog, and
   the three lights are all present at their specified values
-- The kart drives in the direction it visually faces, **at every heading**,
+- ✅ The kart drives in the direction it visually faces, **at every heading**,
   forward and reverse (**acceptance 3**)
-- The kart's yaw correction has its **axis derived from the imported bounds** and
+- ✅ The kart's yaw correction has its **axis derived from the imported bounds** and
   its **sign fixed by a committed capture**, held in one named constant, with a
   vertex-centroid measurement as a second witness — the GDD's "+90°" is never
   transcribed as a literal. The 16-heading test proves travel/facing *consistency*;
   it passes on a 180° error, so it is not what settles the sign (**A6**)
-- The view interpolates between simulation states with
+- ✅ The view interpolates between simulation states with
   `Engine.get_physics_interpolation_fraction()` and advances nothing itself. The
   **composition root** owns the accumulator and is the only caller of `step()`
-- The three light intensities are settled against Godot's units (**A9**) by a
+- ✅ The three light intensities are settled against Godot's units (**A9**) by a
   committed measurement, not by eye: ratios preserved exactly, tonemapping left
   linear, and one shared scale chosen as **the value making the specified ground
   albedo render as itself**, verified to saturate nothing. "The largest scale that
   clips nothing" was the original rule and it is not this one — it parks the scene
   as bright as saturation allows rather than as bright as the
   specification asks, which the captures in `godot/docs/progress/` record
-- The chase camera is a **pure module in `scripts/core/`**, stepped once per tick
+- ✅ The chase camera is a **pure module in `scripts/core/`**, stepped once per tick
   by the composition root immediately after `sim.step()` — so acceptance 8's
   "settles behind the kart" is a numeric test rather than a judgement (**A10**)
-- The chase camera trails, lags through turns, settles behind the kart, and its
+- ✅ The chase camera trails, lags through turns, settles behind the kart, and its
   field of view visibly widens with speed (**acceptance 8**)
-- Driving to the boundary produces a soft rebound with grass still visible
+- ⚠️ Driving to the boundary produces a soft rebound with grass still visible
   beyond, and no wall or ground edge is drawn (**acceptance 7**)
-- Releasing window focus mid-throttle clears every held input and the kart coasts
+- ✅ Releasing window focus mid-throttle clears every held input and the kart coasts
   to a stop rather than driving away (**acceptance 11**)
-- **Visual proof:** the kart mid-turn at speed, and a capture at the boundary
+- ✅ **Visual proof:** the kart mid-turn at speed, and a capture at the boundary
   showing grass beyond it
 
 > **This is the milestone where a port most often goes quietly wrong.** A kart

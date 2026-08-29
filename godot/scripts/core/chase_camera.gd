@@ -7,10 +7,11 @@
 #
 # The reason is that the design document states this camera's behaviour as
 # NUMBERS: an easing factor per tick, a time constant of ~0.2 s, a settling time
-# of ~0.5 s, and a field-of-view curve. Those are checkable, and the core is the
-# only place in this project where a per-tick recurrence can be driven and
-# asserted with no scene loaded. Acceptance item 8 becomes a measurement instead
-# of a judgement.
+# of ~0.5 s, and a field-of-view curve. Those are checkable — and this directory
+# is the only one the boundary gate polices. A pure module is steppable headless
+# wherever it sits; what core/ adds is that nothing here can quietly acquire a
+# Node, read a file, or start easing per frame. Acceptance item 8 becomes a
+# measurement instead of a judgement.
 #
 # The rule this directory really enforces is "fixed-step and engine-free", not
 # "gameplay only". No engine types, no scene tree, constructible from a test.

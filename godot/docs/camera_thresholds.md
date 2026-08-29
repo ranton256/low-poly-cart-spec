@@ -64,7 +64,30 @@ half a second". The derivation gives 0.1999 s and 0.460 s. **Both fall out of
 
 | quantity | predicted | measured |
 |---|---|---|
-| Time constant | 0.1999 s | — |
-| Settling time | 0.460 s | — |
-| Peak offset during the turn | — | — |
-| Field of view at steady state | 89.4° | — |
+| Time constant | 0.1999 s | **0.200 s** (12 ticks) |
+| Settling time | 0.460 s | **0.450 s** (27 ticks), limit 0.500 |
+| Peak offset during the turn | — | **24.67°**, against a 5° floor |
+| Field of view at steady state | 89.4° | **89.40°** |
+
+The settling prediction was made from `chaseSmoothing` alone and landed within
+0.01 s of the measurement. That is the point of writing it down first: the number
+is a consequence of the design document's easing factor, not a description of what
+this implementation happened to do.
+
+**Both thresholds were verified by breaking what they guard.** With
+`chaseSmoothing` at 1.0 — a camera that tracks perfectly and is therefore always
+settled — the time-constant check fails at 0.0167 s and the lag check fails at a
+0.00° peak. That is a **production** mutation: an edit to `data/tuning.json` that
+the shipped game would carry.
+
+The tick-grouping check in `camera_test.gd` is **not** evidence of the same kind,
+and an earlier version of this file listed it as though it were. That check drives
+the camera itself, stepping it inside its own tick loop, so no edit to
+`chase_camera.gd` or `main.gd` can make it fail — it holds by construction, and to
+break it you have to edit the test. What it guards is a later change moving the
+ease into a per-frame call; it does not demonstrate that the running game eases per
+tick today.
+
+`tests/driver_test.gd` carries that half, and it is a production mutation: stepping
+the camera in `_process` as well gives "17 vs 5", and not stepping it at all gives
+"0 vs 4". Both fail by name.

@@ -101,8 +101,8 @@
       "kind": "visual",
       "reason": "Requires seeing that grass is still visible beyond the kart and that no wall or ground edge is drawn. Nothing about that is measurable from state.",
       "milestone": "M6",
-      "capture": "docs/progress/2026-08-29-m2-boundary.png",
-      "note": "Captured by add-world-presentation-layer, and the capture shows the scenario FAILING: the ground plane's edge is a hard line against the sky about 10 wu beyond the boundary, where the design document requires that no edge of the ground be visible. The document's own numbers (\u00b1100 wu plane, \u00b190 drivable extent, fog from 50 wu) make the requirement unreachable \u2014 ambiguity A11, owned by M6, att 15. The capture is also taken from an elevated oblique viewpoint rather than the kart-height eye the scenario describes; that waits for the chase camera. Visual because no headless check can see a horizon.",
+      "capture": "docs/progress/2026-08-29-m2-camera-boundary.png",
+      "note": "Captured through the camera the design document specifies, with the kart driven into the boundary and rebounding \u2014 z=89.997, v=-0.00165, reported by the capture tool. The scenario is still UNMET: the document requires that no edge of the ground be visible, and its own numbers (+/-100 wu plane, +/-90 drivable extent, fog from 50 wu) put the edge five times nearer than fog reaches. From this viewpoint the grass-to-sky transition reads as a plain horizon with no wall, fence or discontinuity, which is the most favourable evidence so far \u2014 and still M6's decision on the whole look rather than one frame. Ambiguity A11, att 15. An earlier note said the kart-height capture 'waits for the chase camera'; it has shipped, and this is it. docs/progress/2026-08-29-m2-boundary.png remains as the elevated oblique view, where the same geometry reads as an edge.",
       "unmet": true
     },
     {
@@ -140,24 +140,6 @@
       "scenario": "Colliding with the kart's own start position after regeneration",
       "kind": "deferred",
       "milestone": "M3"
-    },
-    {
-      "feature": "Chase Camera",
-      "scenario": "Trailing the kart",
-      "kind": "deferred",
-      "milestone": "M2"
-    },
-    {
-      "feature": "Chase Camera",
-      "scenario": "Lagging through a turn",
-      "kind": "deferred",
-      "milestone": "M2"
-    },
-    {
-      "feature": "Chase Camera",
-      "scenario": "Widening the field of view with speed",
-      "kind": "deferred",
-      "milestone": "M2"
     },
     {
       "feature": "Chase Camera",

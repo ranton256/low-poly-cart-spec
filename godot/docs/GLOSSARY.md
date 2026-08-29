@@ -76,6 +76,8 @@ These describe the architecture this project inherited and is bound to by
 | **composition root** | The one place that owns the simulation and advances it. Godot's `_physics_process` is the fixed-step accumulator; the root steps exactly once per call and never in the per-frame callback. |
 | **nose sign** | Which end of the kart's authored long axis is its front. The imported bounds give the axis and cannot give this, because an axis-aligned box is symmetric — see ambiguity A6. |
 | **consistency test** | A check that two things agree, which is not a check that either is right. The 16-heading travel test is one: it derives the kart's nose from the constant it is testing, so a sign error makes both sides wrong together and it passes. |
+| **eased per tick** | A smoothing recurrence advanced once per simulation step, never once per rendered frame. Per frame the same factor gives a different time constant at every display rate — ambiguity A10. |
+| **settling time** | How long the chase camera takes to return behind the kart after a turn, measured as the angle decaying to 10% of its peak. A camera that never leaves is always settled, which is why the lag is asserted separately. |
 
 ---
 

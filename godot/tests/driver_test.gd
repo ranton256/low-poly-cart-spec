@@ -28,6 +28,7 @@ func _init() -> void:
 
 	await _test_stepping_tracks_the_fixed_rate_callback()
 	_test_the_view_never_writes_back()
+	_test_the_game_looks_through_the_specified_camera()
 
 	get_root().remove_child(_root)
 	_root.free()
@@ -35,10 +36,57 @@ func _init() -> void:
 	RVTest.finish(self, "driver: one step per fixed callback, view reads only", "driver check(s)")
 
 
+## THE CHANGE'S HEADLINE DELIVERABLE, AND NOTHING GUARDED IT.
+##
+## add-chase-camera exists to retire the placeholder viewpoint that
+## add-world-presentation-layer shipped. Review deleted the ChaseCamera node from
+## main.tscn — putting the running game back on the placeholder — and the whole
+## standing suite stayed green, because the root reads the node with
+## get_node_or_null and skips it when absent.
+##
+## This is also the change's own spec scenario "The running game uses the
+## specified camera, not the placeholder", which had no test.
+func _test_the_game_looks_through_the_specified_camera() -> void:
+	var camera: Camera3D = _root.chase_camera
+	_check(camera != null, "the running scene has a chase camera at all")
+	if camera == null:
+		return
+	_check(camera.current, "and the game looks through it, not through the placeholder")
+
+	# The placeholder is still in world.tscn, deliberately — world.tscn must stay
+	# capturable on its own. What must NOT happen is the game rendering through
+	# it, and "current" is the only thing that decides which camera wins.
+	var placeholder: Camera3D = _root.get_node_or_null("World/PlaceholderCamera") as Camera3D
+	_check(placeholder != null, "the world scene keeps its placeholder for its own captures")
+	if placeholder != null:
+		_check(
+			not placeholder.current,
+			"but the placeholder is not the active camera in the running game"
+		)
+
+	# The view applies the camera and computes none of it — the other spec
+	# scenario with no test. If these disagree, something between the core and the
+	# screen is doing arithmetic it should not.
+	_check(
+		absf(camera.fov - _root.camera.fov) < 1e-4,
+		(
+			"the view's field of view is the core camera's, unmodified (%f vs %f)"
+			% [camera.fov, _root.camera.fov]
+		)
+	)
+	var applied := camera.global_position
+	var computed := Vector3(_root.camera.pos_x, _root.camera.pos_y, _root.camera.pos_z)
+	_check(
+		applied.distance_to(computed) < 1e-3,
+		"and its position is the core camera's, unmodified (%v vs %v)" % [applied, computed]
+	)
+
+
 func _test_stepping_tracks_the_fixed_rate_callback() -> void:
 	var physics_before: int = Engine.get_physics_frames()
 	var steps_before: int = _root.steps()
 	var begins_before: int = _root.begin_frame_calls()
+	var camera_before: int = _root.camera_steps()
 	for _i in range(12):
 		await process_frame
 
@@ -57,6 +105,20 @@ func _test_stepping_tracks_the_fixed_rate_callback() -> void:
 		)
 	)
 	_check(begun > 0, "the per-frame entry point was called (%d times)" % begun)
+
+	# THE CAMERA ADVANCES WITH THE SIMULATION, not with the frame. This is the
+	# half of ambiguity A10's resolution that camera_test.gd cannot carry: its
+	# tick-grouping check drives the camera itself, so it proves the property
+	# holds when stepped per tick and says nothing about whether the running game
+	# does. This does.
+	var camera_stepped: int = _root.camera_steps() - camera_before
+	_check(
+		camera_stepped == stepped,
+		(
+			"the chase camera advances exactly once per simulation step (%d vs %d)"
+			% [camera_stepped, stepped]
+		)
+	)
 	# The per-frame callback advances NOTHING. If it stepped too, the step count
 	# would exceed the callback count and the simulation would run at display rate.
 	_check(

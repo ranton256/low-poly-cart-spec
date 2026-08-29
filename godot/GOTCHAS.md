@@ -140,6 +140,27 @@ The editor does the same thing. `godot/CLAUDE.md` already warns that Godot strip
 the pinned comments; this is the scripted version of that, and it drops a setting
 too.
 
+### A synthetic input hold does nothing in a background capture
+
+**Symptom.** `tools/drive_capture.gd` presses an action, waits N ticks, and the
+kart barely moves — 560 ticks of "accelerate" left it stopped at z=56 instead of
+against the boundary at 90.
+
+**Why, and it is the game working.** Captures run the window UNFOCUSED so they do
+not interrupt whoever started them (`tools/capture.sh`, `open -g`). The design
+document requires that losing input focus clears every held input, and
+`scripts/main.gd` does exactly that. The synthetic press is cleared on the next
+focus-out and the kart coasts.
+
+**What to do.** Re-press the held actions every tick, which is what
+`drive_capture.gd` does. That drives through the real input path rather than
+around it, and it keeps the focus-clearing behaviour intact — which is a specified
+behaviour and one of the few this project can demonstrate by accident.
+
+**Related.** This is why `drive_capture.gd` prints the kart's final position: a
+capture whose subject sat still looks much like one whose subject drove, and the
+number is the difference.
+
 ## Determinism
 
 ### "The same capture differs between identical runs"

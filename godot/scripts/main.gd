@@ -22,6 +22,8 @@ extends Node3D
 const Sim := preload("res://scripts/core/sim.gd")
 const InputState := preload("res://scripts/core/input_state.gd")
 const TuningLoader := preload("res://scripts/tuning_loader.gd")
+const ChaseCamera := preload("res://scripts/core/chase_camera.gd")
+const ArtTuning := preload("res://scripts/art_tuning.gd")
 
 ## Actions declared in project.godot's InputMap, mapped to the core's held-state
 ## fields. The design document's control table also binds Reset Kart and Save
@@ -37,14 +39,25 @@ const DRIVE_ACTIONS := {
 var sim: RefCounted = null
 var input: RefCounted = null
 
+## The chase camera's state. In the core because it is a fixed-step recurrence
+## whose specified properties are numbers — see scripts/core/chase_camera.gd.
+var camera: RefCounted = null
+
+var _art: RefCounted = null
+
 var _steps: int = 0
 var _frames: int = 0
 var _begin_frame_calls: int = 0
+var _camera_steps: int = 0
 
 ## The kart view, found in the scene rather than constructed here: the root owns
 ## the simulation, not the presentation. It is optional so a headless suite can
 ## drive the root with no view attached.
 @onready var kart: Node3D = get_node_or_null("Kart") as Node3D
+
+## The node the chase camera is applied to. Optional for the same reason the kart
+## view is: a headless suite drives the root with neither attached.
+@onready var chase_camera: Camera3D = get_node_or_null("ChaseCamera") as Camera3D
 
 
 func _ready() -> void:
@@ -60,6 +73,9 @@ func _ready() -> void:
 	input = InputState.new()
 	sim.tuning = tuning
 	sim.input = input
+	camera = ChaseCamera.new()
+	camera.tuning = tuning
+	_art = ArtTuning.load_art()
 
 
 ## Exactly one step. Never a loop: the loop is Godot's, and duplicating it here is
@@ -75,7 +91,13 @@ func _physics_process(_delta: float) -> void:
 	if kart != null:
 		kart.remember(sim)
 	sim.step()
+	# ONCE PER TICK, immediately after the simulation advances — ambiguity A10.
+	# Never in _process: the design document states the easing per tick, and per
+	# frame the time constant becomes 0.4 s at 30 fps and 0.083 s at 144 fps
+	# against a stated 0.2 s.
+	camera.step(sim.pos_x, sim.pos_z, sim.yaw, sim.speed_ratio())
 	_steps += 1
+	_camera_steps += 1
 
 
 ## Once per rendered frame. This advances NOTHING — the count below exists so a
@@ -89,6 +111,8 @@ func _process(_delta: float) -> void:
 	_frames += 1
 	if kart != null:
 		kart.draw_from(sim, interpolation_fraction())
+	if chase_camera != null and _art != null:
+		chase_camera.apply(camera, _art.num("nearClip"), _art.num("farClip"))
 
 
 func steps() -> int:
@@ -101,6 +125,12 @@ func frames() -> int:
 
 func begin_frame_calls() -> int:
 	return _begin_frame_calls
+
+
+## Asserted against steps() by driver_test: the camera must advance exactly with
+## the simulation, which is what "per tick" means in practice.
+func camera_steps() -> int:
+	return _camera_steps
 
 
 ## How far the current frame sits between the last step and the next, 0..1.

@@ -223,6 +223,33 @@ ambiguity register (§5 *Conformance to the specification*).
 
 ---
 
+### `scripts/core/` holds one piece of cosmetic state, deliberately 📐
+
+The chase camera lives in `scripts/core/chase_camera.gd`, and it is not gameplay.
+That widens what this directory means, so it is recorded here rather than left to
+be inferred from a change's `design.md`.
+
+The rule this directory enforces is **fixed-step and engine-free**, not
+**gameplay only**. The camera qualifies on both: it is a per-tick recurrence with
+no engine types, constructible and steppable from a test with no scene loaded. It
+is here because the design document states its behaviour as numbers — a time
+constant, a settling time, a field-of-view curve — and because **this is the only
+directory the boundary gate polices**. Any `RefCounted` module is constructible and
+steppable headless wherever it sits; what `scripts/core/` adds is enforcement, so
+nothing here can quietly acquire a `Node`, read a file, or start easing per frame.
+An earlier version of this paragraph said instead that this was the only place a
+per-tick recurrence could be driven without a renderer. That is false, and the
+change's own `design.md` D1 had already rejected it. Acceptance item 8 is a
+measurement because the camera is a pure recurrence; it is *here* because this is
+where the rule is enforced.
+
+**The test of whether this was right is what follows it in.** Nothing else
+cosmetic should. The HUD, the minimap and the collision shake are all per-frame or
+per-event presentation and belong to the view; if one of them asks for this
+directory, the answer is no and the camera stops being a precedent.
+
+Decided in `add-chase-camera` design D1.
+
 ## 5. Conformance to the specification
 
 This port is **strict**: the GDD's Acceptance Checklist is the contract, its
@@ -322,7 +349,7 @@ in `AMBIGUITIES.md` is mirrored here; that file carries the reasoning:
 | A7 | The sun's orthographic shadow volume has no direct Godot equivalent | Resolved in `spike-compatibility-renderer-shadows` |
 | A8 | Godot has two shadow bias parameters; the design document specifies one | Resolved in `spike-compatibility-renderer-shadows` |
 | A9 | Light intensities are in the reference build's units, not Godot's — at face value Compatibility saturates 59.75% of the frame | Resolved: the ratios are normative, the scale is not. One shared factor `lightScale` = 0.2809, chosen as the value minimising the ground's deviation from its specified albedo; tonemapping stays linear |
-| A10 | The camera eases **per tick** but the frame ordering updates it **per frame**; identical at 60 fps, different at every other rate | ❓ settled in M2 |
+| A10 | The camera eases **per tick** but the frame ordering updates it **per frame**; identical at 60 fps, different at every other rate | Resolved in M2: per tick. The ordering scenario's sequence is normative, its cardinality incidental. Time constant measured 0.200 s, settling 0.450 s, both predicted before measuring |
 | A11 | The design document requires that no edge of the ground be visible, and specifies a ±100 wu plane, a ±90 drivable extent and fog from 50 wu — which make the edge visible from the boundary | ❓ settled in M6 |
 
 ---

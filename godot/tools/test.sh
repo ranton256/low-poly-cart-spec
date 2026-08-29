@@ -87,6 +87,7 @@ godot --headless -s tests/replay_test.gd
 godot --headless -s tests/driver_test.gd
 godot --headless -s tests/kart_test.gd
 godot --headless -s tests/input_test.gd
+godot --headless -s tests/camera_test.gd
 
 
 # Lint and format. Fast, and they keep the diff about behaviour.
@@ -147,6 +148,9 @@ fi
 # thing they check. It shells out to Godot to measure, so it is slower than the
 # other Python gates and still headless.
 "$PY" tools/check_kart_conformance.py
+# Every suite under tests/ is actually run by this file. 3f43233 shipped three
+# that were not, and they were dark until 20e61fa.
+"$PY" tools/check_suites_registered.py
 "$PY" tools/check_settings.py
 
 # Uncomment each as you add it (see docs/testing_toolkit.md, "As the game grows"):

@@ -1,0 +1,6 @@
+id = 16
+title = "Camera captures need input re-pressed every tick"
+description = "tools/drive_capture.gd re-presses held actions on every tick because captures run the window unfocused and the game's own focus-loss handler clears held input — correct behaviour that defeats a synthetic hold. Recorded in GOTCHAS.md. If M5 or M6 adds more driving captures, they need the same pattern; worth folding into a shared helper rather than repeating it."
+status = "not-started"
+created_at = "2026-08-29T18:24:08.903277Z"
+updated_at = "2026-08-29T18:24:08.903277Z"

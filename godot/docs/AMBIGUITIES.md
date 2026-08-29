@@ -206,19 +206,7 @@ a committed tool. A match against the original is neither claimed nor tested.
 *Recorded during `spike-compatibility-renderer-shadows` (M0). Resolved in
 `add-world-presentation-layer` (M2). See `docs/progress/2026-08-29-m2-world.md`.*
 
----
-
-## Open
-
-| # | Ambiguity | Settled by |
-|---|---|---|
-| A1 | HUD element sizes are given in px (200×200 minimap, 160×90 speedometer, ~120 px countdown) with no design resolution named anywhere | M5 |
-| A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
-| A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
-| A10 | The chase camera's easing rate is specified **per tick**, but the frame-ordering scenario places the camera update **once per frame**. At 60 fps those are the same sentence; at no other rate are they | M2 |
-| A11 | The ground is specified as a finite 200 wu plane, the drivable extent as ±90, and fog as beginning at 50 wu. From the boundary the ground's edge is 10 wu away — far inside fog's start — so it renders as a hard line, while acceptance item 7 asks for grass beyond the boundary and no drawn edge | M6 |
-
-### A10 (open, detail) — The camera eases per tick, but is updated per frame
+### A10 — The camera eases per tick, but is updated per frame
 
 **The specification says**, in *Chase Camera / Trailing the kart*, that "the camera
 position eases toward its target by `chaseSmoothing` per tick (a time constant of
@@ -237,23 +225,46 @@ not 1/60 s long:
 | 60 fps | 1 ease · 0.2 s ✓ | 1 ease · 0.2 s ✓ |
 | 144 fps | 0 or 1 ease · 0.2 s ✓ | 1 ease · 0.083 s ✗ |
 
-Per-frame easing gives a camera that snaps tighter on a fast display and wallows on
-a slow one — frame-rate-dependent behaviour, which the *Reference Tick* section
-calls non-conformant in the general case.
+**This port decided: per tick.** The camera is a module in `scripts/core/`,
+advanced by the composition root immediately after `Sim.step()`. The frame-ordering
+scenario's **sequence** is read as normative — physics, then camera — and its
+**cardinality** as incidental: the camera is updated after the frame's ticks,
+however many there were.
 
-**This port leans to easing per tick**, reading the frame-ordering scenario as
-"after this frame's ticks" rather than "once per frame". That reading is not
-free — it makes the ordering scenario's *sequence* normative and its *cardinality*
-incidental — which is exactly why it is recorded rather than assumed. Recording it
-also protects the decision: read literally, the ordering scenario invites someone
-later to "fix" the camera back into frame-rate dependence.
+**Why:** the *Reference Tick* section requires frame-rate independence in general
+terms and calls a naive per-frame port non-conformant. Reading the ordering
+scenario literally would contradict a stronger and more general statement in the
+same document.
 
-**Owner: M2**, the change that builds the chase camera. It settles alongside the
-decision to implement the camera as a pure module in `scripts/core/`, stepped by
-the composition root immediately after `sim.step()` — which is what makes "per
-tick" the natural implementation rather than the awkward one.
+**What this gives up, stated plainly:** at a display rate below the tick rate the
+camera is updated more than once per frame, which the ordering scenario, read
+literally, does not describe. That is the cost, and it buys a camera that behaves
+identically on every display.
 
-*Recorded during M2 exploration. Open.*
+**Evidence.** The time constant measures 0.200 s against the document's ≈0.2 s, and
+settling 0.450 s against its "roughly half a second" — both predicted from
+`chaseSmoothing` before being measured, in a commit that precedes them
+(`docs/camera_thresholds.md`). `camera_test.gd` compares four tick-to-frame
+groupings against a one-per-frame reference and fails on all four when the easing
+is moved to a per-frame call — though that check holds by construction and can only
+be broken by editing the test, so it is a regression guard rather than a
+demonstration. `driver_test.gd` carries the demonstration: it asserts the running
+game advances the camera exactly once per simulation step, and fails both when the
+camera is stepped again per frame and when it is not stepped at all.
+
+*Recorded during M2 exploration. Resolved in `add-chase-camera` (M2); see
+`docs/progress/2026-08-29-m2-camera.md`.*
+
+---
+
+## Open
+
+| # | Ambiguity | Settled by |
+|---|---|---|
+| A1 | HUD element sizes are given in px (200×200 minimap, 160×90 speedometer, ~120 px countdown) with no design resolution named anywhere | M5 |
+| A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
+| A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
+| A11 | The ground is specified as a finite 200 wu plane, the drivable extent as ±90, and fog as beginning at 50 wu. From the boundary the ground's edge is 10 wu away — far inside fog's start — so it renders as a hard line, while acceptance item 7 asks for grass beyond the boundary and no drawn edge | M6 |
 
 ### A11 (open, detail) — A finite ground cannot have an invisible edge
 
