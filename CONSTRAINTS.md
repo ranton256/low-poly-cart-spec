@@ -414,7 +414,7 @@ The supplied asset set is **39 MB of raw `.glb`** across seven models carrying
 | | Target | Status |
 |---|---|---|
 | Cold start → countdown begins, desktop | ≤ 2 s | 📋 M6 |
-| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 6.3 s warm** (3 runs, 6.24–6.49 s) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
+| `godot/tools/test.sh` wall time | ≤ 60 s. **Measured 7.2 s warm** (3 runs, 6.94–7.27 s) and **10.9 s cold**, on a first import with no `.godot/`. Re-measure whenever a check is added — an earlier 1.32 s figure was taken before the asset import and three checkers existed and was left stale | 📐 |
 
 The suite budget is a real constraint, not a nicety: a gate slow enough to skip
 stops being run, and a gate that is not run is not a gate.
@@ -482,7 +482,7 @@ runs to decide whether a change is done. Each is pass/fail with no judgment.
 | # | Condition | Status |
 |---|---|---|
 | V1 | `godot/tools/test.sh` exits 0 | ✅ |
-| V2 | Two runs at the same seed produce byte-identical state summaries | ✅ smoke suite (harness proven; the real simulation arrives in M1) |
+| V2 | Two runs at the same seed produce byte-identical state summaries | ✅ `determinism_test.gd` over 3000 ticks of scripted input against the real simulation, plus the smoke suite |
 | V3 | No banned symbol from §4 *Architectural boundaries* appears under `godot/scripts/core/` | ✅ `check_boundaries.py` |
 | V4 | No physics-body symbol from §4 *Architectural boundaries* appears anywhere under `godot/` | ✅ `check_boundaries.py` over every text file under `godot/`, plus the commit hook on staged content. Binary scenes (`.scn`, `.res`) are beyond a text gate; the project authors none |
 | V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py`. Small integers are excluded and reported each run — see §3 *Language and style* |

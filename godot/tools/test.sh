@@ -59,6 +59,17 @@ godot --headless --import >/dev/null
 godot --headless -s tests/assets_test.gd
 godot --headless -s tests/smoke_test.gd
 
+# The simulation core — the design document's tick order, the boundary, and the
+# reproducibility every other headless suite rests on.
+godot --headless -s tests/tick_test.gd
+godot --headless -s tests/boundary_test.gd
+godot --headless -s tests/determinism_test.gd
+
+# The SHIPPED tuning table against acceptance item 4. Every suite above builds
+# tuning from inline literals, so without this a retuned data/tuning.json would
+# leave them all green while the game violated the acceptance checklist.
+godot --headless -s tests/tuning_loader_test.gd
+
 # Lint and format. Fast, and they keep the diff about behaviour.
 # Every .gd under scripts/ and tests/, not a fixed list of directories — an
 # earlier version named scripts/core/ explicitly, so a future scripts/view/

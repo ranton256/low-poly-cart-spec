@@ -1,94 +1,156 @@
-# The simulation — a worked skeleton of the one decision the rest of this repo
-# depends on.
+# The simulation — the design document's kart tick, and nothing else.
 #
 # RULES, and they are the whole point:
 #
-#   1. No engine node dependencies. This file never touches Node, Sprite2D,
-#      AudioStreamPlayer, or the scene tree. It can be constructed and stepped
-#      by a test, a bot, or a capture harness with no scene loaded at all.
-#   2. Fixed timestep. step() advances exactly one tick. Never read `delta`.
-#   3. Seeded. All gameplay randomness comes from scripts/core/rng.gd, never
-#      from randi(). Cosmetic randomness in the VIEW may use the engine RNG,
-#      precisely so it can never perturb this stream.
-#   4. One-shot effects are PUBLISHED as data, not played. The view drains
-#      `events` each frame and turns them into sound and particles. That is
-#      what makes cues assertable without a sound card.
-#   5. The view reads this; it never writes back.
+#   1. No engine node dependencies. This file never touches Node, the scene
+#      tree, engine input, engine time, or the engine RNG. It is constructible
+#      and steppable by a test with no scene loaded.
+#   2. Fixed timestep. step() advances exactly one tick. It never reads a frame
+#      delta, and elapsed time is derived from the tick count.
+#   3. Tuning is INJECTED. This file holds no constant the design document
+#      names — see tuning.gd.
+#   4. The view reads this; it never writes back.
 #
-# Everything in the toolkit — headless suites, a bot that plays the whole game,
-# reproducible screenshots, renderer-free motion tests — follows from these.
-# Retrofitting them later is expensive; starting with them costs nothing.
-#
-# Replace the placeholder state below with your game. Keep the shape.
+# PRECISION. Velocity, yaw and position are 64-bit floats, and position is two
+# scalars rather than a Vector3, which is 32-bit real_t in a standard build.
+# The acceptance timings are asserted to +/- 0.05 s — three ticks — over runs of
+# up to ~2600 ticks, and 32-bit accumulation does not have that precision
+# spare. Conversion to Vector3 happens at the view boundary.
+extends RefCounted
 
-const DT_MS := 1000.0 / 60.0
-const DT_S := DT_MS / 1000.0
+const TICKS_PER_SECOND := 60
 
-# --- placeholder tuning: replace with reads from data/tuning.json in M1 ---
-const SPEED := 400.0
-const WIDTH := 960.0
-const HEIGHT := 540.0
-const HALF := 16.0
+# --- injected ---
+var tuning: RefCounted = null
+var input: RefCounted = null
 
-# --- input: set by the view or a harness before each step ---
-var in_left := false
-var in_right := false
-var in_up := false
-var in_down := false
+# --- state ---
+var velocity: float = 0.0
+var yaw: float = 0.0
+var pos_x: float = 0.0
+var pos_z: float = 0.0
+var ticks: int = 0
 
-# --- outcome: "" while running; your own strings when the run resolves ---
-var outcome := ""
-
-# --- one-shot effects for the view/audio layer; the consumer clears them ---
-var events: Array[Dictionary] = []
-
-# --- state (placeholder: replace with your game's) ---
-var time_ms := 0.0
-var px := 0.0
-var py := 0.0
+# --- observable outcomes of the last tick, for the view and for tests ---
+var bounced_this_tick: bool = false
 
 
-func setup() -> void:
-	time_ms = 0.0
-	outcome = ""
-	px = WIDTH / 2.0
-	py = HEIGHT - 80.0
-	events.clear()
+## Seconds elapsed, derived from the tick count. Never a host clock.
+func elapsed_seconds() -> float:
+	return float(ticks) / float(TICKS_PER_SECOND)
 
 
-## Publish an effect for the view. The sim never plays a sound itself.
-func emit_sfx(id: String, volume: float) -> void:
-	events.append({"type": "sfx", "id": id, "volume": volume})
+## The speedometer ratio, 0..1 against the forward clamp.
+func speed_ratio() -> float:
+	if tuning.max_speed == 0.0:
+		return 0.0
+	return absf(velocity) / tuning.max_speed
 
 
-## One tick. The ORDER of operations inside here is part of your balance —
-## document it, and change it deliberately rather than incidentally.
+## The integer the dial displays. Acceptance item 4 is stated in these numbers
+## (103, 115), not in wu/tick, so the arithmetic lives here rather than in the
+## HUD — otherwise every test of that item re-derives the formula and there are
+## two definitions of one number. Drawing the needle is M5's problem.
+func speedo_readout() -> int:
+	return int(floorf(speed_ratio() * tuning.speedo_max))
+
+
+## The kart's forward direction. The design document's world forward is +Z, so
+## a yaw of zero faces +Z. In Godot terms this is the node's +basis.z; the
+## engine's own -Z convention is a view concern and lives there.
+func forward_x() -> float:
+	return sin(yaw)
+
+
+func forward_z() -> float:
+	return cos(yaw)
+
+
+## One tick: the design document's eight stages, in its order.
+##
+## THE ORDER IS THE CONTRACT. Several of the document's statements are true only
+## because of it — the clamp precedes friction, so the achievable steady speed
+## is below the clamp rather than equal to it; the steering test reads the
+## post-clamp, pre-friction velocity, so it sees a value slightly larger than
+## the one that moves the kart.
 func step() -> void:
-	if outcome != "":
+	bounced_this_tick = false
+
+	_stage_1_accelerate()
+	_stage_2_clamp()
+	_stage_3_steer()
+	_stage_4_friction()
+	_stage_5_integrate()
+	_stage_6_boundary()
+	_stage_7_collision()
+	_stage_8_lap_gate()
+
+	ticks += 1
+
+
+func _stage_1_accelerate() -> void:
+	velocity += tuning.accel * input.drive_sign()
+
+
+## Clamped BEFORE friction. Reverse is limited more tightly than forward.
+func _stage_2_clamp() -> void:
+	var forward_limit: float = tuning.max_speed
+	var reverse_limit: float = tuning.max_speed * tuning.reverse_factor
+	velocity = clampf(velocity, -reverse_limit, forward_limit)
+
+
+## Tested on the post-clamp, PRE-friction velocity. The sign of travel is what
+## reverses the steering sense when reversing.
+func _stage_3_steer() -> void:
+	if absf(velocity) <= tuning.steer_threshold:
 		return
-	time_ms += DT_MS
-
-	var vx := (1.0 if in_right else 0.0) - (1.0 if in_left else 0.0)
-	var vy := (1.0 if in_down else 0.0) - (1.0 if in_up else 0.0)
-	if vx != 0.0 and vy != 0.0:
-		# normalise so diagonals are not faster than cardinals
-		vx *= 0.70710678
-		vy *= 0.70710678
-	px += vx * SPEED * DT_S
-	py += vy * SPEED * DT_S
-
-	var clamped_x := clampf(px, HALF, WIDTH - HALF)
-	var clamped_y := clampf(py, HALF, HEIGHT - HALF)
-	if clamped_x != px or clamped_y != py:
-		emit_sfx("bump", 0.3)  # example: an effect the cue tests can assert
-	px = clamped_x
-	py = clamped_y
-
-	# TODO: your game. Suggested order to preserve:
-	#   input -> movement -> spawns -> collisions -> timers -> outcome
+	yaw += tuning.turn_rate * input.steer_sign() * signf(velocity)
 
 
-## A one-line state summary. Cheap, and far easier to diff between two runs
-## than comparing object graphs — determinism tests compare these strings.
+func _stage_4_friction() -> void:
+	velocity *= tuning.friction
+
+
+## Displaced along the kart's own heading. No lateral component: this game has
+## no drift and no sideways velocity.
+func _stage_5_integrate() -> void:
+	pos_x += forward_x() * velocity
+	pos_z += forward_z() * velocity
+
+
+## Clamp each axis, then apply the bounce ONCE if either or both clamped.
+##
+## The flag is not decoration. Applying the factor per axis squares it, and at a
+## corner that leaves the kart moving INTO the corner at +9% speed instead of
+## rebounding — which the design document calls out specifically.
+func _stage_6_boundary() -> void:
+	var limit: float = tuning.drivable_extent
+	var clamped_x: float = clampf(pos_x, -limit, limit)
+	var clamped_z: float = clampf(pos_z, -limit, limit)
+	if clamped_x != pos_x or clamped_z != pos_z:
+		bounced_this_tick = true
+	pos_x = clamped_x
+	pos_z = clamped_z
+	if bounced_this_tick:
+		velocity *= tuning.bounce_factor
+
+
+## Stage 7 — collision detection and response. Empty until M3
+## (add-aabb-collision-response). Its place in the order is part of the
+## contract: a collision here discards the entire tick's acceleration, and the
+## push-out must happen before the lap gate observes the position.
+func _stage_7_collision() -> void:
+	pass
+
+
+## Stage 8 — the lap gate. Empty until M4 (add-lap-gate-and-timing). It runs
+## last and observes only: a kart that clipped a prop inside the band has
+## already been stopped and displaced before the gate is tested.
+func _stage_8_lap_gate() -> void:
+	pass
+
+
+## A one-line state summary. Cheap, and far easier to diff between two runs than
+## comparing object graphs — the determinism tests compare these strings.
 func stats_line() -> String:
-	return "t=%.2f x=%.2f y=%.2f outcome=%s" % [time_ms / 1000.0, px, py, outcome]
+	return "t=%d v=%.9f yaw=%.9f x=%.9f z=%.9f" % [ticks, velocity, yaw, pos_x, pos_z]

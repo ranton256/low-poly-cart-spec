@@ -1,0 +1,6 @@
+id = 10
+title = "Kart reset action and the world-facing start pose"
+description = "The design document's Runtime Tuning and Player Actions feature also specifies Reset Kart: return to X=0 Z=0 facing +Z with zero velocity, leaving the timer, best time and world untouched. add-simulation-tick-core implemented the tuning half of that feature but not the reset action, because reset is only observable once there is a world to be displaced in. Belongs with M2 or M7."
+status = "not-started"
+created_at = "2026-08-28T23:54:53.479704Z"
+updated_at = "2026-08-28T23:54:53.479704Z"

@@ -1,6 +1,9 @@
-# Smoke suite — proves the harness works and demonstrates the four assertion
-# shapes you will reuse constantly. Delete these once you have real suites, or
-# keep them: they also guard the RNG and the sim's tick contract.
+# Smoke suite — proves the harness works and guards the RNG and the tick
+# contract. Its sim-dependent checks were rewritten by add-simulation-tick-core
+# when the skeleton's 2D placeholder was replaced by the real simulation; the
+# effects-channel shape went with it, because this game publishes no effects
+# from the core yet. Behaviour lives in tick_test.gd, boundary_test.gd and
+# determinism_test.gd; this file stays deliberately thin.
 #
 #   godot --headless -s tests/smoke_test.gd
 extends SceneTree
@@ -10,6 +13,8 @@ extends SceneTree
 const RVTest := preload("res://tests/harness.gd")
 const Rng := preload("res://scripts/core/rng.gd")
 const Sim := preload("res://scripts/core/sim.gd")
+const Tuning := preload("res://scripts/core/tuning.gd")
+const InputState := preload("res://scripts/core/input_state.gd")
 
 
 func _check(cond: bool, msg: String) -> void:
@@ -20,8 +25,7 @@ func _init() -> void:
 	_test_rng_is_reproducible()
 	_test_tick_is_fixed_rate()
 	_test_run_is_deterministic()
-	_test_effects_are_published_as_data()
-	RVTest.finish(self, "smoke: rng, tick rate, determinism, event channel ok", "smoke check(s)")
+	RVTest.finish(self, "smoke: rng, fixed tick rate, determinism ok", "smoke check(s)")
 
 
 ## SHAPE 1 — a seeded generator must replay exactly.
@@ -49,60 +53,55 @@ func _test_rng_is_reproducible() -> void:
 
 
 ## SHAPE 2 — the tick is a fixed step, not wall-clock. 60 steps is one second,
-## on any machine, under any load.
+## on any machine, under any load, and elapsed time comes from the tick count.
 func _test_tick_is_fixed_rate() -> void:
-	var sim := Sim.new()
-	sim.setup()
-	for i in range(60):
+	var sim := _sim()
+	for _i in range(60):
 		sim.step()
-	RVTest.close(sim.time_ms, 1000.0, 0.1, "60 ticks is one second of sim time")
+	RVTest.close(sim.elapsed_seconds(), 1.0, 0.000001, "60 ticks is one second of sim time")
+	_check(sim.ticks == 60, "the tick counter is the clock")
 
-	# and movement follows from it: one second of held input travels SPEED px
-	var mover := Sim.new()
-	mover.setup()
-	var start_x: float = mover.px
-	mover.in_right = true
-	for i in range(60):
+	# and movement follows from it: held input from rest travels a positive
+	# distance along +Z, the design document's world forward.
+	var mover := _sim()
+	mover.input.forward = true
+	for _i in range(60):
 		mover.step()
-	RVTest.close(mover.px - start_x, Sim.SPEED, 1.0, "one second of input travel")
+	_check(mover.pos_z > 0.0, "one second of held input travels forward along +Z")
+	_check(absf(mover.pos_x) < 1e-12, "and does not drift sideways")
 
 
-## SHAPE 3 — same seed, same inputs, same run. Compare a one-line summary
-## rather than object graphs.
+## SHAPE 3 — same inputs, same run. Compare a one-line summary rather than
+## object graphs. determinism_test.gd covers this at length; this is the smoke.
 func _test_run_is_deterministic() -> void:
 	var summaries: Array[String] = []
-	for attempt in range(2):
+	for _attempt in range(2):
 		Rng.seed_rng(4242)
-		var sim := Sim.new()
-		sim.setup()
+		var sim := _sim()
 		for tick in range(300):
-			sim.in_left = tick % 120 < 60
-			sim.in_right = not sim.in_left
+			sim.input.left = tick % 120 < 60
+			sim.input.right = not sim.input.left
+			sim.input.forward = true
 			sim.step()
-			sim.events.clear()
 		summaries.append(sim.stats_line())
 	_check(
 		summaries[0] == summaries[1], "runs diverged:\n  %s\n  %s" % [summaries[0], summaries[1]]
 	)
 
 
-## SHAPE 4 — effects are data the view drains, so they can be asserted with no
-## audio device. The NEGATIVE case matters as much as the positive one.
-func _test_effects_are_published_as_data() -> void:
-	var sim := Sim.new()
-	sim.setup()
-
-	sim.in_left = true
-	var bumped := false
-	for i in range(300):  # long enough to reach the left wall
-		sim.step()
-		for e in sim.events:
-			if e.get("type", "") == "sfx" and e["id"] == "bump":
-				bumped = true
-		sim.events.clear()
-	_check(bumped, "hitting a wall publishes a 'bump' effect")
-
-	var quiet := Sim.new()
-	quiet.setup()
-	quiet.step()
-	_check(quiet.events.is_empty(), "an idle tick publishes nothing")
+## The design document's tuning, supplied directly — no file, no engine.
+func _sim() -> RefCounted:
+	var t := Tuning.new()
+	t.accel = 0.008
+	t.max_speed = 0.2
+	t.reverse_factor = 0.5
+	t.friction = 0.96
+	t.turn_rate = 0.04
+	t.steer_threshold = 0.01
+	t.bounce_factor = -0.3
+	t.drivable_extent = 90.0
+	t.speedo_max = 120.0
+	var s := Sim.new()
+	s.tuning = t
+	s.input = InputState.new()
+	return s
