@@ -16,6 +16,11 @@
       "file": "godot/scripts/world/world_builder.gd",
       "value": 90,
       "reason": "The hemisphere fill lights are aimed straight down and straight up: a quarter turn about X, in degrees. Geometry, not camera_and_hud.fovMax and not world.drivableExtent, which are the two constants that share the magnitude. Aiming them is load-bearing \u2014 design D2a records that the renderer spike once had both horizontal, tinting nothing."
+    },
+    {
+      "file": "godot/scripts/view/kart_view.gd",
+      "value": 0.02,
+      "reason": "CENTROID_MIN_OFFSET \u2014 how far the kart mesh's vertex centroid must sit from its bounding-box centre for the asymmetry to indicate which end is the nose. The supplied model measures 0.0764, so this is roughly a quarter of it: below this the mesh is too symmetric for the heuristic to speak and the test says so rather than reporting a coin flip as corroboration. The collision is with unnamed_in_spec.startFinishBandHeightY, the height the start/finish band floats above the ground \u2014 an unrelated quantity that happens to share a magnitude."
     }
   ]
 }

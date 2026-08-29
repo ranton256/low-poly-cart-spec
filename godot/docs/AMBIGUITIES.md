@@ -75,32 +75,47 @@ heading as the visual.
 in an engine whose own facing convention differs. The design document's world
 forward is +Z; Godot's is −Z.
 
-**This port decided:** the correction is **derived empirically** from the imported
-glTF bounds, held in one named constant in the view layer, and pinned by a test
-that samples 16 headings. The figure "+90°" is never transcribed as a literal.
+**This port decided:** the correction is **derived** from the imported glTF
+bounds, held in one named constant in the view layer, and evidenced three ways.
+The figure "+90°" is never transcribed as a literal.
 
-**Why:** both frames are right-handed and Y-up, so positions map one to one and
-nothing is mirrored — but a node's facing does not. Copying the number would
-produce a kart that crabs sideways, which the design document names as the classic
-failure of this asset.
+**The axis** is the longer horizontal extent of the authored box — measured
+2.000 × 1.019 × 1.868, so local X — which corroborates §3's own statement that
+"the kart's authored long axis is its local X". Deriving rather than assuming it
+means a re-exported model authored down a different axis fails loudly instead of
+driving sideways.
 
-**Note, added during M2 exploration — the recorded decision was incomplete.** The
-imported bounds give the *axis* of the correction and cannot give its *sign*: an
-axis-aligned box is symmetric, so +90° and −90° are indistinguishable from bounds
-alone. Worse, the 16-heading test as described does not catch the difference. That
-test compares travel direction against a nose direction computed from the derived
-axis; derive the axis with the wrong sign and the test compares a wrong nose to a
-wrong heading, agrees with itself at all 16 headings, and passes — on a kart that
-drives tail-first.
+**The sign** could not come from the bounds: an axis-aligned box is symmetric, so
+it identifies the axis and says nothing about which end is the nose. Three
+witnesses settle it, and the first is the only one that can:
 
-So the decision stands but gains two parts: the **sign is fixed by a committed
-capture**, which is the only artefact that can see which end is the nose, and a
-**vertex-centroid offset measured along the length axis** stands as a second,
-mechanical witness. The 16-heading test states in its own comment that it proves
-travel/facing *consistency*, not orientation.
+1. `docs/progress/2026-08-29-m2-kart-front.png` — from the +Z side, showing the
+   steering wheel in front of the seat and the floor pan toward the camera, so the
+   kart's front faces world forward. The first attempt rendered it tail-first and
+   this capture is what caught it.
+2. The mesh's **vertex centroid**, +0.0764 from the box centre along the long axis
+   — toward the engine, seat and rear tyres. The nose is the end the mass is not
+   at, which is local −X, established without reference to the capture.
+   `tests/kart_test.gd` checks it, and refuses to speak if a future mesh is too
+   symmetric for the heuristic to mean anything.
+3. The derived correction is **+90°**, which is what §4 states. That agreement is
+   pinned by `tools/check_kart_conformance.py`, which reads the figure from the
+   document and compares it against the derivation. If they ever diverge, this
+   entry reopens.
+
+**Why not the obvious test.** A 16-heading check that travel matches facing
+**passes on a kart driving backwards**: it derives the nose from the same constant
+it is testing, so a sign error makes both sides wrong together. Demonstrated by
+inverting the sign — the travel test and the footprint check both passed; only the
+centroid and the document comparison failed. The test says so in its own header.
+
+**Why it matters:** both frames are right-handed and Y-up, so positions map one to
+one and nothing is mirrored — but a node's facing does not. Copying the number
+would have been right by luck here, and there was no way to know that in advance.
 
 *Recorded during `add-godot-project-foundations` (M0). Amended during M2
-exploration. Implemented in M2.*
+exploration. Resolved in `add-kart-view-orientation-and-input` (M2); see
+`docs/progress/2026-08-29-m2-kart.md`.*
 
 ### A7 — The sun's orthographic shadow volume has no direct Godot equivalent
 

@@ -1,0 +1,6 @@
+id = 10
+title = "Kart reset action (the start pose is done)"
+description = "The design document's Runtime Tuning and Player Actions feature specifies Reset Kart: return to X=0 Z=0 facing +Z with zero velocity, leaving the timer, best time and world untouched. add-kart-view-orientation-and-input closed the START POSE half — the kart is placed at the origin facing +Z with zero velocity, verified by tests/kart_test.gd and tools/check_kart_conformance.py — and bound R in project.godot's InputMap, pinned by check_settings.py. What remains is the ACTION: pressing R does nothing. Belongs to M7 with the rest of the player actions."
+status = "not-started"
+created_at = "2026-08-28T23:54:53.479704Z"
+updated_at = "2026-08-29T17:57:46.139613Z"

@@ -19,12 +19,6 @@
     },
     {
       "feature": "Session Bootstrap and Asset Normalisation",
-      "scenario": "Placing the kart at the start line",
-      "kind": "deferred",
-      "milestone": "M2"
-    },
-    {
-      "feature": "Session Bootstrap and Asset Normalisation",
       "scenario": "Completing bootstrap and handing off to the start sequence",
       "kind": "deferred",
       "milestone": "M4"
@@ -255,25 +249,6 @@
       "scenario": "Persisting the best time for the session",
       "kind": "deferred",
       "milestone": "M4"
-    },
-    {
-      "feature": "Input Handling",
-      "scenario": "Mapping the control scheme",
-      "kind": "deferred",
-      "milestone": "M2",
-      "note": "Deferred to M2, which declares the bindings. Two of them \u2014 R Reset Kart and P Save Layout \u2014 invoke actions that do not exist until M7; M2 verifies the bindings, not their effects."
-    },
-    {
-      "feature": "Input Handling",
-      "scenario": "Clearing stuck inputs on focus loss",
-      "kind": "deferred",
-      "milestone": "M2"
-    },
-    {
-      "feature": "Input Handling",
-      "scenario": "Ignoring unbound keys",
-      "kind": "deferred",
-      "milestone": "M2"
     },
     {
       "feature": "Runtime Tuning and Player Actions",

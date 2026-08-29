@@ -134,6 +134,11 @@ fi
 
 # The pinned settings and the committed import presets, both of which Godot
 # rewrites without asking.
+# The kart against the DESIGN DOCUMENT rather than against tuning.json — the one
+# check in this project whose expected values have no common ancestor with the
+# thing they check. It shells out to Godot to measure, so it is slower than the
+# other Python gates and still headless.
+"$PY" tools/check_kart_conformance.py
 "$PY" tools/check_settings.py
 
 # Uncomment each as you add it (see docs/testing_toolkit.md, "As the game grows"):

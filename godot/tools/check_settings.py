@@ -43,6 +43,25 @@ REQUIRED = {
 
 MODELS = ("kart", "tree", "rock", "cone", "crate", "tires", "cottage")
 
+SIM = GODOT / "scripts" / "core" / "sim.gd"
+
+# The design document's control table, Feature: Input Handling / Mapping the
+# control scheme. action -> the physical keycodes it must be bound to, both sets
+# equivalent. Pinned because project.godot is rewritten by the editor AND by
+# ProjectSettings.save(), and both drop things — see GOTCHAS.md.
+KEY_W, KEY_A, KEY_S, KEY_D, KEY_R, KEY_P = 87, 65, 83, 68, 82, 80
+KEY_LEFT, KEY_UP, KEY_RIGHT, KEY_DOWN = 4194319, 4194320, 4194321, 4194322
+REQUIRED_ACTIONS = {
+    "accelerate": {KEY_W, KEY_UP},
+    "reverse": {KEY_S, KEY_DOWN},
+    "steer_left": {KEY_A, KEY_LEFT},
+    "steer_right": {KEY_D, KEY_RIGHT},
+    # Bound and inert until M7 — the document's table lists them, so the binding
+    # is part of the specification even while the action is not.
+    "reset_kart": {KEY_R},
+    "save_layout": {KEY_P},
+}
+
 
 def main() -> int:
     if not PROJECT.exists():
@@ -63,6 +82,44 @@ def main() -> int:
         found = match.group(1)
         if found != expected:
             failures.append(f"{key} is {found}, required {expected} — {why}")
+
+    # THE FIXED RATE IS DECLARED TWICE, in two files, and until now nothing
+    # noticed a divergence — at which point every timing figure in the design
+    # document silently stops applying. project.godot drives Godot's fixed-rate
+    # loop; sim.gd's constant is what the core converts ticks to seconds with.
+    checked_settings += 1
+    sim_rate = None
+    if SIM.exists():
+        rate_match = re.search(r"^const TICKS_PER_SECOND\s*:?=\s*(\d+)", SIM.read_text(), re.M)
+        if rate_match:
+            sim_rate = rate_match.group(1)
+    if sim_rate is None:
+        failures.append("could not read TICKS_PER_SECOND from scripts/core/sim.gd — "
+                        "the cross-check against project.godot's physics rate is "
+                        "no longer running")
+    else:
+        pinned = REQUIRED["common/physics_ticks_per_second"][0]
+        if sim_rate != pinned:
+            failures.append(f"the simulation declares TICKS_PER_SECOND={sim_rate} but "
+                            f"project.godot pins physics_ticks_per_second={pinned}. "
+                            f"Two declarations of one rate; every per-tick constant in "
+                            f"the design document is stated at it")
+
+    # Bindings, action by action and key by key.
+    checked_actions = 0
+    for action, keys in REQUIRED_ACTIONS.items():
+        checked_actions += 1
+        block = re.search(rf"^{re.escape(action)}=\{{(.*?)^\}}", text, re.M | re.S)
+        if not block:
+            failures.append(f"input action {action!r} is not bound in project.godot — "
+                            f"the design document's control table names it")
+            continue
+        found = {int(k) for k in re.findall(r'"physical_keycode":(\d+)', block.group(1))}
+        missing = keys - found
+        if missing:
+            failures.append(f"input action {action!r} is missing key(s) "
+                            f"{sorted(missing)} — the document's table binds "
+                            f"{sorted(keys)}, and both sets are equivalent")
 
     checked_presets = 0
     for name in MODELS:
@@ -102,7 +159,7 @@ def main() -> int:
         print(f"\nsettings: {len(failures)} problem(s)", file=sys.stderr)
         return 1
 
-    print(f"settings: {checked_settings} pinned settings correct, "
+    print(f"settings: {checked_settings} pinned settings correct, {checked_actions} input actions bound, "
           f"{checked_presets} import presets present and valid")
     return 0
 

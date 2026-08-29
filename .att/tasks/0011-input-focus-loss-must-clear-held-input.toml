@@ -1,6 +1,6 @@
 id = 11
 title = "Input focus loss must clear held input"
 description = "Design document, Input Handling: releasing window focus clears every held input so the kart coasts rather than driving away. add-simulation-tick-core implemented InputState.clear() and the held-state model, but nothing calls it — the focus signal is an engine concern and arrives with the view in M2."
-status = "not-started"
+status = "done"
 created_at = "2026-08-28T23:54:53.483398Z"
-updated_at = "2026-08-28T23:54:53.483398Z"
+updated_at = "2026-08-29T17:57:21.928133Z"

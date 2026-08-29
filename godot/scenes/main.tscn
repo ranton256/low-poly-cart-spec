@@ -1,11 +1,21 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
-; The game's entry scene. For now it is the world and nothing else — the
-; composition root, the accumulator and the kart arrive with
+; The game's entry scene: the world, the composition root that drives the
+; simulation, and the kart that shows it.
+;
+; The root lives HERE and not in world.tscn, so that world.tscn keeps its
+; committed property of rendering with nothing stepping — which is what lets it
+; be loaded and captured on its own. See design D1 of
 ; add-kart-view-orientation-and-input.
 
 [ext_resource type="PackedScene" path="res://scenes/world.tscn" id="1_world"]
+[ext_resource type="Script" path="res://scripts/main.gd" id="2_main"]
+[ext_resource type="Script" path="res://scripts/view/kart_view.gd" id="3_kart"]
 
 [node name="Main" type="Node3D"]
+script = ExtResource("2_main")
 
 [node name="World" parent="." instance=ExtResource("1_world")]
+
+[node name="Kart" type="Node3D" parent="."]
+script = ExtResource("3_kart")

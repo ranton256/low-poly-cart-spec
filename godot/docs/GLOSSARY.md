@@ -73,6 +73,9 @@ These describe the architecture this project inherited and is bound to by
 | **light scale** | The single factor converting the design document's light intensities into Godot's units. It multiplies all three together, so the document's ratios — which ARE normative — survive by construction. Ambiguity A9; the value is `port_decisions.lightScale`. |
 | **saturated pixel** | A pixel at 255 in any channel. On a surface with no specular highlight, saturation is exposure, not brightness — the information is gone and no tone curve gets it back. |
 | **falsification test** | A cheap check that runs first and voids everything after it if it fails. Here: the unlit sky must render exactly its specified colour, because if the pipeline is reshaping colour then no other measurement means anything. |
+| **composition root** | The one place that owns the simulation and advances it. Godot's `_physics_process` is the fixed-step accumulator; the root steps exactly once per call and never in the per-frame callback. |
+| **nose sign** | Which end of the kart's authored long axis is its front. The imported bounds give the axis and cannot give this, because an axis-aligned box is symmetric — see ambiguity A6. |
+| **consistency test** | A check that two things agree, which is not a check that either is right. The 16-heading travel test is one: it derives the kart's nose from the constant it is testing, so a sign error makes both sides wrong together and it passes. |
 
 ---
 

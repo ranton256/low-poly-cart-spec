@@ -66,7 +66,14 @@ func forward_z() -> float:
 	return cos(yaw)
 
 
-## Called once per rendered frame, before that frame's ticks.
+## Called once per rendered frame.
+##
+## NOT "before that frame's ticks", which is what this line used to say. That was
+## written against the batch model replay_test.gd uses; the real composition root
+## drives Godot's fixed-rate loop, which runs a frame's physics steps BEFORE its
+## per-frame callback. What makes this a seam is being once per rendered frame —
+## the position relative to the steps is not what matters, and claiming an
+## ordering the caller does not honour is worse than claiming none.
 ##
 ## A NO-OP, AND THAT IS THE POINT. A real composition root has a per-frame entry
 ## point, and this is the only surface through which frame-dependence could

@@ -1,0 +1,26 @@
+[gd_scene load_steps=3 format=3]
+
+; The kart from above, where its CONTACT SHADOW is unambiguous.
+;
+; The design document calls that shadow "the primary cue for where the kart
+; actually is on the ground", and ambiguities A7 and A8 were settled to protect
+; it — on the renderer spike's scene, not this one. This is where that decision
+; is re-checked against the world M2 actually builds.
+;
+; Steeply overhead deliberately. The sun sits at (30, 50, 30), an elevation of
+; 49.7 degrees, so the shadow is offset only about 1 wu from a kart 2.2 wu wide:
+; it falls largely UNDER the kart's own footprint. From a low camera the kart
+; occludes most of it, which is how a first pass at this measurement concluded
+; there was no shadow at all.
+
+[ext_resource type="PackedScene" path="res://scenes/world.tscn" id="1_world"]
+[ext_resource type="Script" path="res://scripts/view/kart_view.gd" id="2_kart"]
+
+[node name="KartOverheadView" type="Node3D"]
+
+[node name="World" parent="." instance=ExtResource("1_world")]
+camera_position = Vector3(1.5, 7, 1.5)
+camera_target = Vector3(-0.4, 0, -0.4)
+
+[node name="Kart" type="Node3D" parent="."]
+script = ExtResource("2_kart")

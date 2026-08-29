@@ -1,0 +1,27 @@
+[gd_scene load_steps=3 format=3]
+
+; The kart seen from in front and to the side, so that which end is its NOSE is
+; visible.
+;
+; VISUAL PROOF, and load-bearing: the imported bounds identify the kart's long
+; axis but cannot identify which end of it is the front, because an axis-aligned
+; box is symmetric. This capture is what settles that — see design D3 and
+; ambiguity A6. The 16-heading travel test cannot do it: it derives the nose from
+; the same constant it is testing, so a half-turn error makes both sides wrong
+; together and the test agrees with itself.
+;
+; The viewpoint sits on the +Z side looking back toward the origin, so a kart
+; correctly facing world +Z presents its FRONT to the camera. If the capture
+; shows a rear end, NOSE_SIGN in scripts/view/kart_view.gd is inverted.
+
+[ext_resource type="PackedScene" path="res://scenes/world.tscn" id="1_world"]
+[ext_resource type="Script" path="res://scripts/view/kart_view.gd" id="2_kart"]
+
+[node name="KartFrontView" type="Node3D"]
+
+[node name="World" parent="." instance=ExtResource("1_world")]
+camera_position = Vector3(1.6, 1.15, 3.6)
+camera_target = Vector3(0, 0.45, 0)
+
+[node name="Kart" type="Node3D" parent="."]
+script = ExtResource("2_kart")

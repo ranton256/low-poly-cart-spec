@@ -113,6 +113,33 @@ before finishing does not silence it.
 error, so it trains the eye to skip errors in suite output. If you are scanning a
 run for problems, this is the one line to ignore — and the only one.
 
+### `ProjectSettings.save()` silently drops pinned settings and every comment
+
+**Symptom.** You add something to `project.godot` from a script — an InputMap, a
+setting — call `ProjectSettings.save()`, and the file comes back missing
+`physics_ticks_per_second` and its entire explanatory comment block.
+
+**Why.** Godot writes only settings that DIFFER from its defaults, and it writes
+no comments at all. `physics_ticks_per_second = 60` is Godot's default, so it is
+pinned in this project precisely because it matters and is therefore exactly the
+kind of line the save drops. The comment block explaining why four settings are
+load-bearing goes with it.
+
+**What saved it.** `tools/check_settings.py` failed on the next run — "absent from
+project.godot — required: 60". That gate exists for this.
+
+**What to do instead.** Generate the section you need, then splice it into the
+committed file rather than letting Godot rewrite the whole thing:
+
+```sh
+# keep Godot's serialisation of the new section, keep everything else from git
+git show HEAD:godot/project.godot   # the file as committed
+```
+
+The editor does the same thing. `godot/CLAUDE.md` already warns that Godot strips
+the pinned comments; this is the scripted version of that, and it drops a setting
+too.
+
 ## Determinism
 
 ### "The same capture differs between identical runs"

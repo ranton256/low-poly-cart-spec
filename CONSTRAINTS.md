@@ -318,7 +318,7 @@ in `AMBIGUITIES.md` is mirrored here; that file carries the reasoning:
 | A3 | Prop registration order after a layout reload — unstated, but it changes collision outcomes | ❓ settled in M7 |
 | A4 | The countdown must advance while "the physics update is skipped entirely" outside RACING | Resolved: `Sim.step()` runs every tick in every state; the kart pipeline is gated on RACING |
 | A5 | Whether the lap gate and minimap read the stepped position or the interpolated render position | Resolved: the stepped position. The view may lag it by up to one tick |
-| A6 | The kart's "+90° yaw correction" is stated in the reference build's frame, not Godot's | Resolved: the *axis* is derived from the imported bounds; the *sign* comes from a committed capture, because bounds are symmetric and a 16-heading test passes on a 180° error. Never copied as a literal |
+| A6 | The kart's "+90° yaw correction" is stated in the reference build's frame, not Godot's | Resolved in M2: axis derived from the imported bounds (local X, as §3 says); sign from a committed capture, the mesh's vertex centroid, and agreement with §4's figure — because bounds are symmetric and a 16-heading test passes on a 180° error. Derived as +90°, never copied |
 | A7 | The sun's orthographic shadow volume has no direct Godot equivalent | Resolved in `spike-compatibility-renderer-shadows` |
 | A8 | Godot has two shadow bias parameters; the design document specifies one | Resolved in `spike-compatibility-renderer-shadows` |
 | A9 | Light intensities are in the reference build's units, not Godot's — at face value Compatibility saturates 59.75% of the frame | Resolved: the ratios are normative, the scale is not. One shared factor `lightScale` = 0.2809, chosen as the value minimising the ground's deviation from its specified albedo; tonemapping stays linear |
@@ -555,6 +555,8 @@ runs to decide whether a change is done. Each is pass/fail with no judgment.
 | V21 | The commit hook and the standing suite derive their banned symbols from one shared definition | ✅ both read `godot/data/banned_symbols.json`; verified by removing a symbol and confirming both stop flagging it |
 | V22 | The rendered environment satisfies the exposure criteria: nothing saturated, the unlit sky exact, the ground at its specified albedo | 📐 `measure_exposure.py`, windowed — it needs a renderer, so it cannot join `test.sh`. Run it against a committed capture |
 | V23 | The design document's specified colours are not written as literals in scripts | ✅ `check_tuning_literals.py` scans quoted hex strings as a separate pass; the numeric pass cannot see them, because it cuts each line at the first `#` |
+| V24 | The built kart matches the design document's own figures for it — authored box, final dimensions, world footprint at the start line, and yaw correction | ✅ `check_kart_conformance.py`. The only gate here whose expected values are read from the design document rather than from `data/tuning.json`, so the two sides share no ancestor |
+| V25 | The kart's contact shadow survives — the cue the design document calls primary | 📐 `measure_contact_shadow.py`, windowed. Depth is gated; coverage is reported, because the margin A8 turned on does not reproduce at this framing |
 
 ---
 
