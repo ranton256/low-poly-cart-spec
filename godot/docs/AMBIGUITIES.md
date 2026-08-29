@@ -86,6 +86,54 @@ failure of this asset.
 
 *Recorded during `add-godot-project-foundations` (M0). Implemented in M2.*
 
+### A7 — The sun's orthographic shadow volume has no direct Godot equivalent
+
+**The specification says** the sun's shadow uses "an orthographic shadow volume
+spanning **±60 wu** in X and Y with near 0.5 / far 200".
+
+**It does not say** how that maps onto an engine with no explicit orthographic
+shadow volume. Godot's `DirectionalLight3D` exposes
+`directional_shadow_max_distance` — how far from the *camera* shadows are drawn,
+and therefore how thinly the map is spread.
+
+**This port decided:** `directional_shadow_max_distance = 120` — the **±60 wu
+volume**, not the far plane of 200.
+
+**Why:** the volume is what governs texel density, and the far plane is a
+different quantity. At 120 with a 2048 map the density is 0.0586 wu per texel.
+
+*Correction: an earlier version of this entry claimed a 2048 map over 200 units
+put the kart's shadow "below one texel". That is arithmetically wrong — 200/2048
+is 0.098 wu per texel against a 2.78 wu kart, about 28 texels. The kart's missing
+shadow had a different cause entirely; see A8. The decision stands, the original
+reasoning did not.*
+
+*Recorded during `spike-compatibility-renderer-shadows` (M0). Binds M2 and M6.*
+
+### A8 — Godot has two shadow bias parameters; the design document specifies one
+
+**The specification says** the sun's shadow uses "a small negative depth bias
+(≈ −0.0001) to suppress acne".
+
+**It does not say** what to do with `shadow_normal_bias`, because the reference
+engine has no equivalent. Godot's defaults to **2.0** and is scaled by texel world
+size.
+
+**This port decided:** `shadow_normal_bias = 0.1`, set explicitly wherever a
+shadow-casting sun is configured.
+
+**Why:** at `max_distance` 120 with a 2048 map — 0.0586 wu per texel — the default
+2.0 offsets a caster **0.117 wu** along its normal, about 29% of a kart wheel, and
+**erases the kart's contact shadow entirely**. Measured: shadowed ground beneath
+the kart rises from **6.5% to 27.2%** when the bias is lowered — measured over the
+region `KART_BOX` names in `godot/tools/measure_shadow.py`, and independently
+reproduced by review. The
+design document names that contact shadow as "the primary cue for where the kart
+actually is on the ground", so a default that removes it is the wrong reading of a
+specification that mentions only one bias.
+
+*Recorded during `spike-compatibility-renderer-shadows` (M0). Binds M2 and M6.*
+
 ---
 
 ## Open
@@ -95,6 +143,30 @@ failure of this asset.
 | A1 | HUD element sizes are given in px (200×200 minimap, 160×90 speedometer, ~120 px countdown) with no design resolution named anywhere | M5 |
 | A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
 | A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
+| A9 | Light intensities are in the reference build's units, not Godot's. Applied at face value, Compatibility clips 67% of the frame against Forward+'s 0.0%, and lit ground differs by +43% | M2 |
+
+### A9 (open, detail) — Light intensities are in the reference build's units, not Godot's
+
+**The specification says** ambient 0.60, hemisphere 0.40, directional sun 1.00.
+
+**It does not say** — and cannot, being engine-agnostic — that those numbers are
+in the reference build's units. Applying them at face value in Godot under the
+Compatibility renderer clips **67% of the frame**, with the specified grass albedo
+`#3D8C40` rendering at green 255. Forward+ at the identical settings clips 0.0%,
+and lit ground differs by **+43%** in luminance between the two.
+
+**This port has NOT decided.** The renderer spike judged shadows on a blown-out
+frame, which does not invalidate a shadow verdict — clipping raises contrast — but
+leaves exposure open.
+
+**Owner: M2**, which builds the real environment and is the first change that has
+to make the game look right rather than merely cast a shadow. The likely shapes
+are a tonemap and white point on the `WorldEnvironment`, or intensities rescaled
+into Godot's units with the ratios preserved. Whichever it is, it is a decision
+with evidence, not a default.
+
+*Recorded during `spike-compatibility-renderer-shadows` (M0). Open.*
+
 
 An open entry is not a licence to decide quietly later. Whichever change settles
 one moves it above the line, with its reasoning, before it is archived.

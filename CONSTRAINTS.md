@@ -63,7 +63,7 @@ Settled choices. Changing one requires a proposal that names what broke.
 |---|---|---|
 | **Engine** | Godot **4.6.1**, recorded in `godot/.godot-version` — the single source of truth. `config/features` carries only the `4.6` series, because Godot stores nothing finer there | ✅ `check_engine_version.py` |
 | **Language** | **GDScript only.** No C#, no GDExtension, no native modules | 📐 — no compiled-language or extension file exists; not mechanically gated |
-| **Renderer** | **Compatibility (WebGL 2 / GLES3)**, on every target including desktop | ❓ confirmed by the M0 renderer spike |
+| **Renderer** | **Compatibility (WebGL 2 / GLES3)**, on every target including desktop | ✅ the pin is gated by `check_settings.py`. The *choice* is evidenced by `spike-compatibility-renderer-shadows` — see `godot/docs/progress/2026-08-28-renderer-spike.md`; no gate checks shadow quality |
 | **Addons** | **None.** No third-party Godot addons in the shipped project | 📐 |
 | **Physics engine** | **Not used.** No `PhysicsBody3D`, no `Area3D`, no collision shapes, no `move_and_slide` — see §4 *Architectural boundaries* | ✅ `check_boundaries.py`, every text file under `godot/` |
 | **Python environment** | **`.venv` always. Never system Python.** Pinned by `godot/requirements.txt`; `test.sh` refuses to run without it | ✅ all three refusal paths verified |
@@ -81,9 +81,22 @@ The spec calls shadows "a load-bearing part of the look". Running Forward+ on
 desktop and Compatibility on the web produces two different looks from one
 specification and doubles the visual baseline set in §7 *Testing*. One renderer,
 one set of baselines, one look — at the cost of desktop fidelity we are not
-being asked for. **M0 spikes this**: if a 2048² directional shadow map with PCF
-does not read acceptably under Compatibility, the decision comes back as a
-proposal, not as a quiet second render path.
+being asked for. **M0 spiked this, and the answer is yes — with two caveats worth carrying.**
+At the specified 2048² map, Compatibility passes all five criteria: contact shadow
+attached, soft edge, no acne (lit-ground std 0.14), no peter-panning, and shadowed
+ground retaining 49% of open-ground luminance. Evidence and method are committed
+at `godot/docs/progress/2026-08-28-renderer-spike.md`.
+
+The caveats. First, the contact shadow only appears once `shadow_normal_bias` is
+lowered from Godot's default of 2.0 — the design document specifies one bias and
+Godot has two, and the default erases the cue the document calls primary
+(ambiguity A8). Second, at the document's stated light intensities Compatibility
+clips 67% of the frame against Forward+'s 0.0%; the shadow verdict survives that,
+the *exposure* question does not, and it is open and owned by M2 (ambiguity A9).
+
+**Not tested: the web target itself.** Every capture is desktop Metal-backed
+OpenGL. The platform that motivated this whole decision has never been rendered.
+M8's export smoke tests are where that gets closed.
 
 ---
 

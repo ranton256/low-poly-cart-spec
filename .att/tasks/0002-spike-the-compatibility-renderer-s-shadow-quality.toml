@@ -1,6 +1,6 @@
 id = 2
 title = "Spike the Compatibility renderer's shadow quality"
-description = "M0, change spike-compatibility-renderer-shadows: confirm a 2048 square PCF directional shadow reads acceptably under Compatibility. If it does not, the renderer decision in CONSTRAINTS §2 Tech stack comes back as a proposal. Nothing in M0 or M1 depends on the outcome."
-status = "not-started"
+description = "M0, change spike-compatibility-renderer-shadows: DONE. Confirmed a 2048 square PCF directional shadow reads acceptably under the Compatibility renderer, against five criteria fixed before the captures. Two caveats carried forward as ambiguities: A8, Godot's default shadow_normal_bias of 2.0 erases the kart's contact shadow and must be lowered; A9, the design document's light intensities are in the reference build's units and clip 67 percent of the frame under Compatibility, which M2 must settle. The web target itself was never rendered - every capture is desktop - and that gap belongs to M8's export smoke tests."
+status = "done"
 created_at = "2026-08-28T17:51:19.911734Z"
-updated_at = "2026-08-28T17:51:19.911734Z"
+updated_at = "2026-08-29T01:11:51.94786Z"

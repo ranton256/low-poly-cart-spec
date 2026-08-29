@@ -42,7 +42,7 @@ is expected to be rewritten when a better implementation appears.**
 |---|---|
 | Engine | Godot **4.6.1** (`godot` on PATH), recorded in `.godot-version`. `config/features` carries only the `4.6` series — Godot stores nothing finer |
 | Language | **GDScript only.** No C#, no GDExtension, no third-party addons — the web target forces one language, so the simulation has one implementation everywhere |
-| Renderer | **Compatibility** on every target. Provisional; owned by `spike-compatibility-renderer-shadows` |
+| Renderer | **Compatibility** on every target, confirmed by `spike-compatibility-renderer-shadows`. Note ambiguities A8 (shadow normal bias) and A9 (light intensity units) in `docs/AMBIGUITIES.md` |
 | Gate | `./tools/test.sh` — headless, display-free, must be green before anything is done |
 | Python | **`.venv` always — never system Python.** Pinned by `requirements.txt` |
 | Planning | `openspec` — see below |

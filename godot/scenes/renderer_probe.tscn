@@ -1,0 +1,98 @@
+[gd_scene load_steps=5 format=3]
+
+; SPIKE EVIDENCE, NOT A LIVE DEFINITION OF THE LOOK.
+;
+; Produced the two captures in docs/progress/ for
+; spike-compatibility-renderer-shadows, and is kept committed because that
+; change's spec requires the comparison be regenerable from a committed scene:
+; a decision nobody can re-check is an anecdote.
+;
+; M2 builds the real environment and M6 owns the look. When it does, THIS FILE
+; IS SUPERSEDED — it is not the place to change the lighting, and nothing
+; references it. Delete it once M2's environment can host the same comparison.
+;
+; Two things here are load-bearing and are recorded in docs/AMBIGUITIES.md:
+;   A7  directional_shadow_max_distance is 120 — the design document's +/-60 wu
+;       VOLUME, not its far plane of 200. Godot has no explicit orthographic
+;       shadow volume; this setting governs how far from the camera shadows are
+;       drawn, and therefore how thinly the map is spread.
+;   --  Godot has no hemisphere light. The sky->ground fill is approximated with
+;       two non-shadowing directional lights, one aimed straight DOWN carrying
+;       the sky colour and one aimed straight UP carrying the ground colour.
+;       Aiming them is the point: an earlier version had both horizontal, so the
+;       ground plane received nothing from either and undersides were not tinted.
+;
+; shadow_normal_bias is 0.1, NOT Godot's default of 2.0. The design document
+; specifies one bias (a small negative depth bias); Godot has two, and the
+; normal bias is scaled by texel world size. At max_distance 120 with a 2048
+; map that default offsets a caster 0.117 wu along its normal — 29% of a kart
+; wheel — and erases the kart's contact shadow entirely. See ambiguity A8.
+;
+; The shadow map size is NOT set here — it is pinned in project.godot, because
+; leaving it unset resolves to Godot's 4096 desktop default rather than the
+; 2048 the design document specifies.
+
+[ext_resource type="PackedScene" path="res://assets/kart.glb" id="1_kart"]
+[ext_resource type="PackedScene" path="res://assets/tree.glb" id="2_tree"]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.529412, 0.807843, 0.921569, 1)
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.6
+
+[sub_resource type="PlaneMesh" id="Plane_1"]
+size = Vector2(200, 200)
+
+[sub_resource type="StandardMaterial3D" id="Grass_1"]
+albedo_color = Color(0.239216, 0.549020, 0.250980, 1)
+roughness = 0.9
+metallic = 0.0
+
+[node name="RendererProbe" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="HemisphereSky" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.000000, 1.000000, -0.000000, 0.000000, 0.000000, 1.000000, 1.000000, 0.000000, -0.000000, 0.000000, 40.000000, 0.000000)
+light_color = Color(0.529412, 0.807843, 0.921569, 1)
+light_energy = 0.4
+shadow_enabled = false
+
+[node name="HemisphereGround" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.000000, 1.000000, -0.000000, 0.000000, -0.000000, -1.000000, -1.000000, 0.000000, -0.000000, 0.000000, -40.000000, 0.000000)
+light_color = Color(0.133333, 0.545098, 0.133333, 1)
+light_energy = 0.4
+shadow_enabled = false
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.539164, 0.457496, 0.000000, 0.646997, 0.762493, -0.707107, -0.539164, 0.457496, 30.000000, 50.000000, 30.000000)
+light_color = Color(1, 1, 1, 1)
+light_energy = 1.0
+shadow_enabled = true
+shadow_bias = -0.0001
+shadow_normal_bias = 0.1
+directional_shadow_mode = 0
+directional_shadow_max_distance = 120.0
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("Plane_1")
+surface_material_override/0 = SubResource("Grass_1")
+cast_shadow = 0
+
+[node name="Kart" parent="." instance=ExtResource("1_kart")]
+; Scale from the design document's §3 normalisation contract: 1.20 target
+; height / 1.019 native = 1.177625, then offset so the lowest point is at
+; Y = 0. Hand-typed 1.18 left the kart 1.2 mm under the grass.
+transform = Transform3D(1.177625, 0, 0, 0, 1.177625, 0, 0, 0, 1.177625, 0, 0.6, 0)
+
+[node name="Tree" parent="." instance=ExtResource("2_tree")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 4, 2, -2)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-0.752577, 0.200608, -0.627204, 0.000000, 0.952467, 0.304642, 0.658505, 0.229266, -0.716804, -3.500000, 2.200000, -4.000000)
+fov = 60.0
+near = 0.1
+far = 1000.0

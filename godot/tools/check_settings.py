@@ -33,6 +33,12 @@ REQUIRED = {
         '"gl_compatibility"', "one renderer on every target — CONSTRAINTS §2 Tech stack"),
     "renderer/rendering_method.mobile": (
         '"gl_compatibility"', "must match the base renderer"),
+    "lights_and_shadows/directional_shadow/size": (
+        "2048", "the design document's specified shadow map. Godot's desktop "
+                "default is 4096, and leaving this unset once invalidated an "
+                "entire renderer spike — see docs/progress/2026-08-28-renderer-spike.md"),
+    "lights_and_shadows/directional_shadow/soft_shadow_filter_quality": (
+        "3", "the document asks for soft/percentage-closer filtering"),
 }
 
 MODELS = ("kart", "tree", "rock", "cone", "crate", "tires", "cottage")

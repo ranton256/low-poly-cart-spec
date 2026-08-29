@@ -11,9 +11,10 @@
 ;                             breaks acceptance item 14. CONSTRAINTS §6 Determinism and the reference frame.
 ;   renderer/rendering_method one renderer on EVERY target, so one spec
 ;                             produces one look and one baseline set.
-;                             CONSTRAINTS §2 Tech stack. PROVISIONAL — owned by the
-;                             change spike-compatibility-renderer-shadows,
-;                             which may reverse it. Nothing depends on it yet.
+;                             CONSTRAINTS §2 Tech stack. Confirmed by the change
+;                             spike-compatibility-renderer-shadows against five
+;                             criteria fixed before the captures were taken;
+;                             evidence in godot/docs/progress/.
 ;   config/features           the Godot SERIES (major.minor) this project is
 ;                             developed against. Godot stores nothing finer
 ;                             here, so the full version lives in
@@ -53,3 +54,16 @@ common/physics_jitter_fix=0.0
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+
+; The design document specifies a 2048 x 2048 shadow map. Godot's desktop
+; default is 4096, so leaving this unset silently renders at 4x the specified
+; texel count — which is exactly what the first run of
+; spike-compatibility-renderer-shadows did, invalidating its verdict. Pinned.
+lights_and_shadows/directional_shadow/size=2048
+lights_and_shadows/directional_shadow/size.mobile=2048
+
+; The design document asks for soft/percentage-closer filtering. Leaving this
+; defaulted meant the renderer spike judged "at the specified map AND filtering"
+; with only the map half pinned. 3 = Soft High.
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality.mobile=3

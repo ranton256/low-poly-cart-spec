@@ -73,19 +73,19 @@ documents that describe it.
   [CONSTRAINTS §10 Verification criteria](CONSTRAINTS.md) is ✅ or has a tracked
   `att` task
 - **Visual proof:** an empty Godot window at the pinned renderer, plus the
-  renderer spike's shadow comparison
+  renderer spike's shadow comparison — both committed in `godot/docs/progress/`
 
 > **The boundary greps are the highest-value item here and the cheapest.** Land
 > them *before* the first line of `scripts/core/`, because that is exactly when
 > the boundary is easiest to violate by accident — and the physics-body gate is
 > the one that stops the port from quietly becoming a `CharacterBody3D` game.
 
-> **The renderer spike is M0 work, not M6 work.** Compatibility-everywhere is
-> recorded as an open decision in
-> [CONSTRAINTS §2 Tech stack](CONSTRAINTS.md). If a 2048² directional shadow map
-> with PCF does not read acceptably under Compatibility, that has to come back as
-> a proposal now, while the answer is cheap — not after five milestones of
-> baselines were captured against it.
+> **The renderer spike was M0 work, not M6 work, and it paid.** Compatibility
+> passes all five criteria at the specified 2048² map — but only after the spike
+> caught that Godot's default `shadow_normal_bias` erases the kart's contact
+> shadow, the cue the design document calls primary (ambiguity A8). It also found
+> that the document's light intensities clip 67% of the frame under Compatibility,
+> which M2 must settle (A9). Both would have shipped into M6's visual baselines.
 
 **Likely changes**
 - `add-godot-project-foundations` — skeleton in, project settings pinned, suite green
