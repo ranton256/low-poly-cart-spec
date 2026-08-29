@@ -25,6 +25,18 @@ var bounce_factor: float = 0.0
 # --- world ---
 var drivable_extent: float = 0.0
 
+# --- chase camera ---
+# In the core because the camera is a fixed-step recurrence and its specified
+# properties are numbers — see scripts/core/chase_camera.gd and design D1 of
+# add-chase-camera. Not because it is gameplay; it is not.
+var chase_back: float = 0.0
+var chase_up: float = 0.0
+var aim_ahead: float = 0.0
+var aim_up: float = 0.0
+var chase_smoothing: float = 0.0
+var fov_base: float = 0.0
+var fov_max: float = 0.0
+
 # --- dial ---
 var speedo_max: float = 0.0
 
@@ -52,6 +64,13 @@ func apply_table(table: Dictionary) -> void:
 	steer_threshold = float(physics.get("steerThreshold", 0.0))
 	bounce_factor = float(physics.get("bounceFactor", 0.0))
 	drivable_extent = float(world.get("drivableExtent", 0.0))
+	chase_back = float(hud.get("chaseBack", 0.0))
+	chase_up = float(hud.get("chaseUp", 0.0))
+	aim_ahead = float(hud.get("aimAhead", 0.0))
+	aim_up = float(hud.get("aimUp", 0.0))
+	chase_smoothing = float(hud.get("chaseSmoothing", 0.0))
+	fov_base = float(hud.get("fovBase", 0.0))
+	fov_max = float(hud.get("fovMax", 0.0))
 	speedo_max = float(hud.get("speedoMax", 0.0))
 	var heights: Dictionary = table.get("asset_target_heights", {})
 	asset_target_heights = {}
@@ -79,6 +98,13 @@ func missing_fields() -> PackedStringArray:
 		"steer_threshold",
 		"bounce_factor",
 		"drivable_extent",
+		"chase_back",
+		"chase_up",
+		"aim_ahead",
+		"aim_up",
+		"chase_smoothing",
+		"fov_base",
+		"fov_max",
 		"speedo_max",
 	]:
 		if float(get(field)) == 0.0:
