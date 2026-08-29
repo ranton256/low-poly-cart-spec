@@ -84,7 +84,23 @@ nothing is mirrored — but a node's facing does not. Copying the number would
 produce a kart that crabs sideways, which the design document names as the classic
 failure of this asset.
 
-*Recorded during `add-godot-project-foundations` (M0). Implemented in M2.*
+**Note, added during M2 exploration — the recorded decision was incomplete.** The
+imported bounds give the *axis* of the correction and cannot give its *sign*: an
+axis-aligned box is symmetric, so +90° and −90° are indistinguishable from bounds
+alone. Worse, the 16-heading test as described does not catch the difference. That
+test compares travel direction against a nose direction computed from the derived
+axis; derive the axis with the wrong sign and the test compares a wrong nose to a
+wrong heading, agrees with itself at all 16 headings, and passes — on a kart that
+drives tail-first.
+
+So the decision stands but gains two parts: the **sign is fixed by a committed
+capture**, which is the only artefact that can see which end is the nose, and a
+**vertex-centroid offset measured along the length axis** stands as a second,
+mechanical witness. The 16-heading test states in its own comment that it proves
+travel/facing *consistency*, not orientation.
+
+*Recorded during `add-godot-project-foundations` (M0). Amended during M2
+exploration. Implemented in M2.*
 
 ### A7 — The sun's orthographic shadow volume has no direct Godot equivalent
 
@@ -134,6 +150,47 @@ specification that mentions only one bias.
 
 *Recorded during `spike-compatibility-renderer-shadows` (M0). Binds M2 and M6.*
 
+### A9 — Light intensities are in the reference build's units, not Godot's
+
+**The specification says** ambient 0.60, hemisphere 0.40, directional sun 1.00.
+
+**It does not say** — and cannot, being engine-agnostic — that those numbers are
+in the reference build's units. Applied at face value in Godot under the
+Compatibility renderer they saturate **59.75%** of the frame, with the specified
+grass `#3D8C40` rendering `[115, 255, 131]`.
+
+**This port decided:** the document's **ratios are normative and its absolute
+scale is not**. All three intensities are transcribed unscaled and multiplied by
+one shared factor, `port_decisions.lightScale = 0.2809`, so the ratios are
+preserved by construction — nothing scales one light alone. Tonemapping stays
+**linear**: the document specifies its look as exact hex colours, and a filmic or
+ACES curve would make the specified albedo unreachable by construction.
+
+**How the number was chosen:** it is the value **minimising the ground's deviation
+from its specified albedo**, subject to nothing saturating and the unlit sky
+rendering exactly `#87CEEB`. At 0.2809 the grass renders `[56, 141, 65]` against
+the specified `[61, 140, 64]` — deviation 0.0309 against a tolerance of 0.0401
+computed from the document's own hemisphere ratio. Scales 5% and 10% either side
+deviate more. Reproduce with `tools/find_light_scale.py`; every sample region is a
+named constant printed on each run.
+
+**Why not "the largest scale that clips nothing":** that was the rule this change
+was approved with, and it returns **0.6882** — the largest scale at which nothing
+saturates, and a fluorescent field: grass at `[94, 218, 108]`, a deviation of
+1.6756 against a tolerance of 0.0401. It passed every criterion as
+written, because the ground criterion constrained hue but not lightness and so
+nothing pulled brightness down. Both captures are committed in `docs/progress/`.
+
+**The limit of this result, stated plainly:** preserving the document's ratios is
+not the same as reproducing its image. Godot's ambient and the reference build's
+`HemisphereLight` are different integrators, and the reference build cannot be run
+side by side here. What is established is that the specified colours render as
+themselves under the specified lighting, and that the choice is reproducible from
+a committed tool. A match against the original is neither claimed nor tested.
+
+*Recorded during `spike-compatibility-renderer-shadows` (M0). Resolved in
+`add-world-presentation-layer` (M2). See `docs/progress/2026-08-29-m2-world.md`.*
+
 ---
 
 ## Open
@@ -143,30 +200,87 @@ specification that mentions only one bias.
 | A1 | HUD element sizes are given in px (200×200 minimap, 160×90 speedometer, ~120 px countdown) with no design resolution named anywhere | M5 |
 | A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
 | A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
-| A9 | Light intensities are in the reference build's units, not Godot's. Applied at face value, Compatibility clips 67% of the frame against Forward+'s 0.0%, and lit ground differs by +43% | M2 |
+| A10 | The chase camera's easing rate is specified **per tick**, but the frame-ordering scenario places the camera update **once per frame**. At 60 fps those are the same sentence; at no other rate are they | M2 |
+| A11 | The ground is specified as a finite 200 wu plane, the drivable extent as ±90, and fog as beginning at 50 wu. From the boundary the ground's edge is 10 wu away — far inside fog's start — so it renders as a hard line, while acceptance item 7 asks for grass beyond the boundary and no drawn edge | M6 |
 
-### A9 (open, detail) — Light intensities are in the reference build's units, not Godot's
+### A10 (open, detail) — The camera eases per tick, but is updated per frame
 
-**The specification says** ambient 0.60, hemisphere 0.40, directional sun 1.00.
+**The specification says**, in *Chase Camera / Trailing the kart*, that "the camera
+position eases toward its target by `chaseSmoothing` per tick (a time constant of
+≈ 0.2 s)". It also says, in *Frame Loop and Render Pipeline / Ordering the work
+within a frame*, that "the camera is then updated from the kart's post-physics
+transform" — once, as one step of one frame.
 
-**It does not say** — and cannot, being engine-agnostic — that those numbers are
-in the reference build's units. Applying them at face value in Godot under the
-Compatibility renderer clips **67% of the frame**, with the specified grass albedo
-`#3D8C40` rendering at green 255. Forward+ at the identical settings clips 0.0%,
-and lit ground differs by **+43%** in luminance between the two.
+**It does not say** which governs when a frame does not contain exactly one tick.
+The reference build runs tick and frame together at ~60 fps, where the question
+cannot arise. A port with a fixed-step accumulator faces it on every frame that is
+not 1/60 s long:
 
-**This port has NOT decided.** The renderer spike judged shadows on a blown-out
-frame, which does not invalidate a shadow verdict — clipping raises contrast — but
-leaves exposure open.
+| | eased per tick | eased per frame |
+|---|---|---|
+| 30 fps | 2 eases · time constant 0.2 s ✓ | 1 ease · 0.4 s ✗ |
+| 60 fps | 1 ease · 0.2 s ✓ | 1 ease · 0.2 s ✓ |
+| 144 fps | 0 or 1 ease · 0.2 s ✓ | 1 ease · 0.083 s ✗ |
 
-**Owner: M2**, which builds the real environment and is the first change that has
-to make the game look right rather than merely cast a shadow. The likely shapes
-are a tonemap and white point on the `WorldEnvironment`, or intensities rescaled
-into Godot's units with the ratios preserved. Whichever it is, it is a decision
-with evidence, not a default.
+Per-frame easing gives a camera that snaps tighter on a fast display and wallows on
+a slow one — frame-rate-dependent behaviour, which the *Reference Tick* section
+calls non-conformant in the general case.
 
-*Recorded during `spike-compatibility-renderer-shadows` (M0). Open.*
+**This port leans to easing per tick**, reading the frame-ordering scenario as
+"after this frame's ticks" rather than "once per frame". That reading is not
+free — it makes the ordering scenario's *sequence* normative and its *cardinality*
+incidental — which is exactly why it is recorded rather than assumed. Recording it
+also protects the decision: read literally, the ordering scenario invites someone
+later to "fix" the camera back into frame-rate dependence.
 
+**Owner: M2**, the change that builds the chase camera. It settles alongside the
+decision to implement the camera as a pure module in `scripts/core/`, stepped by
+the composition root immediately after `sim.step()` — which is what makes "per
+tick" the natural implementation rather than the awkward one.
+
+*Recorded during M2 exploration. Open.*
+
+### A11 (open, detail) — A finite ground cannot have an invisible edge
+
+**The specification says**, in *World Boundary Containment / Keeping the boundary
+invisible*, that when the kart is held against the boundary "there is still
+visible grass beyond the kart in every direction" **and** "no wall, fence, or
+edge of the ground is drawn or visible". The same scenario opens by giving the
+ground plane as spanning **±100 wu**, §5 sizes it at 200 × 200, the drivable
+extent is **±90**, and fog runs from **50 wu** to 150.
+
+**It does not say** how those numbers coexist. They leave **10 wu** of ground
+beyond the boundary, and fog does not begin until 50 wu, so from the boundary the
+plane's edge is five times nearer than the nearest fogged distance. It is drawn,
+and the scenario says it must not be.
+
+**What it actually looks like matters, and is less alarming than it sounds.**
+`docs/progress/2026-08-29-m2-boundary.png` is taken from x = +90 — the boundary
+the scenario names — at roughly the chase camera's eye height, looking outward.
+The edge presents as a horizon: a straight line where grass meets sky, 10 wu away
+and indistinguishable at that eye height from the horizon of a plane that never
+ends. An earlier version of this capture used an elevated oblique viewpoint 28 wu
+inside the limit, where the same edge reads unmistakably as an edge. Both are
+true; only the first is the view the scenario describes, and only the first is
+what a player at the boundary will see.
+
+**This port has NOT decided**, and the ways out are more numerous than an earlier
+version of this entry claimed. It asserted that all three options — enlarging the
+plane past ±100, pulling fog nearer than 50 wu, or accepting a visible edge — break
+something the document states. Review pointed out a fourth that breaks nothing: a
+distant skirt of ground in the same albedo, beyond about ±240, leaves §5's Ground
+exactly 200 × 200 at Y = 0, leaves fog at 50 → 150, and puts every edge past fog's
+end from anywhere in the drivable area. Whether that is the right answer is a
+question about the look; that it exists means "every resolution breaks one of the
+document's own numbers" was an assertion this entry had not earned.
+
+What decides it is how the edge reads through the specified chase camera, whose
+pitch and field of view do not exist yet.
+
+**Owner: M6**, which owns the look and the visual conformance gate, with the chase
+camera change expected to sharpen the question first.
+
+*Recorded during `add-world-presentation-layer` (M2). Open.*
 
 An open entry is not a licence to decide quietly later. Whichever change settles
 one moves it above the line, with its reasoning, before it is archived.

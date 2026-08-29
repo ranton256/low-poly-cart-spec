@@ -1,10 +1,21 @@
 {
   "_meta": {
     "purpose": "Numeric literals that collide with a tuning value but are genuinely not that constant.",
-    "rules": "Every entry needs file, value and a written reason. An entry without a reason fails the gate, and so does an entry that no longer matches anything — an exemption must not outlive its reason.",
-    "granularity": "An entry is keyed on (file, value), NOT on line, and matches on magnitude, so it covers both signs and every occurrence in that file. That is deliberate — a line-keyed entry goes stale on every edit above it — but it means an entry is a broader promise than it looks. Keep the file scope narrow.",
+    "rules": "Every entry needs file, value and a written reason. An entry without a reason fails the gate, and so does an entry that no longer matches anything \u2014 an exemption must not outlive its reason.",
+    "granularity": "An entry is keyed on (file, value), NOT on line, and matches on magnitude, so it covers both signs and every occurrence in that file. That is deliberate \u2014 a line-keyed entry goes stale on every edit above it \u2014 but it means an entry is a broader promise than it looks. Keep the file scope narrow.",
     "warning": "A growing allowlist means the gate is being worked around rather than obeyed. The count is printed on every run.",
-    "history": "Held two entries during M0, both justifying coincidences in the inherited placeholder sim.gd (a 0.3 sound volume against pushDistance, and 1000.0 milliseconds against farClip). add-simulation-tick-core replaced that file and the staleness rule failed the suite until they were removed — the mechanism working as intended."
+    "history": "Held two entries during M0, both justifying coincidences in the inherited placeholder sim.gd (a 0.3 sound volume against pushDistance, and 1000.0 milliseconds against farClip). add-simulation-tick-core replaced that file and the staleness rule failed the suite until they were removed \u2014 the mechanism working as intended."
   },
-  "exemptions": []
+  "exemptions": [
+    {
+      "file": "godot/scripts/core/sim.gd",
+      "value": 60,
+      "reason": "TICKS_PER_SECOND \u2014 the design document's Reference Tick section fixes the simulation at 60 ticks per second, and it is pinned in project.godot rather than tuned. The collision is with lighting.shadowVolumeExtent, which add-world-presentation-layer added and which is +/-60 wu of shadow volume: an unrelated quantity that happens to share a magnitude. Note what this shows \u2014 adding a value to tuning.json can make a gate fail in a file the change never touched, because the scan matches magnitudes, not meanings."
+    },
+    {
+      "file": "godot/scripts/world/world_builder.gd",
+      "value": 90,
+      "reason": "The hemisphere fill lights are aimed straight down and straight up: a quarter turn about X, in degrees. Geometry, not camera_and_hud.fovMax and not world.drivableExtent, which are the two constants that share the magnitude. Aiming them is load-bearing \u2014 design D2a records that the renderer spike once had both horizontal, tinting nothing."
+    }
+  ]
 }

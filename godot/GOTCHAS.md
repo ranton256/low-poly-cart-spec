@@ -98,6 +98,21 @@ the visual gate on a headless machine without a virtual framebuffer.
 
 ---
 
+### "Pages in use exist at exit in PagedAllocator" after a suite passes
+
+**Symptom.** A suite prints its success line, then Godot prints
+`ERROR: Pages in use exist at exit in PagedAllocator: N7Variant5Pools12BucketMediumE`.
+
+**It is not a failure.** The exit code is 0 and the suite really passed —
+verified by mutating a check and watching the code go to 1. It appears in suites
+that `instantiate()` a `PackedScene` into the tree from a `SceneTree` script;
+`world_test.gd` does. Removing the node, freeing it, and nulling every member
+before finishing does not silence it.
+
+**Why it matters anyway.** It is stderr noise that looks exactly like a real
+error, so it trains the eye to skip errors in suite output. If you are scanning a
+run for problems, this is the one line to ignore — and the only one.
+
 ## Determinism
 
 ### "The same capture differs between identical runs"

@@ -6,8 +6,9 @@ one table row and scenarios refer to it by name. tuning.json is the single
 transcription of those tables, so a drifted, renamed, or missing key silently
 forks the contract — and nothing else in the suite would notice.
 
-Checks, against the four tables under "# Tuning Constants" AND the per-asset
-target heights in "### 3. Asset normalisation contract":
+Checks, against the four tables under "# Tuning Constants", the per-asset target
+heights in "### 3. Asset normalisation contract", AND the environment and
+lighting tables in sections 5 and 6:
   1. Every backticked `name` in a leftmost table cell is present.
   2. No key is renamed — anything outside the named set must be declared in
      the unnamed_in_spec group, which exists for table rows the document does
@@ -15,6 +16,15 @@ target heights in "### 3. Asset normalisation contract":
   3. Derived quantities stay out. The document lists steady-state speeds and
      the collision velocity result as NOT independently tunable; transcribing
      them invites two sources of truth that disagree after a retune.
+
+Sections 5 and 6 are prose-in-cells rather than name/value rows, so each value
+is pulled by an explicit pattern naming where it comes from. That is deliberate:
+a key nobody extracts is a key nobody checks, and an unchecked transcription
+reads as coverage while being none. Every key in the environment and lighting
+groups must be covered by an extractor or the white-word set, or this gate fails.
+
+port_decisions is exempt BY DESIGN — those values are this port's, not the
+document's, and checking them against it would be checking it against itself.
 
 To re-verify after a design-document change, run this. To deliberately break
 it and confirm it works, rename a key in tuning.json.
@@ -29,6 +39,57 @@ GDD = ROOT / "low-poly-cart-game-design-document.md"
 TUNING = ROOT / "godot" / "data" / "tuning.json"
 
 DERIVED_MARKERS = ("steadyState", "steady_state", "collisionVelocity")
+ENV_SECTION = "### 5. Environment art"
+LIGHT_SECTION = "### 6. Lighting"
+
+# Groups whose keys this port names because the design document names none.
+# unnamed_in_spec came first, for unnamed rows in the four Tuning Constants
+# tables; sections 5 and 6 name nothing at all.
+PORT_NAMED_GROUPS = ("unnamed_in_spec", "environment", "lighting", "port_decisions")
+
+# Keys the document specifies with the word "white" rather than a hex value.
+# Checked separately: the document is confirmed to say white, and the
+# transcription to say #FFFFFF. Neither half is assumed.
+WHITE_KEYS = ("ambientColour", "sunColour", "bandColour")
+# Which section states each one's "white". The band's is section 5's "flat unlit
+# white quad"; the two lights are section 6's table.
+WHITE_KEY_SECTIONS = {
+    "ambientColour": LIGHT_SECTION,
+    "sunColour": LIGHT_SECTION,
+    "bandColour": ENV_SECTION,
+}
+
+# (key, section, pattern). One capture group each, except the sun position.
+# Extracted from prose, so each pattern quotes enough of its sentence to be
+# unambiguous — a looser pattern would match the first number in the table and
+# drift silently when a neighbouring row is reworded.
+ENV_LIGHT_PATTERNS = [
+    ("skyColour", "env", r"Flat sky blue `(#[0-9A-Fa-f]{6})`"),
+    ("fogColour", "env", r"Linear fog, colour `(#[0-9A-Fa-f]{6})`"),
+    ("fogStart", "env", r"starting at (\d+(?:\.\d+)?) wu"),
+    ("fogEnd", "env", r"fully opaque at (\d+(?:\.\d+)?) wu"),
+    ("groundColour", "env", r"Grass green `(#[0-9A-Fa-f]{6})`"),
+    ("groundRoughness", "env", r"roughness (\d+(?:\.\d+)?)"),
+    ("groundMetalness", "env", r"metalness (\d+(?:\.\d+)?)"),
+    ("gridHeight", "env", r"drawn (\d+(?:\.\d+)?) wu above the ground"),
+    ("gridAxisColour", "env", r"Centre-axis lines `(#[0-9A-Fa-f]{6})`"),
+    ("gridMinorColour", "env", r"minor lines `(#[0-9A-Fa-f]{6})`"),
+    ("bandOpacity", "env", r"(\d+)% opaque"),
+    ("ambientIntensity", "light", r"\|\s*Ambient\s*\|\s*white\s*\|\s*(\d+(?:\.\d+)?)\s*\|"),
+    ("hemisphereSkyColour", "light", r"sky `(#[0-9A-Fa-f]{6})`"),
+    ("hemisphereGroundColour", "light", r"ground `(#[0-9A-Fa-f]{6})`"),
+    ("hemisphereIntensity", "light", r"\|\s*Hemisphere\s*\|[^|]*\|\s*(\d+(?:\.\d+)?)\s*\|"),
+    ("sunIntensity", "light", r"\|\s*Directional[^|]*\|\s*white\s*\|\s*(\d+(?:\.\d+)?)\s*\|"),
+    ("shadowMapSize", "light", r"(\d+)\s*\u00d7\s*\d+ shadow map"),
+    ("shadowVolumeExtent", "light", r"\*\*\u00b1(\d+(?:\.\d+)?) wu\*\*"),
+    ("shadowNear", "light", r"near (\d+(?:\.\d+)?) / far"),
+    ("shadowFar", "light", r"near \d+(?:\.\d+)? / far (\d+(?:\.\d+)?)"),
+    ("shadowDepthBias", "light", r"depth bias \(\u2248 [\u2212-](\d+(?:\.\d+)?)\)"),
+]
+SUN_POSITION_PATTERN = r"Positioned at \((\d+), (\d+), (\d+)\)"
+# 21 patterns + 3 sun-position components. Guards against a reworded document
+# quietly reducing what this gate inspects.
+EXPECTED_ENV_LIGHT_COUNT = 24
 ASSET_SECTION = "### 3. Asset normalisation contract"
 # The design document's §1 inventory and §3 table both list seven models.
 EXPECTED_ASSET_COUNT = 7
@@ -54,9 +115,46 @@ def asset_target_heights(text: str) -> dict:
     section = re.split(r"\n### ", rest)[0]
     out = {}
     for line in section.splitlines():
-        match = re.match(r"\|\s*`(\w+)`\s*\|\s*([\d.]+)\s*\|", line)
+        match = re.match(r"\|\s*`(\w+)`\s*\|\s*(\d+(?:\.\d+)?)\s*\|", line)
         if match:
             out[match.group(1)] = float(match.group(2))
+    return out
+
+
+def section_text(text: str, heading: str) -> str:
+    """One numbered section of the art specification, fenced at the next heading.
+
+    Split on the NEXT heading of any kind rather than on a literal successor —
+    the same trap asset_target_heights() fell into, where renaming section 4 let
+    a section run to the end of the document and scrape unrelated tables.
+    """
+    if heading not in text:
+        return ""
+    return re.split(r"\n### ", text.split(heading)[1])[0]
+
+
+def environment_and_lighting(text: str) -> dict:
+    """Values from sections 5 and 6, each pulled by a named pattern.
+
+    Percentages are normalised to fractions ("80% opaque" -> 0.8) because that
+    is what a renderer takes; the document's own number is still what the
+    pattern matched.
+    """
+    sections = {"env": section_text(text, ENV_SECTION),
+                "light": section_text(text, LIGHT_SECTION)}
+    out = {}
+    for key, which, pattern in ENV_LIGHT_PATTERNS:
+        match = re.search(pattern, sections[which])
+        if not match:
+            continue
+        raw = match.group(1)
+        out[key] = raw if raw.startswith("#") else float(raw)
+        if key == "bandOpacity":
+            out[key] = out[key] / 100.0
+    sun = re.search(SUN_POSITION_PATTERN, sections["light"])
+    if sun:
+        for axis, value in zip("XYZ", sun.groups()):
+            out["sunPosition" + axis] = float(value)
     return out
 
 
@@ -124,6 +222,17 @@ def main() -> int:
               f"{ASSET_SECTION!r} — the table format changed and this gate is "
               f"no longer checking them", file=sys.stderr)
         return 1
+    env_light = environment_and_lighting(gdd_text)
+    if len(env_light) != EXPECTED_ENV_LIGHT_COUNT:
+        print(f"error: expected {EXPECTED_ENV_LIGHT_COUNT} values from "
+              f"{ENV_SECTION!r} and {LIGHT_SECTION!r}, extracted "
+              f"{len(env_light)} — a pattern stopped matching, so this gate is "
+              f"no longer checking what it reports. Missing: "
+              + ", ".join(k for k, _, _ in ENV_LIGHT_PATTERNS if k not in env_light)
+              + (", sun position" if "sunPositionX" not in env_light else ""),
+              file=sys.stderr)
+        return 1
+
     names = names + sorted(assets)
     if not names:
         print("error: no named constants found in the design document — the "
@@ -144,7 +253,12 @@ def main() -> int:
         if not key.startswith("_")
     ]
     present = {key for _, key in occurrences}
-    unnamed = {k for k in tuning.get("unnamed_in_spec", {}) if not k.startswith("_")}
+    unnamed = {
+        key
+        for group in PORT_NAMED_GROUPS
+        for key in tuning.get(group, {})
+        if not key.startswith("_")
+    }
 
     failures = []
 
@@ -167,8 +281,8 @@ def main() -> int:
     renamed = sorted(present - set(names) - unnamed)
     if renamed:
         failures.append(f"{len(renamed)} key(s) in tuning.json are not named in the "
-                        f"design document and are not declared unnamed_in_spec: "
-                        + ", ".join(renamed))
+                        f"design document and are not in a port-named group "
+                        f"({', '.join(PORT_NAMED_GROUPS)}): " + ", ".join(renamed))
 
     blob = json.dumps(tuning)
     leaked = [m for m in DERIVED_MARKERS if m in blob]
@@ -195,6 +309,42 @@ def main() -> int:
     if drifted:
         failures.append("value(s) drifted from the design document: " + "; ".join(drifted))
 
+    # Sections 5 and 6: colours compare as strings, numbers as magnitudes.
+    art = {}
+    for group in ("environment", "lighting"):
+        art.update({k: v for k, v in tuning.get(group, {}).items() if not k.startswith("_")})
+    art_drifted = []
+    for name, expected in env_light.items():
+        if name not in art:
+            art_drifted.append(f"{name} is missing from tuning.json but section 5 or 6 states it")
+        elif isinstance(expected, str):
+            if str(art[name]).upper() != expected.upper():
+                art_drifted.append(f"{name} is {art[name]!r} but the document says {expected!r}")
+        elif abs(abs(float(art[name])) - expected) > 1e-9:
+            art_drifted.append(f"{name} is {art[name]} but the document says {expected}")
+    for name in WHITE_KEYS:
+        if name not in art:
+            continue
+        if str(art[name]).upper() != "#FFFFFF":
+            art_drifted.append(f"{name} is {art[name]!r} but the document says white")
+    # Each white-word key is pinned to the section that actually states it:
+    # ambient and sun are §6's table, but the band's "flat unlit white quad" is
+    # §5's. Guarding all three against §6 meant bandColour was checked against
+    # prose that never mentioned it.
+    for key, section in WHITE_KEY_SECTIONS.items():
+        if "white" not in section_text(gdd_text, section):
+            art_drifted.append(f"{section!r} no longer says 'white' — {key} is "
+                               f"transcribed against a phrase that has moved")
+    if art_drifted:
+        failures.append("section 5/6 value(s) drifted: " + "; ".join(art_drifted))
+
+    # A key nobody extracts is a key nobody checks. Adding one to the data
+    # without adding its pattern would otherwise read as coverage.
+    unchecked = sorted(set(art) - set(env_light) - set(WHITE_KEYS))
+    if unchecked:
+        failures.append(f"{len(unchecked)} environment/lighting key(s) have no extractor "
+                        f"and are therefore transcribed but unverified: " + ", ".join(unchecked))
+
     if failures:
         for f in failures:
             print(f"tuning: {f}", file=sys.stderr)
@@ -204,7 +354,10 @@ def main() -> int:
           f"({len(assets)} of them per-asset target heights), "
           f"{len(table['values'])} values checked against the document "
           f"({len(table['unattributable'])} multi-name rows not attributable), "
-          f"{len(unnamed)} unnamed table rows, {len(occurrences)} entries each appearing once, no derived values")
+          f"{len(unnamed)} port-named rows, {len(occurrences)} entries each appearing once, "
+          f"{len(env_light)} section 5/6 values checked + {len(WHITE_KEYS)} stated white, "
+          f"{len([k for k in tuning.get('port_decisions', {}) if not k.startswith('_')])} "
+          f"port decisions not checked against the document, no derived values")
     return 0
 
 

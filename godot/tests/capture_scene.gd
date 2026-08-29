@@ -21,7 +21,28 @@ const DEFAULT_OUT := "gallery/capture.png"
 const DEFAULT_FRAMES := 30
 
 
+## Keep the capture window from stealing focus.
+##
+## A capture is a build step, not an app launch: it should not interrupt whatever
+## the person running it is doing. Godot has no --no-focus command-line flag, so
+## the window flag is set as early as the script runs, before the first frame is
+## drawn. NO_FOCUS also keeps the window out of the way on later frames, which
+## matters because a capture run may take dozens of windows in a row — the
+## exposure search opens one per candidate scale.
+##
+## Best-effort by design: it is a request to the windowing system, and a platform
+## may decline it. It must never fail the capture, so nothing here is asserted.
+func _quieten_window() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, true)
+	# Mouse passthrough as well: a window that cannot take focus can still
+	# swallow a click if it happens to be under the pointer.
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_MOUSE_PASSTHROUGH, true)
+
+
 func _init() -> void:
+	_quieten_window()
 	var options := _parse_arguments()
 	var scene_path: String = options.get("scene", DEFAULT_SCENE)
 	var out_path: String = options.get("out", DEFAULT_OUT)

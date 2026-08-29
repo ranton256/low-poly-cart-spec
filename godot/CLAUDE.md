@@ -55,6 +55,9 @@ is expected to be rewritten when a better implementation appears.**
 .venv/bin/python tools/check_section_refs.py   # every CONSTRAINTS §N reference is accurate
 .venv/bin/python tools/check_placeholders.py   # placeholder markers in shipped docs
 .venv/bin/python tools/check_tuning_transcription.py  # tuning.json matches the GDD tables
+.venv/bin/python tools/measure_exposure.py <capture.png>   # the A9 exposure criteria
+.venv/bin/python tools/find_light_scale.py # re-derive the light scale (windowed)
+./tools/check_sky_ambient.sh                # regenerate design D2a's evidence (windowed)
 ./tools/sync_assets.sh                     # copy the shared models in from ../assets/
 godot --headless -s tests/<suite>.gd       # one suite directly
 ```

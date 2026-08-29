@@ -11,7 +11,9 @@ Every `### Scenario:` heading must be claimed exactly once, as one of:
              beside the function. Beside the code, so it moves with the code.
   visual     godot/data/scenario_register.json, with a reason it cannot be
              checked headlessly and the capture that covers it (or the
-             milestone that will produce one).
+             milestone that will produce one). An entry may also set
+             "unmet": true, meaning the capture shows the scenario FAILING —
+             evidence worth committing, but never counted as coverage.
   deferred   the same register, with the milestone that owns it.
 
 MATCHING IS VERBATIM. Rewording a heading in the design document breaks every
@@ -119,6 +121,18 @@ def main() -> int:
         elif kind == "visual":
             if not str(entry.get("reason", "")).strip():
                 failures.append(f"register[{i}] marks {key!r} visual without a reason")
+            # A capture can show a scenario FAILING. That is evidence, and it is
+            # worth committing — but counting it as coverage would let the gate
+            # report a scenario as covered while the project knows it is not met.
+            # An entry that says so must name the milestone that owns the fix, and
+            # is counted as unmet rather than visual.
+            if entry.get("unmet"):
+                if not str(entry.get("milestone", "")).strip():
+                    failures.append(f"register[{i}] marks {key!r} unmet without naming "
+                                    f"the milestone that owns the fix")
+                if not str(entry.get("capture", "")).strip():
+                    failures.append(f"register[{i}] marks {key!r} unmet without the "
+                                    f"capture that shows it")
             if not str(entry.get("capture", "")).strip() and not str(entry.get("milestone", "")).strip():
                 failures.append(f"register[{i}] marks {key!r} visual with neither a "
                                 f"capture nor the milestone that will produce one")
@@ -142,7 +156,8 @@ def main() -> int:
                         f"— by {', '.join(claimed[k])}")
 
     verified = sum(1 for k in claimed if k in known and any(c.startswith("test ") for c in claimed[k]))
-    visual = sum(1 for e in entries if e.get("kind") == "visual")
+    visual = sum(1 for e in entries if e.get("kind") == "visual" and not e.get("unmet"))
+    unmet = sum(1 for e in entries if e.get("unmet"))
     deferred_by_ms: dict = {}
     for e in entries:
         if e.get("kind") == "deferred":
@@ -157,7 +172,8 @@ def main() -> int:
         return 1
 
     by_ms = ", ".join(f"{m}:{n}" for m, n in sorted(deferred_by_ms.items()))
-    print(f"coverage: {len(scenarios)} scenarios — {verified} verified, {visual} visual, "
+    unmet_note = f", {unmet} UNMET" if unmet else ""
+    print(f"coverage: {len(scenarios)} scenarios — {verified} verified, {visual} visual{unmet_note}, "
           f"{sum(deferred_by_ms.values())} deferred ({by_ms})")
     return 0
 

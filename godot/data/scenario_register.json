@@ -106,7 +106,10 @@
       "scenario": "Keeping the boundary invisible",
       "kind": "visual",
       "reason": "Requires seeing that grass is still visible beyond the kart and that no wall or ground edge is drawn. Nothing about that is measurable from state.",
-      "milestone": "M2"
+      "milestone": "M6",
+      "capture": "docs/progress/2026-08-29-m2-boundary.png",
+      "note": "Captured by add-world-presentation-layer, and the capture shows the scenario FAILING: the ground plane's edge is a hard line against the sky about 10 wu beyond the boundary, where the design document requires that no edge of the ground be visible. The document's own numbers (\u00b1100 wu plane, \u00b190 drivable extent, fog from 50 wu) make the requirement unreachable \u2014 ambiguity A11, owned by M6, att 15. The capture is also taken from an elevated oblique viewpoint rather than the kart-height eye the scenario describes; that waits for the chase camera. Visual because no headless check can see a horizon.",
+      "unmet": true
     },
     {
       "feature": "Collision Detection and Response",

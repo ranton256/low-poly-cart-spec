@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+; The design document's section 5 environment and section 6 lighting.
+;
+; DELIBERATELY ALMOST EMPTY. Everything is built by world_builder.gd from
+; data/tuning.json, because a .tscn full of hand-typed colours and sizes would
+; be a second home for values that already have exactly one — the requirement
+; in openspec/specs/godot/project-configuration/spec.md.
+;
+; This scene stands alone and steps nothing: it is what tools/capture.sh points
+; at for this milestone's visual proof, and it must render with no simulation,
+; no kart and no input. main.tscn instantiates it.
+
+[ext_resource type="Script" path="res://scripts/world/world_builder.gd" id="1_world"]
+
+[node name="World" type="Node3D"]
+script = ExtResource("1_world")

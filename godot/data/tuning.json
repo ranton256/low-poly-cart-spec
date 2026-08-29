@@ -1,18 +1,21 @@
 {
   "_meta": {
-    "source": "low-poly-cart-game-design-document.md \u2014 the Tuning Constants section, plus the per-asset target heights in \u00a73 Asset normalisation contract",
+    "source": "low-poly-cart-game-design-document.md — the Tuning Constants section, plus the per-asset target heights in §3 Asset normalisation contract",
     "tables": [
       "Physics",
       "World",
       "Camera and HUD",
       "Timing",
-      "\u00a73 Asset normalisation contract"
+      "§3 Asset normalisation contract",
+      "§5 Environment art",
+      "§6 Lighting"
     ],
     "keys": "Exactly the names the design document gives. Renaming a key forks the contract.",
     "rate": "Physics values are the Per tick column at the 60 Hz reference rate. That column is what a port implements; the design document's Continuous column is informative only and the two do not agree.",
     "excluded_derived": "Steady-state forward speed, steady-state reverse speed, and the collision velocity result are listed in the design document as derived and NOT independently tunable. They are computed from the values below and are deliberately absent here.",
     "excluded_out_of_scope": "Prop population counts and clearance radii live in the Procedural World Generation section rather than any of these tables. M3 adds them. The per-asset target heights WERE excluded here and were added by add-asset-normalisation-contract.",
-    "readers": "None yet. M1 is the first consumer."
+    "readers": "scripts/art_tuning.gd, called by scripts/world/world_builder.gd, for the environment, lighting and port_decisions groups. scripts/tuning_loader.gd reads the simulation's groups and is exercised by tests/tuning_loader_test.gd; the running game gains that reader with add-kart-view-orientation-and-input.",
+    "port_values": "The port_decisions group holds values this port chose, NOT values the design document states. They are kept apart so the document-derived set stays exactly that, and each names the ambiguity register entry that justifies it."
   },
   "physics": {
     "accel": 0.008,
@@ -80,7 +83,7 @@
     "lapGateAbsXLimit": 5
   },
   "asset_target_heights": {
-    "_note": "From the design document's \u00a73 Asset normalisation contract table, not its four Tuning Constants tables. Every instance of an asset is scaled so its height is this value before any random variation.",
+    "_note": "From the design document's §3 Asset normalisation contract table, not its four Tuning Constants tables. Every instance of an asset is scaled so its height is this value before any random variation.",
     "kart": 1.2,
     "tree": 4.0,
     "rock": 1.5,
@@ -88,5 +91,44 @@
     "crate": 1.0,
     "tires": 1.2,
     "cottage": 3.0
+  },
+  "environment": {
+    "_note": "The design document's §5 Environment art table. Authored in code, not supplied as files, so none of it exists until it is built. Colours are the document's own hex strings. Keys are named by this port: §5 gives no backticked names.",
+    "skyColour": "#87CEEB",
+    "fogColour": "#87CEEB",
+    "fogStart": 50,
+    "fogEnd": 150,
+    "groundColour": "#3D8C40",
+    "groundRoughness": 0.9,
+    "groundMetalness": 0.0,
+    "gridHeight": 0.01,
+    "gridAxisColour": "#555555",
+    "gridMinorColour": "#333333",
+    "bandOpacity": 0.8,
+    "bandColour": "#FFFFFF"
+  },
+  "lighting": {
+    "_note": "The design document's §6 Lighting table, transcribed UNSCALED — these are the document's own intensities in the reference build's units. The single factor that converts them to Godot's is port_decisions.lightScale (ambiguity A9). shadowDepthBias is a magnitude; the document writes the sign as prose (\"a small negative depth bias\"), exactly as it does for friction.",
+    "ambientColour": "#FFFFFF",
+    "ambientIntensity": 0.6,
+    "hemisphereSkyColour": "#87CEEB",
+    "hemisphereGroundColour": "#228B22",
+    "hemisphereIntensity": 0.4,
+    "sunColour": "#FFFFFF",
+    "sunIntensity": 1.0,
+    "sunPositionX": 30,
+    "sunPositionY": 50,
+    "sunPositionZ": 30,
+    "shadowMapSize": 2048,
+    "shadowVolumeExtent": 60,
+    "shadowNear": 0.5,
+    "shadowFar": 200,
+    "shadowDepthBias": 0.0001
+  },
+  "port_decisions": {
+    "_note": "Values this port chose because the design document could not state them in Godot's terms. Each is recorded in godot/docs/AMBIGUITIES.md with its evidence. NOT transcribed from the document, and deliberately not checked against it. lightScale settles A9: the value minimising the ground's deviation from its specified albedo, found by tools/find_light_scale.py. At it the grass renders [56, 141, 65] against the specified [61, 140, 64] — deviation 0.0309 against a computed tolerance of 0.0401, with the scale 5% and 10% either side deviating more. It multiplies all three intensities together, so the document's ratios are preserved by construction.",
+    "shadowMaxDistance": 120,
+    "shadowNormalBias": 0.1,
+    "lightScale": 0.2809
   }
 }

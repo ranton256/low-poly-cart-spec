@@ -1,0 +1,28 @@
+[gd_scene load_steps=2 format=3]
+
+; The world seen from the drivable boundary, looking outward.
+;
+; VISUAL PROOF ONLY — not a game scene. It exists so acceptance item 7's "grass
+; still visible beyond" and the design document's "no wall or ground edge" can be
+; captured before there is a kart to drive there.
+;
+; The viewpoint stands AT the boundary — x = +drivableExtent = 90 — at roughly the
+; chase camera's eye height, looking outward along +X. That is the position the
+; design document's scenario names ("the kart is held against the boundary at
+; +/-drivableExtent"), and the evidence has to be taken from where the scenario
+; says or it is evidence about something else.
+;
+; An earlier version of this file used an elevated oblique viewpoint 28 wu inside
+; the limit, because it framed the grid and the horizon more informatively. Review
+; caught that the spec scenario, the register entry and ambiguity A11 all describe
+; a view FROM the boundary, and were resting on a capture from somewhere else.
+; These numbers are a viewpoint, not a specification: nothing reads them but this
+; capture.
+
+[ext_resource type="PackedScene" path="res://scenes/world.tscn" id="1_world"]
+
+[node name="BoundaryView" type="Node3D"]
+
+[node name="World" parent="." instance=ExtResource("1_world")]
+camera_position = Vector3(90, 4, 0)
+camera_target = Vector3(104, 2.5, 0)

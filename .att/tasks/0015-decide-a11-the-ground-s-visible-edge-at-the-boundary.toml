@@ -1,0 +1,6 @@
+id = 15
+title = "Decide A11: the ground's visible edge at the boundary"
+description = "add-world-presentation-layer measured that the design document's 200 wu ground, +/-90 drivable extent and 50 wu fog start leave the ground's edge 10 wu beyond the boundary, rendering as a hard line against the sky. Evidence: godot/docs/progress/2026-08-29-m2-boundary.png. Every resolution breaks one of the document's stated numbers, so it is a composition problem rather than a port defect. Owner M6; the chase camera's pitch and FOV decide how visible it actually is, so add-chase-camera should sharpen it first."
+status = "not-started"
+created_at = "2026-08-29T15:51:16.311498Z"
+updated_at = "2026-08-29T15:51:16.311498Z"

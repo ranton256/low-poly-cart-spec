@@ -155,11 +155,24 @@ Props wait for M3.
   the three lights are all present at their specified values
 - The kart drives in the direction it visually faces, **at every heading**,
   forward and reverse (**acceptance 3**)
-- The kart's yaw correction is **derived from the imported bounds**, held in one
-  named constant, and pinned by a test that samples 16 headings — the GDD's
-  "+90°" is never transcribed as a literal
+- The kart's yaw correction has its **axis derived from the imported bounds** and
+  its **sign fixed by a committed capture**, held in one named constant, with a
+  vertex-centroid measurement as a second witness — the GDD's "+90°" is never
+  transcribed as a literal. The 16-heading test proves travel/facing *consistency*;
+  it passes on a 180° error, so it is not what settles the sign (**A6**)
 - The view interpolates between simulation states with
-  `Engine.get_physics_interpolation_fraction()` and advances nothing itself
+  `Engine.get_physics_interpolation_fraction()` and advances nothing itself. The
+  **composition root** owns the accumulator and is the only caller of `step()`
+- The three light intensities are settled against Godot's units (**A9**) by a
+  committed measurement, not by eye: ratios preserved exactly, tonemapping left
+  linear, and one shared scale chosen as **the value making the specified ground
+  albedo render as itself**, verified to saturate nothing. "The largest scale that
+  clips nothing" was the original rule and it is not this one — it parks the scene
+  as bright as saturation allows rather than as bright as the
+  specification asks, which the captures in `godot/docs/progress/` record
+- The chase camera is a **pure module in `scripts/core/`**, stepped once per tick
+  by the composition root immediately after `sim.step()` — so acceptance 8's
+  "settles behind the kart" is a numeric test rather than a judgement (**A10**)
 - The chase camera trails, lags through turns, settles behind the kart, and its
   field of view visibly widens with speed (**acceptance 8**)
 - Driving to the boundary produces a soft rebound with grass still visible
@@ -175,9 +188,25 @@ Props wait for M3.
 > that now and finding it in M8.
 
 **Likely changes**
-- `add-world-presentation-layer` — ground, grid, band, sky, fog, lights
-- `add-kart-view-and-orientation-calibration` — the mesh, the derived constant, interpolation
-- `add-chase-camera-and-input` — camera behaviour, FOV curve, real input with focus handling
+- `add-world-presentation-layer` — ground, grid, band, sky, fog, lights; settles
+  **A9**; adds the §5/§6 art constants to `tuning.json` and gives that file its
+  first reader in the running game, through a new `art_tuning.gd` rather than the
+  simulation's loader, so `att` 13 stays open; ships a **static camera** so this
+  milestone's first two changes have any visual proof at all
+- `add-kart-view-orientation-and-input` — the composition root and its accumulator,
+  the kart mesh, the derived yaw constant, render interpolation, start-line
+  placement, and real input with focus handling
+- `add-chase-camera` — `scripts/core/chase_camera.gd` eased per tick, the FOV
+  curve, and the replacement of the static camera
+
+> **Input moved in with driving, and the camera moved into the core.** Input and
+> the camera were originally bundled as "the player-facing loop", but they share no
+> dependency: input is what makes the kart drivable and belongs with the kart.
+> The camera went into `scripts/core/` because the design document eases it *per
+> tick*, which makes it a fixed-step recurrence like the physics — implemented in a
+> `Node` it would ease per frame and converge 2.4× too fast on a 144 Hz display.
+> As a pure module it is also testable with no renderer, which is what turns
+> acceptance 8 into a real test. Both decisions come from M2 exploration.
 
 ---
 

@@ -70,6 +70,9 @@ These describe the architecture this project inherited and is bound to by
 | **balance invariants** | Assertions about *tuning data* rather than code — that difficulty never dips between levels, that a curve lands where intended. The highest-value suite in this skeleton. |
 | **mutation check** | Deliberately breaking what a gate guards to confirm it fails, with the right message. Green after a harness change is not evidence. |
 | **oracle** | An independent source of expected values, with no shared lineage with your implementation. Expectations generated from your own code agree with it by construction and verify nothing. |
+| **light scale** | The single factor converting the design document's light intensities into Godot's units. It multiplies all three together, so the document's ratios — which ARE normative — survive by construction. Ambiguity A9; the value is `port_decisions.lightScale`. |
+| **saturated pixel** | A pixel at 255 in any channel. On a surface with no specular highlight, saturation is exposure, not brightness — the information is gone and no tone curve gets it back. |
+| **falsification test** | A cheap check that runs first and voids everything after it if it fails. Here: the unlit sky must render exactly its specified colour, because if the pipeline is reshaping colour then no other measurement means anything. |
 
 ---
 

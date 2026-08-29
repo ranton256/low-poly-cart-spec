@@ -92,8 +92,11 @@ The caveats. First, the contact shadow only appears once `shadow_normal_bias` is
 lowered from Godot's default of 2.0 — the design document specifies one bias and
 Godot has two, and the default erases the cue the document calls primary
 (ambiguity A8). Second, at the document's stated light intensities Compatibility
-clips 67% of the frame against Forward+'s 0.0%; the shadow verdict survives that,
-the *exposure* question does not, and it is open and owned by M2 (ambiguity A9).
+saturates 66.8% of the spike's probe scene against Forward+'s 0.05%. Both figures
+are re-measured with `measure_exposure.py`, which counts every pixel; the spike's
+own "67% / 0.0%" came from a region measure. The shadow verdict survives that; the
+*exposure* question did not, and was settled by `add-world-presentation-layer`
+(ambiguity A9, now resolved).
 
 **Not tested: the web target itself.** Every capture is desktop Metal-backed
 OpenGL. The platform that motivated this whole decision has never been rendered.
@@ -305,8 +308,8 @@ pinned between two near-touching props with Reset Kart as the specified escape.
 
 `godot/docs/AMBIGUITIES.md` records every place the spec did not decide something
 the port had to. This is a **deliverable**, not a complaint file — it is the
-output the repository's README says the exercise exists to produce. Open at the
-time of writing:
+output the repository's README says the exercise exists to produce. Every entry
+in `AMBIGUITIES.md` is mirrored here; that file carries the reasoning:
 
 | # | Ambiguity | Port's decision |
 |---|---|---|
@@ -315,7 +318,12 @@ time of writing:
 | A3 | Prop registration order after a layout reload — unstated, but it changes collision outcomes | ❓ settled in M7 |
 | A4 | The countdown must advance while "the physics update is skipped entirely" outside RACING | Resolved: `Sim.step()` runs every tick in every state; the kart pipeline is gated on RACING |
 | A5 | Whether the lap gate and minimap read the stepped position or the interpolated render position | Resolved: the stepped position. The view may lag it by up to one tick |
-| A6 | The kart's "+90° yaw correction" is stated in the reference build's frame, not Godot's | Resolved: derived empirically in M2 and pinned by a test — never copied as a literal |
+| A6 | The kart's "+90° yaw correction" is stated in the reference build's frame, not Godot's | Resolved: the *axis* is derived from the imported bounds; the *sign* comes from a committed capture, because bounds are symmetric and a 16-heading test passes on a 180° error. Never copied as a literal |
+| A7 | The sun's orthographic shadow volume has no direct Godot equivalent | Resolved in `spike-compatibility-renderer-shadows` |
+| A8 | Godot has two shadow bias parameters; the design document specifies one | Resolved in `spike-compatibility-renderer-shadows` |
+| A9 | Light intensities are in the reference build's units, not Godot's — at face value Compatibility saturates 59.75% of the frame | Resolved: the ratios are normative, the scale is not. One shared factor `lightScale` = 0.2809, chosen as the value minimising the ground's deviation from its specified albedo; tonemapping stays linear |
+| A10 | The camera eases **per tick** but the frame ordering updates it **per frame**; identical at 60 fps, different at every other rate | ❓ settled in M2 |
+| A11 | The design document requires that no edge of the ground be visible, and specifies a ±100 wu plane, a ±90 drivable extent and fog from 50 wu — which make the edge visible from the boundary | ❓ settled in M6 |
 
 ---
 
@@ -545,6 +553,8 @@ runs to decide whether a change is done. Each is pass/fail with no judgment.
 | V19 | Every GDScript function signature carries parameter and return types | ⚠️ `check_static_typing.py`; members not yet covered |
 | V20 | The seven supplied models import and load | ✅ `tests/assets_test.gd` |
 | V21 | The commit hook and the standing suite derive their banned symbols from one shared definition | ✅ both read `godot/data/banned_symbols.json`; verified by removing a symbol and confirming both stop flagging it |
+| V22 | The rendered environment satisfies the exposure criteria: nothing saturated, the unlit sky exact, the ground at its specified albedo | 📐 `measure_exposure.py`, windowed — it needs a renderer, so it cannot join `test.sh`. Run it against a committed capture |
+| V23 | The design document's specified colours are not written as literals in scripts | ✅ `check_tuning_literals.py` scans quoted hex strings as a separate pass; the numeric pass cannot see them, because it cuts each line at the first `#` |
 
 ---
 

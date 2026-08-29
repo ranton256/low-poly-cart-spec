@@ -52,6 +52,7 @@ SMALL_INTEGER_LIMIT = 10
 
 
 def collect(node, prefix=""):
+    """Numeric tuning values, by dotted name."""
     out = {}
     if isinstance(node, dict):
         for key, value in node.items():
@@ -60,6 +61,28 @@ def collect(node, prefix=""):
             out.update(collect(value, f"{prefix}.{key}" if prefix else key))
     elif isinstance(node, (int, float)) and not isinstance(node, bool):
         out[prefix] = float(node)
+    return out
+
+
+def collect_colours(node, prefix=""):
+    """Colour tuning values, by dotted name.
+
+    A SEPARATE PASS, because colours are JSON strings and the numeric collector
+    above silently skipped every one of them. Ten of the values sections 5 and 6
+    specify are colours — the majority of what this gate was extended to cover —
+    and until review found it, any of them could be hardcoded as `#3D8C40` in a
+    script with the gate still reporting "0 hits". The spec requires that no
+    "dimension, colour, distance or intensity" appear as a literal; only three of
+    those four were enforced.
+    """
+    out = {}
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key.startswith("_"):
+                continue
+            out.update(collect_colours(value, f"{prefix}.{key}" if prefix else key))
+    elif isinstance(node, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}", node.strip()):
+        out[prefix] = node.strip().upper()
     return out
 
 
@@ -131,6 +154,27 @@ def main() -> int:
     #                  toward a false positive.
     NUMBER = re.compile(r"(?<![\w.])(\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?(?![\w.])")
 
+    # Colours, scanned separately from numbers and for a specific reason: the
+    # numeric pass cuts each line at the first '#', which is where a hex colour
+    # BEGINS. Every specified colour was therefore invisible to it. This pass
+    # looks for a QUOTED hex string, and skips whole-line comments so that prose
+    # naming a colour stays legal.
+    #
+    # Known limits, stated rather than implied: Color.html() also accepts a hex
+    # with no leading '#', Color(r, g, b) spells a colour as three floats, and a
+    # named constant like Color.RED needs no hex at all. Each errs toward missing
+    # a literal, never toward a false positive.
+    COLOUR = re.compile(r"[\"'](#[0-9A-Fa-f]{6})[\"']")
+    colours = collect_colours(json.loads(TUNING.read_text()))
+    by_colour = {}
+    for name, value in colours.items():
+        by_colour.setdefault(value, []).append(name)
+    if not by_colour:
+        print("error: no colours found in tuning.json — sections 5 and 6 specify "
+              "ten, so the format changed and this pass is searching for nothing",
+              file=sys.stderr)
+        return 1
+
     used_exemptions = set()
     hits = []
 
@@ -162,6 +206,27 @@ def main() -> int:
                                 f"constant {' / '.join(sorted(names))} ({literal}) "
                                 f"— refer to it by name")
 
+    for path in files:
+        rel = str(path.relative_to(ROOT))
+        for lineno, line in enumerate(
+            path.read_text(encoding="utf-8", errors="replace").split("\n"), 1
+        ):
+            if line.lstrip().startswith("#"):
+                continue
+            for m in COLOUR.finditer(line):
+                found = m.group(1).upper()
+                if found not in by_colour:
+                    continue
+                exempt = next((j for j, e in enumerate(allow)
+                               if e.get("file") == rel
+                               and str(e.get("value", "")).upper() == found), None)
+                if exempt is not None:
+                    used_exemptions.add(exempt)
+                    continue
+                hits.append(f"{rel}:{lineno}: literal {m.group(1)} is the tuning "
+                            f"colour {' / '.join(sorted(by_colour[found]))} "
+                            f"— refer to it by name")
+
     stale = [f"entry {i} ({e.get('file')} value {e.get('value')}) matches nothing"
              for i, e in enumerate(allow) if i not in used_exemptions]
 
@@ -182,7 +247,8 @@ def main() -> int:
         note = (f"; {len(unsearchable)} not searchable (small integers): "
                 + ", ".join(f"{n}={v:g}" for n, v in sorted(unsearchable.items())))
     print(f"tuning literals: {len(searchable)} values searched across {len(files)} "
-          f"files, 0 hits, {len(used_exemptions)} exemption(s){note}")
+          f"files, {len(by_colour)} colours, 0 hits, "
+          f"{len(used_exemptions)} exemption(s){note}")
     return 0
 
 

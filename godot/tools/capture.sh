@@ -36,12 +36,72 @@ fi
 
 mkdir -p "$(dirname "$OUT")"
 
-godot -s tests/capture_scene.gd -- \
-	--scene "$SCENE" --out "$OUT" --frames "$FRAMES"
+# Launch WITHOUT stealing focus.
+#
+# macOS activates a foreground app when it launches, which raises its window over
+# whatever the person running this is doing. Godot has no flag for it, and the
+# NO_FOCUS window flag set in capture_scene.gd stops keyboard focus but NOT app
+# activation — verified the hard way, twice. `open -g` is the macOS-level answer:
+# -g leaves the app in the background, -n forces a new instance rather than
+# activating a running editor, -W waits for it to exit.
+#
+# The cost is that `open` does not pipe stdout, so a failing run says nothing.
+# Hence the pattern: quiet in the background on success, and on failure re-run
+# attached so the error is actually visible. Set LPC_CAPTURE_FOREGROUND=1 to skip
+# the quiet path entirely.
+BUNDLE=""
+if [ "$(uname)" = "Darwin" ]; then
+	RESOLVED="$(readlink "$(command -v godot)" 2>/dev/null || command -v godot)"
+	case "$RESOLVED" in
+		*.app/Contents/MacOS/*) BUNDLE="${RESOLVED%%.app/Contents/MacOS/*}.app" ;;
+	esac
+fi
+
+# `open` runs the app from a different working directory, so every path it is
+# given must be absolute.
+PROJECT="$(pwd)"
+case "$OUT" in
+	/*) ABS_OUT="$OUT" ;;
+	*) ABS_OUT="$PROJECT/$OUT" ;;
+esac
+
+# Remove any previous file at the target FIRST.
+#
+# This is the only thing standing between a failed capture and a silent pass.
+# `open -g` does not carry Godot's exit status, so the sole failure signal is
+# "no file at the output path" — and a stale file from an earlier run satisfies
+# that check while containing the WRONG frame. Review reproduced it: a capture
+# of a non-existent scene exited 0 and left the old bytes in place.
+#
+# It matters most where it is least visible. tools/find_light_scale.py reuses one
+# scratch path for every candidate scale of a search, so a failed capture midway
+# would have been measured as the previous scale's image, and the search would
+# have reported a scale it never rendered. check_sky_ambient.sh writes over a
+# COMMITTED capture, so the same failure would have re-presented an old file as
+# freshly regenerated evidence.
+rm -f "$ABS_OUT"
+
+run_attached() {
+	godot -s tests/capture_scene.gd -- \
+		--scene "$SCENE" --out "$ABS_OUT" --frames "$FRAMES"
+}
+
+if [ -n "$BUNDLE" ] && [ "${LPC_CAPTURE_FOREGROUND:-0}" != "1" ]; then
+	open -g -n -W -a "$BUNDLE" --args \
+		--path "$PROJECT" -s tests/capture_scene.gd -- \
+		--scene "$SCENE" --out "$ABS_OUT" --frames "$FRAMES"
+	if [ ! -s "$ABS_OUT" ]; then
+		echo "capture: background run produced nothing — repeating in the foreground" >&2
+		echo "         so the error is visible." >&2
+		run_attached
+	fi
+else
+	run_attached
+fi
 
 # The Godot side prints its own success line, but a missing file must not pass
 # quietly — the same lesson as the suite runner.
-if [ ! -s "$OUT" ]; then
+if [ ! -s "$ABS_OUT" ]; then
 	echo "error: $OUT was not written, or is empty" >&2
 	exit 1
 fi

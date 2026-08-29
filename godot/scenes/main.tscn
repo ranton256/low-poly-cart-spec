@@ -1,3 +1,11 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
+
+; The game's entry scene. For now it is the world and nothing else — the
+; composition root, the accumulator and the kart arrive with
+; add-kart-view-orientation-and-input.
+
+[ext_resource type="PackedScene" path="res://scenes/world.tscn" id="1_world"]
 
 [node name="Main" type="Node3D"]
+
+[node name="World" parent="." instance=ExtResource("1_world")]

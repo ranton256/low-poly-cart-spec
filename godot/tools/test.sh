@@ -74,6 +74,10 @@ godot --headless -s tests/tuning_loader_test.gd
 # decides whether props stand on the ground or in it.
 godot --headless -s tests/normalise_test.gd
 
+# The environment, checked in a headless scene tree — everything about §5 and §6
+# except the pixels. The captures in docs/progress/ carry the other half.
+godot --headless -s tests/world_test.gd
+
 # Acceptance 14a: one input sequence, three tick batchings, one outcome.
 godot --headless -s tests/replay_test.gd
 
