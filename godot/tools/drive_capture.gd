@@ -9,6 +9,12 @@
 extends SceneTree
 
 const DEFAULT_TICKS := 200
+## Rendered frames to wait before grabbing the viewport. See the settle loop.
+const SETTLE_FRAMES := 12
+## A rendered frame of this game is grass, sky and props. If most of it is pure
+## black the renderer had not caught up, and the capture is not evidence — refuse
+## to write it rather than let a half-drawn frame be committed as proof.
+const MAX_BLACK_FRACTION := 0.20
 
 
 func _init() -> void:
@@ -40,8 +46,11 @@ func _init() -> void:
 	for action in hold:
 		if InputMap.has_action(action):
 			Input.action_release(action)
-	# Let the frame settle so the capture is of a drawn frame, not a mid-step one.
-	for _i in range(3):
+	# Let the frame settle. THREE WAS NOT ENOUGH: a capture taken after 420 physics
+	# frames came back with a pure-black sky and near-black ground, while two
+	# re-runs of the same command were correct. Grabbing the viewport before the
+	# renderer has caught up produces a frame that looks like evidence and is not.
+	for _i in range(SETTLE_FRAMES):
 		await process_frame
 
 	var image := get_root().get_texture().get_image()
@@ -49,6 +58,20 @@ func _init() -> void:
 		printerr("drive_capture: no image — this needs a WINDOWED run")
 		quit(1)
 		return
+	var black: float = _black_fraction(image)
+	if black > MAX_BLACK_FRACTION:
+		printerr(
+			(
+				(
+					"drive_capture: %.1f%% of the frame is pure black — the renderer had "
+					+ "not caught up and this is not a usable capture. Nothing written."
+				)
+				% (black * 100.0)
+			)
+		)
+		quit(1)
+		return
+
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_path.get_base_dir()))
 	if image.save_png(out_path) != OK:
 		printerr("drive_capture: could not write %s" % out_path)
@@ -72,6 +95,22 @@ func _init() -> void:
 		)
 	)
 	quit()
+
+
+## How much of the frame is pure black. Sampled on a grid rather than every
+## pixel: this runs after every capture and the answer does not need 900,000
+## samples to be right.
+func _black_fraction(image: Image) -> float:
+	var black: int = 0
+	var total: int = 0
+	var step: int = 8
+	for y in range(0, image.get_height(), step):
+		for x in range(0, image.get_width(), step):
+			total += 1
+			var pixel := image.get_pixel(x, y)
+			if pixel.r == 0.0 and pixel.g == 0.0 and pixel.b == 0.0:
+				black += 1
+	return float(black) / float(maxi(total, 1))
 
 
 func _parse() -> Dictionary:

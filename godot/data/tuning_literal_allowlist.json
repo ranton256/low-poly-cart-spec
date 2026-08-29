@@ -21,6 +21,16 @@
       "file": "godot/scripts/view/kart_view.gd",
       "value": 0.02,
       "reason": "CENTROID_MIN_OFFSET \u2014 how far the kart mesh's vertex centroid must sit from its bounding-box centre for the asymmetry to indicate which end is the nose. The supplied model measures 0.0764, so this is roughly a quarter of it: below this the mesh is too symmetric for the heuristic to speak and the test says so rather than reporting a coin flip as corroboration. The collision is with unnamed_in_spec.startFinishBandHeightY, the height the start/finish band floats above the ground \u2014 an unrelated quantity that happens to share a magnitude."
+    },
+    {
+      "file": "godot/scripts/core/rng.gd",
+      "value": 15,
+      "reason": "A bit shift in mulberry32 \u2014 `_state >> 15` \u2014 and part of the algorithm's definition, not a tuning value. Changing it would produce a different generator, which is why the file's own header warns that getting the masking wrong makes the sequence diverge silently. The collision is with prop_counts.treeCount, added by add-seeded-world-scatter."
+    },
+    {
+      "file": "godot/scripts/world/world_builder.gd",
+      "value": 12,
+      "reason": "The placeholder camera's look-at target on Z. A viewpoint, not a population: it is written down so the world scene's captures are reproducible, and add-chase-camera replaced it for the running game. The collision is with prop_counts.coneCount, added by add-seeded-world-scatter."
     }
   ]
 }

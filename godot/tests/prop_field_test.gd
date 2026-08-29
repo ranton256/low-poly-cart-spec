@@ -1,0 +1,165 @@
+# The scattered field in a running scene: props exist, regeneration replaces
+# them, and the kart is left alone.
+#
+#   godot --headless -s tests/prop_field_test.gd
+#
+# tests/scatter_test.gd proves the placement rules with no scene loaded. This is
+# the half that needs a tree: that the placements become props, that regenerating
+# releases the old ones, and that the design document's requirement — the kart's
+# position, heading, velocity and the running clock all untouched — actually
+# holds in the game rather than only in the generator.
+extends SceneTree
+
+const RVTest := preload("res://tests/harness.gd")
+const Scatter := preload("res://scripts/core/scatter.gd")
+
+var _root: Node3D = null
+
+
+func _check(cond: bool, msg: String) -> void:
+	RVTest.check(cond, msg)
+
+
+func _init() -> void:
+	await process_frame
+	_root = (load("res://scenes/main.tscn") as PackedScene).instantiate() as Node3D
+	get_root().add_child(_root)
+	await process_frame
+
+	_test_the_field_is_populated()
+	_test_records_keep_the_acceptance_order()
+	_test_records_are_in_registration_order()
+	await _test_regeneration_replaces_the_props()
+	await _test_regeneration_leaves_the_kart_alone()
+
+	get_root().remove_child(_root)
+	_root.free()
+	_root = null
+	RVTest.finish(self, "prop field: populated, regenerated, kart untouched", "prop field check(s)")
+
+
+func _requested_total() -> int:
+	var total: int = 0
+	for asset in Scatter.ASSET_ORDER:
+		total += int(_root.sim.tuning.prop_count(asset))
+	return total
+
+
+func _test_the_field_is_populated() -> void:
+	_check(_root.props != null, "the scene has a prop field")
+	if _root.props == null:
+		return
+	var count: int = _root.props.prop_count()
+	_check(count == _requested_total(), "every requested prop was placed (%d)" % count)
+	# One node per record, so nothing is registered that is not drawn and nothing
+	# drawn that collision will not see.
+	_check(
+		_root.props.get_child_count() == count,
+		(
+			"one instantiated node per record (%d nodes, %d records)"
+			% [_root.props.get_child_count(), count]
+		)
+	)
+
+
+## The order the next change resolves collisions by, preserved through the view.
+##
+## Against the ACCEPTANCE INDEX, not against Scatter.ASSET_ORDER. Comparing the
+## view's asset sequence to the port's own constant is what let review reorder
+## records inside an asset with the whole suite green.
+func _test_records_keep_the_acceptance_order() -> void:
+	var records: Array = _root.props.records
+	_check(records.size() > 0, "there are records to check")
+	var wrong: int = 0
+	for i in range(records.size()):
+		if records[i].sequence != i:
+			wrong += 1
+			if wrong == 1:
+				_check(
+					false,
+					(
+						"record %d carries acceptance index %d — the view reordered them"
+						% [i, records[i].sequence]
+					)
+				)
+	_check(wrong == 0, "every record sits at the index its placement was accepted at")
+
+
+## The order the next change resolves collisions by, preserved through the view.
+func _test_records_are_in_registration_order() -> void:
+	var seen: Array[String] = []
+	for record in _root.props.records:
+		var asset: String = record.asset
+		if seen.is_empty() or seen[-1] != asset:
+			_check(not seen.has(asset), "%s's records are contiguous" % asset)
+			seen.append(asset)
+	var expected: Array[String] = []
+	for asset in Scatter.ASSET_ORDER:
+		if seen.has(asset):
+			expected.append(asset)
+	_check(seen == expected, "records follow the document's table order (got %s)" % [seen])
+
+
+func _test_regeneration_replaces_the_props() -> void:
+	var before_seed: int = _root.field_seed
+	var before: Array[String] = []
+	for record in _root.props.records:
+		before.append("%s|%.6f|%.6f" % [record.asset, record.x, record.z])
+
+	_root.regenerate_world()
+	# One frame, because queue_free() is DEFERRED and a count taken immediately
+	# would still see the old nodes.
+	#
+	# Be precise about what this does NOT establish: prop_field.clear() frees
+	# immediately rather than queueing, and swapping it back to queue_free() does
+	# NOT fail this test — verified by trying it. After a frame both are correct,
+	# and the difference is only visible to a caller counting children within the
+	# same frame. The immediate free is the better choice for that reason, not
+	# because anything here would catch the other.
+	await process_frame
+
+	_check(_root.field_seed != before_seed, "regenerating moved to a new seed")
+	_check(
+		_root.props.prop_count() == _requested_total(),
+		"the fresh population is complete (%d)" % _root.props.prop_count()
+	)
+	_check(
+		_root.props.get_child_count() == _root.props.prop_count(),
+		(
+			"and no nodes from the old field survive (%d nodes, %d records)"
+			% [_root.props.get_child_count(), _root.props.prop_count()]
+		)
+	)
+	var after: Array[String] = []
+	for record in _root.props.records:
+		after.append("%s|%.6f|%.6f" % [record.asset, record.x, record.z])
+	_check(before != after, "and the arrangement actually changed")
+
+
+# @covers Procedural World Generation / Regenerating the world on demand
+## The design document's requirement, and the reason regeneration is a world
+## operation rather than a reset.
+func _test_regeneration_leaves_the_kart_alone() -> void:
+	var sim: RefCounted = _root.sim
+	sim.pos_x = 12.5
+	sim.pos_z = -7.25
+	sim.yaw = 1.25
+	sim.velocity = 0.15
+	var ticks_before: int = sim.ticks
+
+	_root.regenerate_world()
+	await process_frame
+
+	_check(
+		is_equal_approx(sim.pos_x, 12.5) and is_equal_approx(sim.pos_z, -7.25),
+		"the kart's position is untouched by regeneration"
+	)
+	_check(is_equal_approx(sim.yaw, 1.25), "its heading is untouched")
+	_check(is_equal_approx(sim.velocity, 0.15), "its velocity is untouched")
+	# The clock is the tick count; regeneration must not advance or reset it.
+	# A physics frame may land between the two reads, so this allows forward
+	# motion from stepping and forbids a reset.
+	_check(
+		sim.ticks >= ticks_before,
+		"the running clock was not reset (%d -> %d)" % [ticks_before, sim.ticks]
+	)

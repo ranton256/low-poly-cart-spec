@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://scripts/main.gd" id="2_main"]
 [ext_resource type="Script" path="res://scripts/view/kart_view.gd" id="3_kart"]
 [ext_resource type="Script" path="res://scripts/view/camera_view.gd" id="4_camera"]
+[ext_resource type="Script" path="res://scripts/world/prop_field.gd" id="5_props"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("2_main")
@@ -21,6 +22,9 @@ script = ExtResource("2_main")
 
 [node name="Kart" type="Node3D" parent="."]
 script = ExtResource("3_kart")
+
+[node name="PropField" type="Node3D" parent="."]
+script = ExtResource("5_props")
 
 [node name="ChaseCamera" type="Camera3D" parent="."]
 script = ExtResource("4_camera")

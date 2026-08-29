@@ -88,6 +88,8 @@ godot --headless -s tests/driver_test.gd
 godot --headless -s tests/kart_test.gd
 godot --headless -s tests/input_test.gd
 godot --headless -s tests/camera_test.gd
+godot --headless -s tests/scatter_test.gd
+godot --headless -s tests/prop_field_test.gd
 
 
 # Lint and format. Fast, and they keep the diff about behaviour.
@@ -148,6 +150,11 @@ fi
 # thing they check. It shells out to Godot to measure, so it is slower than the
 # other Python gates and still headless.
 "$PY" tools/check_kart_conformance.py
+
+# The generated field against the design document's own population table and
+# rejection rules — the second gate whose expectations share no ancestor with the
+# thing they check. Shells out to Godot to generate, and stays headless.
+"$PY" tools/check_scatter_conformance.py
 # Every suite under tests/ is actually run by this file. 3f43233 shipped three
 # that were not, and they were dark until 20e61fa.
 "$PY" tools/check_suites_registered.py

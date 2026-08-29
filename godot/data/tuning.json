@@ -8,7 +8,8 @@
       "Timing",
       "§3 Asset normalisation contract",
       "§5 Environment art",
-      "§6 Lighting"
+      "§6 Lighting",
+      "Procedural World Generation / Scattering the standard prop population"
     ],
     "keys": "Exactly the names the design document gives. Renaming a key forks the contract.",
     "rate": "Physics values are the Per tick column at the 60 Hz reference rate. That column is what a port implements; the design document's Continuous column is informative only and the two do not agree.",
@@ -130,5 +131,14 @@
     "shadowMaxDistance": 120,
     "shadowNormalBias": 0.1,
     "lightScale": 0.2809
+  },
+  "prop_counts": {
+    "_note": "From the design document's Procedural World Generation feature, the 'Scattering the standard prop population' scenario table — a SIXTH source, after the four Tuning Constants tables and the section 3 target heights. Keys are '<asset>Count' and NOT the bare asset name: the document names the asset in one column and the count in another, and a bare 'tree' would collide with asset_target_heights.tree. That collision is not cosmetic — check_tuning_transcription.py requires each constant to appear exactly once across all groups, and scripts/art_tuning.gd looks values up FLAT across groups on the strength of that guarantee. The gate caught the collision on the first attempt. The same table's Clearance radius column is already carried as world.startClearance (8) and world.cottageClearance (20). Order is the document's table order, which is also the registration order collision resolves by.",
+    "treeCount": 15,
+    "rockCount": 10,
+    "coneCount": 12,
+    "crateCount": 8,
+    "tiresCount": 6,
+    "cottageCount": 3
   }
 }

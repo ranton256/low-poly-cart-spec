@@ -30,42 +30,6 @@
       "milestone": "M4"
     },
     {
-      "feature": "Procedural World Generation",
-      "scenario": "Scattering the standard prop population",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Procedural World Generation",
-      "scenario": "Rejecting a candidate placement",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Procedural World Generation",
-      "scenario": "Giving up gracefully when placements cannot be found",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Procedural World Generation",
-      "scenario": "Varying repeated instances so the field does not look tiled",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Procedural World Generation",
-      "scenario": "Leaving an empty outer ring",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
-      "feature": "Procedural World Generation",
-      "scenario": "Regenerating the world on demand",
-      "kind": "deferred",
-      "milestone": "M3"
-    },
-    {
       "feature": "Race Start Sequence and Game State Machine",
       "scenario": "Enumerating the game states",
       "kind": "deferred",

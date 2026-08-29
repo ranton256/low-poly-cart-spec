@@ -59,6 +59,7 @@ is expected to be rewritten when a better implementation appears.**
 .venv/bin/python tools/find_light_scale.py # re-derive the light scale (windowed)
 ./tools/check_sky_ambient.sh                # regenerate design D2a's evidence (windowed)
 .venv/bin/python tools/check_kart_conformance.py  # the kart vs the design document
+.venv/bin/python tools/check_scatter_conformance.py  # the field vs the design document
 .venv/bin/python tools/measure_contact_shadow.py <capture.png>  # the primary cue
 ./tools/sync_assets.sh                     # copy the shared models in from ../assets/
 godot --headless -s tests/<suite>.gd       # one suite directly

@@ -24,11 +24,19 @@ const InputState := preload("res://scripts/core/input_state.gd")
 const TuningLoader := preload("res://scripts/tuning_loader.gd")
 const ChaseCamera := preload("res://scripts/core/chase_camera.gd")
 const ArtTuning := preload("res://scripts/art_tuning.gd")
+const Scatter := preload("res://scripts/core/scatter.gd")
 
 ## Actions declared in project.godot's InputMap, mapped to the core's held-state
 ## fields. The design document's control table also binds Reset Kart and Save
 ## Layout, whose EFFECTS arrive in M7 — they are bound here and deliberately do
 ## nothing, which the register entry for "Mapping the control scheme" records.
+## The seed this session's field is generated from.
+##
+## Fixed rather than drawn from the clock: a field nobody can reproduce is a field
+## nobody can report a bug about. Regenerate World advances it, so the player gets
+## a new arrangement while every one of them stays nameable.
+const STARTING_SEED := 20260829
+
 const DRIVE_ACTIONS := {
 	"accelerate": "forward",
 	"reverse": "reverse",
@@ -42,6 +50,11 @@ var input: RefCounted = null
 ## The chase camera's state. In the core because it is a fixed-step recurrence
 ## whose specified properties are numbers — see scripts/core/chase_camera.gd.
 var camera: RefCounted = null
+
+## The scattered field. The generator lives in the core; this holds what it
+## produced, in the order it produced it.
+var scatter: RefCounted = null
+var field_seed: int = STARTING_SEED
 
 var _art: RefCounted = null
 
@@ -58,6 +71,10 @@ var _camera_steps: int = 0
 ## The node the chase camera is applied to. Optional for the same reason the kart
 ## view is: a headless suite drives the root with neither attached.
 @onready var chase_camera: Camera3D = get_node_or_null("ChaseCamera") as Camera3D
+
+## The props. Optional like the other views, so a headless suite can drive the
+## root without one.
+@onready var props: Node3D = get_node_or_null("PropField") as Node3D
 
 
 func _ready() -> void:
@@ -76,6 +93,9 @@ func _ready() -> void:
 	camera = ChaseCamera.new()
 	camera.tuning = tuning
 	_art = ArtTuning.load_art()
+	scatter = Scatter.new()
+	scatter.tuning = tuning
+	_generate_field(field_seed)
 
 
 ## Exactly one step. Never a loop: the loop is Godot's, and duplicating it here is
@@ -142,9 +162,36 @@ func interpolation_fraction() -> float:
 	return Engine.get_physics_interpolation_fraction()
 
 
+## Scatter a field and hand it to the view.
+##
+## The design document's regeneration scenario requires the kart's position,
+## heading, velocity and the running clock be left untouched — which is why
+## nothing here touches the simulation. Regenerating is a world operation, not a
+## reset.
+func _generate_field(seed_value: int) -> void:
+	if props == null:
+		return
+	if props.authored_boxes().is_empty() and not props.load_assets():
+		push_error("main: could not load the prop models; the field is empty")
+		return
+	props.build(scatter.generate(seed_value, props.authored_boxes()))
+	print("world: seed %d — %s" % [seed_value, scatter.shortfall_report()])
+
+
+## Regenerate World. The design document gives this action no required binding and
+## leaves the exposure to the port; project.godot binds it and check_settings.py
+## pins it.
+func regenerate_world() -> void:
+	field_seed += 1
+	_generate_field(field_seed)
+
+
 func _read_input() -> void:
 	for action in DRIVE_ACTIONS:
 		input.set(DRIVE_ACTIONS[action], Input.is_action_pressed(action))
+	# Edge-triggered, not held: one press is one new world.
+	if Input.is_action_just_pressed("regenerate_world"):
+		regenerate_world()
 
 
 ## Every held input is released when the window loses focus.

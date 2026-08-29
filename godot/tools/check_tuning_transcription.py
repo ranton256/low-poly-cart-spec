@@ -39,13 +39,24 @@ GDD = ROOT / "low-poly-cart-game-design-document.md"
 TUNING = ROOT / "godot" / "data" / "tuning.json"
 
 DERIVED_MARKERS = ("steadyState", "steady_state", "collisionVelocity")
+SCATTER_SCENARIO = "### Scenario: Scattering the standard prop population"
+# The document's table lists six assets. A guard, so a reworded table fails loudly
+# rather than silently checking fewer.
+EXPECTED_PROP_COUNTS = 6
+
 ENV_SECTION = "### 5. Environment art"
 LIGHT_SECTION = "### 6. Lighting"
 
 # Groups whose keys this port names because the design document names none.
 # unnamed_in_spec came first, for unnamed rows in the four Tuning Constants
 # tables; sections 5 and 6 name nothing at all.
-PORT_NAMED_GROUPS = ("unnamed_in_spec", "environment", "lighting", "port_decisions")
+PORT_NAMED_GROUPS = (
+    "unnamed_in_spec",
+    "environment",
+    "lighting",
+    "port_decisions",
+    "prop_counts",
+)
 
 # Keys the document specifies with the word "white" rather than a hex value.
 # Checked separately: the document is confirmed to say white, and the
@@ -86,6 +97,12 @@ ENV_LIGHT_PATTERNS = [
     ("shadowFar", "light", r"near \d+(?:\.\d+)? / far (\d+(?:\.\d+)?)"),
     ("shadowDepthBias", "light", r"depth bias \(\u2248 [\u2212-](\d+(?:\.\d+)?)\)"),
 ]
+# scaleVariation is a RANGE in one cell — "x0.8 - x1.2" — so table_values() counts
+# it among the multi-name rows it cannot attribute and nothing checked either end.
+# add-seeded-world-scatter is its first consumer, and its progress note asserted
+# "the range is 0.8-1.2" as a document fact that no gate held. Read explicitly.
+SCALE_VARIATION_PATTERN = r"\|\s*`scaleVariation`\s*\|\s*\u00d7([\d.]+)\s*[\u2013-]\s*\u00d7([\d.]+)"
+
 SUN_POSITION_PATTERN = r"Positioned at \((\d+), (\d+), (\d+)\)"
 # 21 patterns + 3 sun-position components. Guards against a reworded document
 # quietly reducing what this gate inspects.
@@ -158,6 +175,39 @@ def environment_and_lighting(text: str) -> dict:
     return out
 
 
+def prop_counts(text: str) -> dict:
+    """Per-asset populations from the Procedural World Generation scenario table.
+
+    A SIXTH source of transcribed values, after the four Tuning Constants tables
+    and the section 3 target heights. Keyed '<asset>Count' to match tuning.json,
+    because a bare asset name collides with asset_target_heights — see that
+    group's note.
+
+    The table also carries Target height and Clearance radius columns. Those are
+    already checked elsewhere (section 3, and world.startClearance /
+    world.cottageClearance), and are deliberately not re-read here: a value
+    checked twice against the same source is not checked twice.
+    """
+    if SCATTER_SCENARIO not in text:
+        return {}
+    body = re.split(r"\n### ", text.split(SCATTER_SCENARIO)[1])[0]
+    out = {}
+    for line in body.splitlines():
+        match = re.match(r"\s*\|\s*`(\w+)`\s*\|\s*(\d+)\s*\|", line)
+        if match:
+            out[match.group(1) + "Count"] = float(match.group(2))
+    return out
+
+
+def scale_variation(text: str) -> dict:
+    """The two ends of scaleVariation, from the World table's range cell."""
+    section = text.split("# Tuning Constants")[1].split("# Acceptance Checklist")[0]
+    match = re.search(SCALE_VARIATION_PATTERN, section)
+    if not match:
+        return {}
+    return {"min": float(match.group(1)), "max": float(match.group(2))}
+
+
 def named_constants(text: str) -> list[str]:
     section = text.split("# Tuning Constants")[1].split("# Acceptance Checklist")[0]
     names = []
@@ -222,6 +272,13 @@ def main() -> int:
               f"{ASSET_SECTION!r} — the table format changed and this gate is "
               f"no longer checking them", file=sys.stderr)
         return 1
+    counts = prop_counts(gdd_text)
+    if len(counts) != EXPECTED_PROP_COUNTS:
+        print(f"error: expected {EXPECTED_PROP_COUNTS} prop counts under "
+              f"{SCATTER_SCENARIO!r}, found {len(counts)} — the table changed shape "
+              f"and this gate's scope moved with it", file=sys.stderr)
+        return 1
+
     env_light = environment_and_lighting(gdd_text)
     if len(env_light) != EXPECTED_ENV_LIGHT_COUNT:
         print(f"error: expected {EXPECTED_ENV_LIGHT_COUNT} values from "
@@ -338,6 +395,42 @@ def main() -> int:
     if art_drifted:
         failures.append("section 5/6 value(s) drifted: " + "; ".join(art_drifted))
 
+    variation = scale_variation(gdd_text)
+    if not variation:
+        print("error: could not read scaleVariation's range from the World table — "
+              "the row changed shape and neither end is being checked",
+              file=sys.stderr)
+        return 1
+    transcribed_variation = tuning.get("world", {}).get("scaleVariation", {})
+    for end in ("min", "max"):
+        got = transcribed_variation.get(end)
+        if got is None:
+            failures.append(f"world.scaleVariation.{end} is missing; the document states "
+                            f"{variation[end]:g}")
+        elif abs(float(got) - variation[end]) > 1e-9:
+            failures.append(f"world.scaleVariation.{end} is {got} but the document says "
+                            f"{variation[end]:g}")
+
+    count_drifted = []
+    transcribed_counts = {
+        k: v for k, v in tuning.get("prop_counts", {}).items() if not k.startswith("_")
+    }
+    for name, expected in counts.items():
+        if name not in transcribed_counts:
+            count_drifted.append(f"{name} is missing from tuning.json but the "
+                               f"population table states it")
+        elif abs(float(transcribed_counts[name]) - expected) > 1e-9:
+            count_drifted.append(f"{name} is {transcribed_counts[name]} but the document "
+                               f"says {expected:g}")
+    extra_counts = sorted(set(transcribed_counts) - set(counts))
+    if extra_counts:
+        count_drifted.append(f"{len(extra_counts)} prop count(s) with no row in the "
+                           f"document's table: " + ", ".join(extra_counts))
+
+    if count_drifted:
+        failures.append("prop count(s) drifted from the design document: "
+                        + "; ".join(count_drifted))
+
     # A key nobody extracts is a key nobody checks. Adding one to the data
     # without adding its pattern would otherwise read as coverage.
     unchecked = sorted(set(art) - set(env_light) - set(WHITE_KEYS))
@@ -356,6 +449,7 @@ def main() -> int:
           f"({len(table['unattributable'])} multi-name rows not attributable), "
           f"{len(unnamed)} port-named rows, {len(occurrences)} entries each appearing once, "
           f"{len(env_light)} section 5/6 values checked + {len(WHITE_KEYS)} stated white, "
+          f"{len(counts)} prop counts checked, "
           f"{len([k for k in tuning.get('port_decisions', {}) if not k.startswith('_')])} "
           f"port decisions not checked against the document, no derived values")
     return 0

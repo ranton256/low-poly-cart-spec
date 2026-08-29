@@ -223,6 +223,23 @@ ambiguity register (§5 *Conformance to the specification*).
 
 ---
 
+### Registration order is a contract between two changes 📐
+
+`scripts/core/scatter.gd` emits placements **asset by asset in the design
+document's own table order** — `tree`, `rock`, `cone`, `crate`, `tires`,
+`cottage` — and within an asset in the order candidates were accepted.
+`scripts/world/prop_field.gd` preserves that order in its records.
+
+This is written here rather than only in a change's `design.md` because it is a
+contract *between* changes. The design document specifies that a collision
+resolves against "the first intersecting prop in registration order only", so the
+order one change emits decides what another change collides with. An unstated
+order would make collision outcomes depend on an implementation detail nobody
+wrote down — and they would be wrong reproducibly, which is the hardest kind of
+wrong to notice.
+
+The document gives a table, not an ordering rule. This is the rule.
+
 ### `scripts/core/` holds one piece of cosmetic state, deliberately 📐
 
 The chase camera lives in `scripts/core/chase_camera.gd`, and it is not gameplay.
@@ -582,8 +599,9 @@ runs to decide whether a change is done. Each is pass/fail with no judgment.
 | V21 | The commit hook and the standing suite derive their banned symbols from one shared definition | ✅ both read `godot/data/banned_symbols.json`; verified by removing a symbol and confirming both stop flagging it |
 | V22 | The rendered environment satisfies the exposure criteria: nothing saturated, the unlit sky exact, the ground at its specified albedo | 📐 `measure_exposure.py`, windowed — it needs a renderer, so it cannot join `test.sh`. Run it against a committed capture |
 | V23 | The design document's specified colours are not written as literals in scripts | ✅ `check_tuning_literals.py` scans quoted hex strings as a separate pass; the numeric pass cannot see them, because it cuts each line at the first `#` |
-| V24 | The built kart matches the design document's own figures for it — authored box, final dimensions, world footprint at the start line, and yaw correction | ✅ `check_kart_conformance.py`. The only gate here whose expected values are read from the design document rather than from `data/tuning.json`, so the two sides share no ancestor |
+| V24 | The built kart matches the design document's own figures for it — authored box, final dimensions, world footprint at the start line, and yaw correction | ✅ `check_kart_conformance.py`. One of two gates whose expected values come from the design document rather than from `data/tuning.json`, so the two sides share no ancestor — see V26 for the other |
 | V25 | The kart's contact shadow survives — the cue the design document calls primary | 📐 `measure_contact_shadow.py`, windowed. Depth is gated; coverage is reported, because the margin A8 turned on does not reproduce at this framing |
+| V26 | A generated field matches the design document's own population table, clearance radii, grounding and asset ordering | ✅ `check_scatter_conformance.py`. Reads the *Scattering the standard prop population* table and the *Rejecting a candidate placement* rules from the design document. The ordering half compared the port against its own constant until review caught it; it now reads the table's key order. The WITHIN-asset half is not this gate's — `scatter_test.gd` and `prop_field_test.gd` assert it against the recorded acceptance index |
 
 ---
 
@@ -739,6 +757,11 @@ Added by this project, in order of value:
 | Architectural boundaries | `godot/tools/check_boundaries.py` — core purity and the physics ban, from `godot/data/banned_symbols.json`, which the commit hook reads too | ✅ M0 |
 | Tuning literals | `godot/tools/check_tuning_literals.py` — distinctive values in `godot/scripts/`, with a justified-exemption allowlist that fails on stale entries | ✅ M0 |
 | Pinned settings | `godot/tools/check_settings.py` — determinism-critical settings and the seven import presets | ✅ M0 |
+| Design-document conformance: the kart | `godot/tools/check_kart_conformance.py` — the built kart against §1, §3 and §4's own figures, so the expectation shares no ancestor with `data/tuning.json` | ✅ M2 |
+| Design-document conformance: the field | `godot/tools/check_scatter_conformance.py` — a generated field against the *Scattering the standard prop population* table and the *Rejecting a candidate placement* rules | ✅ M3 |
+| Suite registration | `godot/tools/check_suites_registered.py` — every `tests/*.gd` is actually run by `tools/test.sh`. Exists because three suites once were not | ✅ M2 |
+| Exposure (A9) | `godot/tools/measure_exposure.py` and `find_light_scale.py` — windowed | 📐 M2 |
+| Contact shadow | `godot/tools/measure_contact_shadow.py` — windowed; depth gated, coverage reported | 📐 M2 |
 
 **Reference sections by number *and* title** — `CONSTRAINTS §8 Performance and
 size budgets`, never a bare `§8`. A bare number survives a renumber while

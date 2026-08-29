@@ -40,6 +40,11 @@ def main() -> int:
         stripped = line.strip()
         if stripped.startswith("#"):
             continue
+        # The line must actually RUN the suite. Matching a bare mention anywhere on
+        # a non-comment line let `echo skipping   # tests/foo_test.gd` count as
+        # registration — review demonstrated it. A run is godot invoked with -s.
+        if not re.search(r"\bgodot\b.*(-s|--script)\s", stripped):
+            continue
         for match in re.finditer(r"tests/(\w+\.gd)", stripped):
             registered.add(match.group(1))
 
