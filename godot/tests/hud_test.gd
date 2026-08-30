@@ -166,6 +166,21 @@ func _test_timer_block_is_top_right_to_spec() -> void:
 		time_value.anchor_left == 1.0 and time_value.anchor_right == 1.0,
 		"the block anchors to the top-RIGHT corner — its specified home"
 	)
+	var parent_size: Vector2 = time_value.get_parent_area_size()
+	_check(
+		time_value.position.x > parent_size.x - 200.0 and time_value.position.x < parent_size.x,
+		"and sits ON screen at the right edge (%s in %s)" % [time_value.position, parent_size]
+	)
+	var speedo_rect: Control = overlay.get_node("Speedo") as Control
+	_check(
+		(
+			speedo_rect.position.x > 0.0
+			and speedo_rect.position.y > 0.0
+			and speedo_rect.position.x + speedo_rect.size.x <= parent_size.x
+			and speedo_rect.position.y + speedo_rect.size.y <= parent_size.y
+		),
+		"the dial sits on screen at the bottom-right (%s)" % speedo_rect.position
+	)
 
 
 func _test_title_and_hints_present() -> void:

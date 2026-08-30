@@ -57,8 +57,13 @@ func _test_the_inset_is_the_specified_region() -> void:
 		"anchored to the bottom-left corner"
 	)
 	_check(
-		_minimap.position == Vector2(inset, -side - inset),
-		"inset 10 px from the bottom-left (%s)" % _minimap.position
+		_minimap.offset_left == inset and _minimap.offset_bottom == -inset,
+		"inset 10 px from the bottom-left corner"
+	)
+	var parent_size: Vector2 = _minimap.get_parent_area_size()
+	_check(
+		_minimap.position == Vector2(inset, parent_size.y - side - inset),
+		"and actually ON screen at that inset (%s in %s)" % [_minimap.position, parent_size]
 	)
 	var viewport: SubViewport = _minimap.get_node("Viewport") as SubViewport
 	_check(viewport != null and not viewport.own_world_3d, "a SubViewport sharing the main world")

@@ -34,10 +34,13 @@ var _arrow: MeshInstance3D = null
 func configure(art: RefCounted, world_parent: Node3D) -> void:
 	var side: float = art.num("minimapSize")
 	var inset: float = art.num("minimapInset")
-	size = Vector2(side, side)
-	custom_minimum_size = size
+	custom_minimum_size = Vector2(side, side)
 	set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	position = Vector2(inset, -side - inset)
+	# Offsets, not position — the same off-screen trap the timer block hit.
+	offset_left = inset
+	offset_right = inset + side
+	offset_top = -side - inset
+	offset_bottom = -inset
 	stretch = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 

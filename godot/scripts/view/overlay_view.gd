@@ -161,8 +161,13 @@ func _style(art: RefCounted) -> void:
 		label.label_settings.shadow_offset = Vector2(2, 2)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		# Layout, not spec: a right-aligned column inset 16 px from the edge.
-		label.position = Vector2(-164.0, row[4])
-		label.size.x = 148.0
+		# OFFSETS, not position — position is relative to the parent's
+		# top-left whatever the anchors say, which parked the first draft of
+		# this block off-screen; the milestone capture caught it.
+		label.offset_left = -164.0
+		label.offset_right = -16.0
+		label.offset_top = row[4]
+		label.offset_bottom = row[4] + float(row[2]) + 8.0
 	_time_label.modulate.a = 0.7
 	_best_label.modulate.a = 0.7
 
@@ -186,4 +191,7 @@ func _style(art: RefCounted) -> void:
 
 	_speedo.configure(art)
 	_speedo.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_speedo.position = Vector2(-_speedo.size.x - 16.0, -_speedo.size.y - 16.0)
+	_speedo.offset_left = -_speedo.custom_minimum_size.x - 16.0
+	_speedo.offset_right = -16.0
+	_speedo.offset_top = -_speedo.custom_minimum_size.y - 16.0
+	_speedo.offset_bottom = -16.0

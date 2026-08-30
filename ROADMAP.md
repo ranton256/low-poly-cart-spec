@@ -334,28 +334,29 @@ review's should-fix findings are Backlog lines tagged M5 below.
 **Goal.** The player can read their speed, their time, and where they are.
 
 **Done when**
-- Speedometer half-dial with a red→yellow needle, ~0.1 s eased, reading
+- ✅ Speedometer half-dial with a red→yellow needle, ~0.1 s eased, reading
   `floor(ratio × speedoMax)`, topping out at **115** as specified — not "fixed"
   to reach 120
-- Timer block: `TIME` in green to two decimals, `BEST` in yellow, `--.--` until a
+- ✅ Timer block: `TIME` in green to two decimals, `BEST` in yellow, `--.--` until a
   lap is banked
-- Countdown overlay and loading indicator to their specified colours and sizes
-- Minimap: a 200×200 px inset, parallel projection from 100 wu up, half-extent
-  50 wu, **north-up regardless of kart heading**, tracking the kart, with a
-  marker and a heading arrow showing **true heading** — not the reference build's
-  90°-offset arrow (**acceptance 9**)
-- Minimap markers are invisible in the main view
-- Every HUD element reads **post-physics state**, so the kart's visible position,
+- ✅ Countdown overlay and loading indicator to their specified colours and sizes
+- ✅ Minimap: a 200×200 px inset, parallel projection from 100 wu up, half-extent
+  50 wu, **orientation-fixed regardless of kart heading** (the GDD's own frame:
+  world +X toward the right edge, +Z toward the bottom — this bullet once said
+  "north-up", a paraphrase the normative document does not), tracking the kart,
+  with a marker and a heading arrow showing **true heading** — not the reference
+  build's 90°-offset arrow (**acceptance 9**)
+- ✅ Minimap markers are invisible in the main view
+- ✅ Every HUD element reads **post-physics state**, so the kart's visible position,
   the needle, and the minimap marker always agree within a frame
-- The HUD design resolution is chosen, recorded, and entered in the ambiguity
+- ✅ The HUD design resolution is chosen, recorded, and entered in the ambiguity
   register as **A1**
-- No developer instrumentation is present in the player-facing HUD; the reference
+- ✅ No developer instrumentation is present in the player-facing HUD; the reference
   grid stays, because it is part of the intended look
-- **Visual proof:** a full-frame capture with every HUD element live at speed
+- ✅ **Visual proof:** a full-frame capture with every HUD element live at speed
 
-**Likely changes**
-- `add-heads-up-display` — speedometer, timer block, countdown, loading indicator
-- `add-minimap-viewport` — the inset viewport, framing, markers, layer isolation
+**Changes:** `add-heads-up-display` and `add-minimap-viewport`, both archived.
+Critic pass pending before the milestone is called complete.
 
 ---
 
