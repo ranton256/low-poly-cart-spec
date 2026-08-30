@@ -31,7 +31,7 @@ document itself that M3 measured and the Backlog has carried since.
 - **The grazing-angle state** (Backlog, M8): a staged camera low over a
   receding row of cones joins the gallery set and baselines — the dedicated
   verification the anisotropic requirement deferred at M6.
-- **A12 resolved by GDD amendment** (by proposal, per CONSTRAINTS §16): the
+- **A12 resolved by GDD amendment** (by proposal, per CONSTRAINTS §16 Changing this document): the
   pin sentence's "cannot drive out" becomes the measured truth — held with
   velocity zeroed every tick, squeezed free by the radial push's instability
   within roughly a second or two depending on heading, Reset Kart the

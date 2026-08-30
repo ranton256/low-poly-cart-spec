@@ -210,6 +210,13 @@ func _process(_delta: float) -> void:
 			# behind and above the start line, looking at the origin. The chase
 			# camera engages on the first RACING frame.
 			chase_camera.look_at_from_position(INSPECT_POSITION, Vector3.ZERO)
+			# And it must be the camera the game RENDERS through, pre-race
+			# included: the world scene's placeholder ships current=true (for
+			# its own standalone captures) and carries no marker mask — left
+			# in charge, it showed the minimap disc floating over the kart
+			# through the whole countdown (checklist item 9, found by the M8
+			# grazing-angle capture).
+			chase_camera.current = true
 	if overlay != null:
 		overlay.draw_from(sim, _art)
 	if minimap != null:

@@ -22,14 +22,16 @@ if [ "${1:-}" = "--bless" ]; then MODE="bless"; fi
 if [ "${1:-}" = "--capture-only" ]; then MODE="capture"; OUT="${2:?--capture-only needs a directory}"; fi
 mkdir -p "$OUT"
 
-# The five states. Tick counts are sim-exact: READY at 30, GO! inside the
+# The six states. Tick counts are sim-exact: READY at 30, GO! inside the
 # 30-tick linger at 250, the HUD at speed at 330, the boundary pin at 850,
-# and the banked lap via the lap suite's own phase table.
+# and the banked lap via the lap suite's own phase table; the grazing-angle
+# cone row (M8) is fully staged, no drive at all.
 godot -s tools/drive_capture.gd -- --out "$OUT/boot_ready.png"     --ticks 30
 godot -s tools/drive_capture.gd -- --out "$OUT/countdown_go.png"   --ticks 250
 godot -s tools/drive_capture.gd -- --out "$OUT/hud_at_speed.png"   --ticks 330 --hold accelerate
 godot -s tools/drive_capture.gd -- --out "$OUT/boundary_skirt.png" --ticks 850 --hold accelerate
 godot -s tools/lap_capture.gd  -- --out "$OUT/lap_banked.png"
+godot -s tools/graze_capture.gd -- --out "$OUT/graze_cones.png"
 
 case "$MODE" in
 	capture) echo "gallery: captured the set into $OUT" ;;

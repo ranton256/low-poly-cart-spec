@@ -359,9 +359,8 @@ geometry asserted by `world_test.gd`.
 
 ## Open
 
-| # | Ambiguity | Settled by |
-|---|---|---|
-| A12 | The design document states that a kart pinned between two props at the minimum separation "cannot drive out", but its own collision response makes that state an unstable equilibrium: the kart is ejected in a fraction of a second at fourteen of sixteen headings, and in about two seconds at the other two | A GDD proposal — ROADMAP Backlog |
+None. A12 — the register's last open entry — was settled at M8 by amending the
+design document itself; its full history stays below.
 
 ### A13 — Props below the blessed 1024 (RESOLVED)
 
@@ -383,7 +382,7 @@ drifts. Payload: 89.2 → 20.5 MB gzip-9.
 
 *Recorded during M6. Resolved.*
 
-### A12 (open, detail) — The pinned kart cannot stay pinned
+### A12 — The pinned kart cannot stay pinned (RESOLVED at M8)
 
 **The specification says**, under *Not becoming trapped inside an obstacle*, that
 two cottages at the minimum 3 wu separation leave a 0.09 wu gap against a
@@ -447,10 +446,18 @@ against the sentence "cannot drive out". Until it is settled, the delta spec in
 restate the one that fails — and it does not relax the rule the document is
 emphatic about, which is that no more than one collision is resolved per tick.
 
-**Owner: a GDD proposal (ROADMAP Backlog).** M7's Reset Kart (also Backlog) is unaffected
-either way: a kart held for a second with its engine dead still wants a reset.
+**The resolution (M8, `add-acceptance-conformance-suite`): the document was
+amended, not the response.** The GDD's pin sentence now states the measured
+truth — the kart "cannot make forward progress through the gap", the pin is "
+transient, not permanent", the radial push's instability "squeezes the kart out
+sideways within a fraction of a second at most headings and inside a couple of
+seconds at the worst", and Reset Kart is the *immediate* escape. Nothing about
+the placement rule, the one-resolution-per-tick rule, or the response changed;
+`collision_test.gd`'s two guarantees (never through the pair; ejection always
+transverse) were already asserting the amended sentence before it was written.
 
-*Recorded in `add-aabb-collision-response` (M3). Open.*
+*Recorded in `add-aabb-collision-response` (M3). Resolved in M8 by GDD
+amendment.*
 
 An open entry is not a licence to decide quietly later. Whichever change settles
 one moves it above the line, with its reasoning, before it is archived.

@@ -1,0 +1,7 @@
+refresh_probe: 60 vs 30 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
+refresh_probe: 60 vs 144 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
+refresh_probe: 30 vs 144 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
+refresh_probe:  60 fps — end (2.8159, 90.0000), best lap 15.0500 s, 3601 frames drawn in 60.0 s
+refresh_probe:  30 fps — end (2.8159, 90.0000), best lap 15.0500 s, 1800 frames drawn in 60.0 s
+refresh_probe: 144 fps — end (2.8159, 90.0000), best lap 15.0500 s, 8641 frames drawn in 60.0 s
+refresh_probe: acceptance 14b holds at 30/60/144 fps

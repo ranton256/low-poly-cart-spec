@@ -47,6 +47,14 @@
     "floor. Getting the floor here took three harness fixes, all recorded in",
     "add-visual-conformance-gate: sim-tick-aligned driving (not loop",
     "iterations), the same for the lap phases, and pausing the tree before the",
-    "settle frames so the sim cannot coast a run-varying tail."
+    "settle frames so the sim cannot coast a run-varying tail.",
+    "Re-measured 2026-08-30 at M8 after adding graze_cones and fixing the",
+    "pre-race active camera (the world placeholder had held the viewport):",
+    "  boot_ready / boundary_skirt / countdown_go / graze_cones: 0.0000 / 0.000% / 0.000%",
+    "  hud_at_speed: 0.0124 / 0.081% / 0.008%   lap_banked: 0.0183 / 0.097% / 0.011%",
+    "boot_ready re-blessed deliberately: the old baseline was the placeholder",
+    "camera's view WITH the minimap disc visible over the kart (item 9 breach,",
+    "caught by the graze capture); the new one is the intended inspection pose.",
+    "Limits unchanged."
   ]
 }

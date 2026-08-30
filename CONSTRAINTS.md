@@ -179,8 +179,9 @@ it). **Reset Kart is the specified escape** (M7, backlog).
 
 Driving it revealed the pin is a **transient** — the radial push makes the
 centred state an unstable equilibrium, ejection in 15–125 ticks depending on
-heading — which contradicts the GDD's "cannot drive out". That is a defect in
-the design document, raised by GDD proposal: ambiguity **A12**, open.
+heading — which contradicted the GDD's "cannot drive out". That was a defect in
+the design document, settled at M8 by amending the GDD's own sentence to the
+measured truth: ambiguity **A12**, resolved.
 Measurements: `godot/docs/progress/2026-08-29-m3-collision.md`.
 
 ### `scripts/core/` holds one piece of cosmetic state, deliberately 📐
@@ -205,7 +206,7 @@ call.
 | | Status |
 |---|---|
 | **G1** — Every `### Scenario:` in the GDD is claimed exactly once: by a named test (`# @covers`), by the visual register with a stated reason, or by a deferral naming the milestone that owns it | ✅ `check_spec_coverage.py` |
-| **G2** — Each of the 14 Acceptance Checklist items is one named conformance test carrying its stated tolerance as a literal | 📋 M8 |
+| **G2** — Each of the 14 Acceptance Checklist items is one named conformance test carrying its stated tolerance as a literal | ✅ `tests/conformance_test.gd` (M8); the refresh-rate half of item 14 by `tools/refresh_probe.gd`, run recorded |
 
 ```
    every scenario in the design document — the gate counts them on every run
@@ -243,7 +244,7 @@ undirected lap test, on-screen instrumentation, or the dead free-look hint. It
 **must** reproduce the two deviations the spec keeps: the speedometer topping
 out at 115, and the two-prop pin (see §4 and ambiguity A12).
 
-### The ambiguity register 📋 M8
+### The ambiguity register ✅ complete (M8)
 
 `godot/docs/AMBIGUITIES.md` records every place the spec did not decide
 something the port had to. It is a **deliverable** — the output the README says
@@ -263,7 +264,7 @@ carries the reasoning:
 | A9 | Light intensities are in the reference build's units | Resolved: the ratios are normative, the scale is not; one shared `lightScale` = 0.2809; tonemapping linear |
 | A10 | The camera eases per tick but frame ordering updates per frame | Resolved in M2: per tick. Time constant measured 0.200 s, settling 0.450 s, both predicted before measuring |
 | A11 | The GDD requires no ground edge be visible, and specifies numbers that make it visible from the boundary | Resolved in M6: a ground skirt in the same albedo past fog's end — every stated number untouched; capture + geometry test |
-| A12 | The two-prop pin is stated as permanent, but the specified radial push ejects the kart in 15–125 ticks | ❓ a GDD proposal (backlog) |
+| A12 | The two-prop pin was stated as permanent, but the specified radial push ejects the kart in 15–125 ticks | ✅ resolved M8 — the GDD amended by proposal: the pin is transient, the response untouched |
 | A13 | §2's 1024 downsample blessing states a floor only for the kart; whether props may ship below 1024 was unstated | Resolved in M6: props 512 / kart 1024 / Basis, forced by the 25 MB budget, gated by the baselines and the stamp check |
 
 ---
@@ -441,7 +442,7 @@ Deterministic acceptance conditions — pass/fail with no judgment.
 | V4 | No physics-body symbol from §4 appears anywhere under `godot/` | ✅ `check_boundaries.py` + the commit hook on staged content |
 | V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py` |
 | V6 | **G1** — every GDD scenario claimed exactly once; a claim on a scenario the document lacks also fails | ✅ `check_spec_coverage.py` |
-| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | 📋 M8 |
+| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ✅ `tests/conformance_test.gd`: `_item_01`…`_item_14`, self-counting; 14b recorded from `tools/refresh_probe.gd` |
 | V8 | Pinned project settings match §6, and every model has a valid committed import preset | ✅ `check_settings.py` |
 | V9 | Gallery diffs within recorded thresholds on all three criteria | ✅ `tools/gallery.sh` + `gallery_compare.py`, five states, floor and limits recorded in `gallery_config.json`; verified by mutation (a painted band fails on all three criteria) |
 | V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py` |

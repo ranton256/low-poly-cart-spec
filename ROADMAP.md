@@ -521,20 +521,10 @@ their full histories are in git at `streamline-process`'s parent commit.)
 
 - Extend `check_static_typing.py` to member variables; V19 stays ⚠️ until
   then. *(was att 18)*
-- **M8** — A grazing-angle-past-a-cone gallery state, so the anisotropic
-  sampling the materials now request is verified by a dedicated capture
-  rather than incidentally by the standing baselines. *(M6 Critic finding 1)*
 - **M8** — Cold-load-to-countdown ≤ 5 s on the web build, measured in a
   served browser session at the web smoke; the payload half of §8's table is
   measured (20.5 MB gzip-9 vs 25) by add-render-pipeline-and-web-budget.
   *(disclosed split)*
-- **M8** — A discriminating test for the lap gate's place in the tick order:
-  a gate moved before stage 7 currently fails nothing, because the
-  stage-5-displacement observable makes the ordering nearly moot.
-  *(M4 Critic finding 5)*
-- **GDD proposal** — A12: the two-prop pin's "cannot drive out" is not
-  producible by the specified response; raise the wording fix against the
-  design document. *(was att 20)*
 
 ---
 

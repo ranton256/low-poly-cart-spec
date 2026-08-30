@@ -319,6 +319,16 @@ func _item_09_minimap() -> void:
 		(_root.chase_camera.cull_mask & (1 << 1)) == 0 and (cam.cull_mask & (1 << 1)) != 0,
 		"item 9: the markers are invisible in the main view — masked, not moved"
 	)
+	# The mask is a setting; the behaviour is which camera RENDERS. The world
+	# scene's placeholder ships current=true and unmasked, and it held the
+	# viewport through the whole pre-race phase until M8's grazing capture
+	# caught the disc on screen — so assert the ACTIVE camera, in this
+	# pre-race state, is the masked one.
+	var active: Camera3D = get_root().get_camera_3d()
+	_check(
+		active != null and (active.cull_mask & (1 << 1)) == 0,
+		"item 9: and the camera actually rendering — pre-race included — carries the mask"
+	)
 
 
 ## "Crossing the white band northbound after 5 s banks a lap, freezes TIME on
