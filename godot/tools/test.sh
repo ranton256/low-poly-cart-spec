@@ -103,6 +103,7 @@ run_suite tests/minimap_test.gd
 # size budgets) — headless and fast; the frame-time half needs a window and
 # lives in tools/fps_probe.gd.
 run_suite tests/layout_test.gd
+run_suite tests/conformance_test.gd
 run_suite tools/step_bench.gd
 run_suite tests/boundary_test.gd
 run_suite tests/determinism_test.gd
