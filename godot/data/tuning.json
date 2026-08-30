@@ -84,7 +84,9 @@
     "lapGateAbsXLimit": 5,
     "countdownTextColour": "#FFFFFF",
     "countdownGoColour": "#00FF00",
-    "countdownFontPx": 120
+    "countdownFontPx": 120,
+    "bestTextColour": "#FFFF00",
+    "bestFlashColour": "#00FF00"
   },
   "asset_target_heights": {
     "_note": "From the design document's §3 Asset normalisation contract table, not its four Tuning Constants tables. Every instance of an asset is scaled so its height is this value before any random variation.",

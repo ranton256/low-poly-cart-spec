@@ -20,6 +20,7 @@ extends RefCounted
 
 const Collision := preload("res://scripts/core/collision.gd")
 const RaceState := preload("res://scripts/core/race_state.gd")
+const LapGate := preload("res://scripts/core/lap_gate.gd")
 
 const TICKS_PER_SECOND := 60
 
@@ -33,6 +34,9 @@ var input: RefCounted = null
 ## length is wired from the tuning on the first step, so the machine stays
 ## constructible bare.
 var race: RefCounted = RaceState.new()
+
+## The lap gate, clock, and session best — stage 8's owner (godot/lap-timing).
+var lap: RefCounted = LapGate.new()
 var velocity: float = 0.0
 var yaw: float = 0.0
 var pos_x: float = 0.0
@@ -41,6 +45,12 @@ var ticks: int = 0
 
 # --- observable outcomes of the last tick, for the view and for tests ---
 var bounced_this_tick: bool = false
+
+## The +Z displacement stage 5 actually applied this tick — THE crossing
+## observable (godot/lap-timing D1). Captured where it happens: by stage 8 a
+## collision may have zeroed the velocity, and net position change is moved
+## by the clamp and the push-out too.
+var last_step5_dz: float = 0.0
 
 ## The props this tick collides with, in REGISTRATION ORDER. Supplied by the
 ## caller like the tuning is, so the simulation stays constructible with no scene
@@ -181,8 +191,9 @@ func _stage_4_friction() -> void:
 ## Displaced along the kart's own heading. No lateral component: this game has
 ## no drift and no sideways velocity.
 func _stage_5_integrate() -> void:
+	last_step5_dz = forward_z() * velocity
 	pos_x += forward_x() * velocity
-	pos_z += forward_z() * velocity
+	pos_z += last_step5_dz
 
 
 ## Clamp each axis, then apply the bounce ONCE if either or both clamped.
@@ -237,17 +248,32 @@ func _stage_7_collision() -> void:
 	last_hit = hit
 
 
-## Stage 8 — the lap gate. Empty until M4 (add-lap-gate-and-timing). It runs
-## last and observes only: a kart that clipped a prop inside the band has
-## already been stopped and displaced before the gate is tested.
+## Stage 8 — the lap gate. Runs last and observes only: a kart that clipped a
+## prop inside the band has already been stopped and displaced before the gate
+## is tested, and the gate reads stage 5's own displacement, which none of the
+## later stages can have influenced.
 func _stage_8_lap_gate() -> void:
-	pass
+	if lap.tuning == null:
+		lap.tuning = tuning
+	lap.advance(pos_x, pos_z, last_step5_dz)
 
 
 ## A one-line state summary. Cheap, and far easier to diff between two runs than
 ## comparing object graphs — the determinism tests compare these strings.
 func stats_line() -> String:
 	return (
-		"t=%d state=%d ts=%d v=%.9f yaw=%.9f x=%.9f z=%.9f"
-		% [ticks, race.state, race.ticks_in_state, velocity, yaw, pos_x, pos_z]
+		"t=%d state=%d ts=%d lc=%d hold=%d bank=%.2f best=%.2f v=%.9f yaw=%.9f x=%.9f z=%.9f"
+		% [
+			ticks,
+			race.state,
+			race.ticks_in_state,
+			lap.clock_ticks,
+			lap.hold_ticks,
+			lap.banked_seconds,
+			lap.best_seconds,
+			velocity,
+			yaw,
+			pos_x,
+			pos_z,
+		]
 	)

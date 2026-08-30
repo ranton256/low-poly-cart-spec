@@ -22,12 +22,18 @@ const GO_TEXT := "GO!"
 
 var _countdown: Label = null
 var _loading: Label = null
+var _time: Label = null
+var _best: Label = null
 var _styled := false
 
 
 func _ready() -> void:
 	_countdown = _make_label("Countdown")
 	_loading = _make_label("Loading")
+	_time = _make_label("Time", Control.PRESET_TOP_LEFT)
+	_best = _make_label("Best", Control.PRESET_TOP_LEFT)
+	_time.position = Vector2(16, 16)
+	_best.position = Vector2(16, 56)
 
 
 ## Called by the composition root once per rendered frame, after the kart view.
@@ -39,6 +45,7 @@ func draw_from(sim: RefCounted, art: RefCounted) -> void:
 		_styled = true
 
 	var race: RefCounted = sim.race
+	_draw_readouts(sim, art, race)
 	_loading.visible = race.state == RaceState.LOADING
 	if race.state == RaceState.LOADING:
 		# The error replaces the indicator; the underlying cause is already in
@@ -65,12 +72,33 @@ func draw_from(sim: RefCounted, art: RefCounted) -> void:
 		_countdown.label_settings.font_color = art.colour("countdownTextColour")
 
 
-func _make_label(label_name: String) -> Label:
+## The TIME and BEST readouts (Heads-Up Display): two decimal places, the
+## banked time during the hold, the unset placeholder, yellow base with the
+## green flash while the best-flash countdown runs. Derived entirely from the
+## lap module's counters — this node owns no timing state (godot/lap-timing).
+func _draw_readouts(sim: RefCounted, art: RefCounted, race: RefCounted) -> void:
+	var racing: bool = race.state == RaceState.RACING
+	_time.visible = racing
+	_best.visible = racing
+	if not racing:
+		return
+	var lap: RefCounted = sim.lap
+	_time.text = "TIME %.2f" % lap.display_seconds()
+	if lap.best_seconds < 0.0:
+		_best.text = "BEST --.--"
+	else:
+		_best.text = "BEST %.2f" % lap.best_seconds
+	var flash: bool = lap.best_flash_ticks > 0
+	_best.label_settings.font_color = art.colour("bestFlashColour" if flash else "bestTextColour")
+
+
+func _make_label(label_name: String, preset: int = Control.PRESET_FULL_RECT) -> Label:
 	var label := Label.new()
 	label.name = label_name
-	label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.set_anchors_preset(preset)
+	if preset == Control.PRESET_FULL_RECT:
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.label_settings = LabelSettings.new()
 	label.visible = false
 	add_child(label)
@@ -81,9 +109,10 @@ func _make_label(label_name: String) -> Label:
 ## _ready. Font size and colours are data; the shadow's black is a Color
 ## constant, not a specified hex string.
 func _style(art: RefCounted) -> void:
-	for label: Label in [_countdown, _loading]:
+	for label: Label in [_countdown, _loading, _time, _best]:
 		var settings: LabelSettings = label.label_settings
 		settings.font_size = int(art.num("countdownFontPx")) if label == _countdown else 32
 		settings.font_color = art.colour("countdownTextColour")
 		settings.shadow_color = Color(0, 0, 0)
-		settings.shadow_offset = Vector2(4, 4)
+		settings.shadow_offset = Vector2(4, 4) if label == _countdown else Vector2(2, 2)
+	_best.label_settings.font_color = art.colour("bestTextColour")

@@ -65,54 +65,6 @@
       "milestone": "M5"
     },
     {
-      "feature": "Heads-Up Display",
-      "scenario": "Running the race timer",
-      "kind": "deferred",
-      "milestone": "M5"
-    },
-    {
-      "feature": "Heads-Up Display",
-      "scenario": "Displaying an unset best time",
-      "kind": "deferred",
-      "milestone": "M5"
-    },
-    {
-      "feature": "Lap Detection and Best-Time Tracking",
-      "scenario": "Completing a valid lap",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Lap Detection and Best-Time Tracking",
-      "scenario": "Setting a new best time",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Lap Detection and Best-Time Tracking",
-      "scenario": "Recording a lap slower than the best",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Lap Detection and Best-Time Tracking",
-      "scenario": "Restarting the clock after a lap",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Lap Detection and Best-Time Tracking",
-      "scenario": "Rejecting a crossing",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Lap Detection and Best-Time Tracking",
-      "scenario": "Persisting the best time for the session",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
       "feature": "Runtime Tuning and Player Actions",
       "scenario": "Resetting the kart",
       "kind": "deferred",

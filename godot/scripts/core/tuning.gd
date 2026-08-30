@@ -59,6 +59,15 @@ var speedo_max: float = 0.0
 # --- race timing ---
 var countdown_step: float = 0.0
 var go_linger: float = 0.0
+var min_lap_time: float = 0.0
+var lap_crossing_threshold: float = 0.0
+var lap_restart_delay: float = 0.0
+var best_flash_duration: float = 0.0
+
+# --- lap gate geometry, from the document's rows without backticked names ---
+var lap_gate_z_min: float = 0.0
+var lap_gate_z_max: float = 0.0
+var lap_gate_abs_x_limit: float = 0.0
 
 # --- per-asset target heights, from the design document's §3 table ---
 # A dictionary rather than named fields: the asset set is data, and M3 adds
@@ -107,6 +116,14 @@ func apply_table(table: Dictionary) -> void:
 	var timing: Dictionary = table.get("timing", {})
 	countdown_step = float(timing.get("countdownStep", 0.0))
 	go_linger = float(timing.get("goLinger", 0.0))
+	min_lap_time = float(timing.get("minLapTime", 0.0))
+	lap_crossing_threshold = float(timing.get("lapCrossingThreshold", 0.0))
+	lap_restart_delay = float(timing.get("lapRestartDelay", 0.0))
+	best_flash_duration = float(timing.get("bestFlashDuration", 0.0))
+	var unnamed: Dictionary = table.get("unnamed_in_spec", {})
+	lap_gate_z_min = float(unnamed.get("lapGateZMin", 0.0))
+	lap_gate_z_max = float(unnamed.get("lapGateZMax", 0.0))
+	lap_gate_abs_x_limit = float(unnamed.get("lapGateAbsXLimit", 0.0))
 	var counts: Dictionary = table.get("prop_counts", {})
 	prop_counts = {}
 	for key in counts:
@@ -173,6 +190,13 @@ func missing_fields() -> PackedStringArray:
 		"speedo_max",
 		"countdown_step",
 		"go_linger",
+		"min_lap_time",
+		"lap_crossing_threshold",
+		"lap_restart_delay",
+		"best_flash_duration",
+		"lap_gate_z_min",
+		"lap_gate_z_max",
+		"lap_gate_abs_x_limit",
 	]:
 		if float(get(field)) == 0.0:
 			missing.append(field)

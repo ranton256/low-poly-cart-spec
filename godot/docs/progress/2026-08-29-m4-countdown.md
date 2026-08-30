@@ -9,5 +9,11 @@ chase camera engaged by the RACING transition.
 Deterministic: seed 20260829, fixed tick counts, no wall-clock anywhere in
 the countdown — re-run the command and the frame comes back byte-comparable.
 
-The other half of M4's mandated proof (TIME frozen on a banked lap with a
-green best) arrives with `add-lap-gate-and-timing`.
+`2026-08-29-m4-lap-banked.png` — the other half, captured by
+`tools/lap_capture.gd`, which replays the lap suite's own scripted drive
+(north through the band too soon — rejected; two u-turns; back through
+northbound at 15.05 s): `TIME` holding the banked 15.05 through the
+`lapRestartDelay` window, `BEST 15.05` flashing the data layer's green, the
+kart just north of the band. Reported by the tool: hold 19 ticks and flash 49
+ticks remaining at the grab. Deterministic — same seed, same phase table,
+same frame.

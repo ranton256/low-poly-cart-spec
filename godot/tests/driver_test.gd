@@ -13,6 +13,7 @@ extends SceneTree
 
 const RVTest := preload("res://tests/harness.gd")
 const RaceState := preload("res://scripts/core/race_state.gd")
+const ArtTuning := preload("res://scripts/art_tuning.gd")
 
 var _root: Node3D = null
 
@@ -34,6 +35,7 @@ func _init() -> void:
 	await _test_stepping_tracks_the_fixed_rate_callback()
 	_test_the_view_never_writes_back()
 	_test_the_game_looks_through_the_specified_camera()
+	await _test_the_readouts_derive_from_the_lap_counters()
 	await _test_the_running_game_collides_and_jolts()
 
 	get_root().remove_child(_root)
@@ -180,6 +182,62 @@ func _test_the_view_never_writes_back() -> void:
 	_check(
 		is_equal_approx(sim.pos_x, 12.5) and is_equal_approx(sim.pos_z, -3.25),
 		"drawing the kart leaves the simulation's own position untouched"
+	)
+
+
+## The TIME and BEST readouts, through the running scene: pure consumers of
+## the lap module's counters — set the counters, read the labels.
+# @covers Heads-Up Display / Displaying an unset best time
+# @covers Lap Detection and Best-Time Tracking / Persisting the best time for the session
+func _test_the_readouts_derive_from_the_lap_counters() -> void:
+	var overlay: CanvasLayer = _root.overlay
+	_check(overlay != null, "the running scene has the overlay")
+	if overlay == null:
+		return
+	var art: RefCounted = ArtTuning.load_art()
+	var time_label: Label = overlay.get_node("Time") as Label
+	var best_label: Label = overlay.get_node("Best") as Label
+	await process_frame
+	await process_frame
+	_check(time_label.visible and best_label.visible, "TIME and BEST show while racing")
+	_check(
+		best_label.text == "BEST --.--", "an unset best shows the placeholder, %s" % best_label.text
+	)
+
+	# Two decimal places, from the running clock.
+	var shown: float = float(time_label.text.trim_prefix("TIME "))
+	_check(
+		time_label.text.match("TIME *.??") and absf(shown - _root.sim.lap.display_seconds()) < 0.2,
+		"TIME shows the lap clock to two decimals (%s)" % time_label.text
+	)
+
+	# The hold: set the counters, and the label must follow — no state of its own.
+	var lap: RefCounted = _root.sim.lap
+	lap.banked_seconds = 12.34
+	lap.best_seconds = 12.34
+	lap.best_flash_ticks = 240
+	lap.hold_ticks = 240
+	await process_frame
+	_check(
+		time_label.text == "TIME 12.34",
+		"during the hold TIME is the banked time (%s)" % time_label.text
+	)
+	_check(best_label.text == "BEST 12.34", "and BEST shows the banked best (%s)" % best_label.text)
+	_check(
+		best_label.label_settings.font_color.is_equal_approx(art.colour("bestFlashColour")),
+		"a fresh best flashes in the data layer's green"
+	)
+	# Session persistence: regeneration must not touch the lap module.
+	_root.regenerate_world()
+	_check(lap.best_seconds == 12.34, "the best survives a world regeneration")
+	lap.hold_ticks = 0
+	lap.best_flash_ticks = 0
+	lap.banked_seconds = -1.0
+	lap.best_seconds = -1.0
+	await process_frame
+	_check(
+		best_label.label_settings.font_color.is_equal_approx(art.colour("bestTextColour")),
+		"and the flash returns to the yellow base"
 	)
 
 

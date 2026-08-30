@@ -41,6 +41,11 @@
       "file": "godot/scripts/core/race_state.gd",
       "value": 60,
       "reason": "TICKS_PER_SECOND, mirrored from sim.gd because a preload between the two would be circular — the same fixed 60 ticks per second the sim.gd entry above justifies, colliding with the same lighting.shadowVolumeExtent."
+    },
+    {
+      "file": "godot/scripts/core/lap_gate.gd",
+      "value": 60,
+      "reason": "TICKS_PER_SECOND, mirrored for the same circular-preload reason as race_state.gd's entry above — the fixed 60 ticks per second, colliding with the same lighting.shadowVolumeExtent."
     }
   ]
 }
