@@ -486,6 +486,17 @@ smoke, as registered.
 **Goal.** All fourteen acceptance items pass as named tests, on four platforms,
 and the ambiguity register is published.
 
+**Status (pre-review).** Both changes archived
+(`add-acceptance-conformance-suite`, `add-export-and-release-pipeline`).
+G2 live and green; 14b measured (0.0000 wu / 0.0000 s gaps at 30/60/144 fps);
+G1 at 64/64; the register complete with A12 settled by GDD amendment; four
+targets exported from 208d7f1 and recorded; macOS artifact self-smoked and
+signed (notarization owed by the credential holder); web cold-loaded in
+0.62 s against the ≤ 5 s bound. Windows/Linux smoke disclosed unexecuted —
+no OS for them here. Building the graze state caught and fixed a real item-9
+breach: the pre-race view rendered through the world's unmasked placeholder
+camera, minimap disc visible over the kart. The tag follows the verdict.
+
 **Done when**
 - **G2 is live**: `tests/conformance_test.gd` holds fourteen named cases, one per
   Acceptance Checklist item, each asserting the GDD's literal tolerance (**V7**)
