@@ -277,6 +277,37 @@ camera is stepped again per frame and when it is not stepped at all.
 `docs/progress/2026-08-29-m2-camera.md`.*
 
 
+### A2 — How the layout file reaches the player (RESOLVED)
+
+**The specification says** a layout file "is produced and delivered to the
+player", and nothing about the mechanism — which necessarily differs between
+a desktop process with a filesystem and a browser sandbox without one.
+
+**The port resolves** (add-layout-persistence): on desktop, Save Layout
+writes `track_layout.json` to the user data directory and prints the
+absolute path — a real file in a real folder. On the web, the same bytes are
+offered as a browser download through the JS bridge (exercised at M8's web
+smoke). Loading reads the same location, bound to `L` (`load_layout`,
+pinned in `check_settings.py`); `LPC_LAYOUT_FILE` overrides the path so no
+suite ever touches a real user file.
+
+*Recorded during M2 exploration. Resolved in M7.*
+
+### A3 — Registration order through a layout reload (RESOLVED)
+
+**The specification says** collision resolves "the first intersecting prop in
+registration order", and separately that a restored layout registers each
+prop as a solid obstacle — without saying whether the order survives.
+
+**The port resolves** (add-layout-persistence): export writes records in the
+field's registration order, and import registers in the file's record order,
+through the same `build()` path regeneration uses. `layout_test.gd` asserts
+the collision array element by element across the round trip — a reloaded
+track collides identically to the one that was saved.
+
+*Recorded during M2 exploration (CONSTRAINTS §4 Architectural boundaries
+carries the ordering contract). Resolved in M7.*
+
 ### A11 — A finite ground cannot have an invisible edge (RESOLVED)
 
 **The specification says**, in *World Boundary Containment / Keeping the boundary
@@ -330,8 +361,6 @@ geometry asserted by `world_test.gd`.
 
 | # | Ambiguity | Settled by |
 |---|---|---|
-| A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
-| A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
 | A12 | The design document states that a kart pinned between two props at the minimum separation "cannot drive out", but its own collision response makes that state an unstable equilibrium: the kart is ejected in a fraction of a second at fourteen of sixteen headings, and in about two seconds at the other two | A GDD proposal — ROADMAP Backlog |
 
 ### A13 — Props below the blessed 1024 (RESOLVED)

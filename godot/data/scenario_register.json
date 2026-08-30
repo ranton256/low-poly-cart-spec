@@ -24,24 +24,6 @@
       "scenario": "Resetting the kart",
       "kind": "deferred",
       "milestone": "M7"
-    },
-    {
-      "feature": "Track Layout Persistence",
-      "scenario": "Exporting the current layout",
-      "kind": "deferred",
-      "milestone": "M7"
-    },
-    {
-      "feature": "Track Layout Persistence",
-      "scenario": "Restoring a saved layout",
-      "kind": "deferred",
-      "milestone": "M7"
-    },
-    {
-      "feature": "Track Layout Persistence",
-      "scenario": "Round-tripping a layout without drift",
-      "kind": "deferred",
-      "milestone": "M7"
     }
   ]
 }

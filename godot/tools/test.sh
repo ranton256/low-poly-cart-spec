@@ -13,6 +13,7 @@ cd "$(dirname "$0")/.."
 
 # Never touch a real save file from a test. See GOTCHAS.md.
 export LPC_SAVE_FILE="user://save_test.cfg"
+export LPC_LAYOUT_FILE="user://layout_test.json"
 
 # Python tooling runs from .venv, never system Python — so the package versions
 # that gate a change are the ones recorded in requirements.txt, not whatever
@@ -101,6 +102,7 @@ run_suite tests/minimap_test.gd
 # The step-cost budget as a standing check (CONSTRAINTS §8 Performance and
 # size budgets) — headless and fast; the frame-time half needs a window and
 # lives in tools/fps_probe.gd.
+run_suite tests/layout_test.gd
 run_suite tools/step_bench.gd
 run_suite tests/boundary_test.gd
 run_suite tests/determinism_test.gd

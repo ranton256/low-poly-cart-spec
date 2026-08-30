@@ -26,6 +26,7 @@ const ChaseCamera := preload("res://scripts/core/chase_camera.gd")
 const ArtTuning := preload("res://scripts/art_tuning.gd")
 const Scatter := preload("res://scripts/core/scatter.gd")
 const RaceState := preload("res://scripts/core/race_state.gd")
+const LayoutIO := preload("res://scripts/world/layout_io.gd")
 
 ## Actions declared in project.godot's InputMap, mapped to the core's held-state
 ## fields. The design document's control table also binds Reset Kart and Save
@@ -278,6 +279,28 @@ func build_field(placements: Array) -> void:
 	sim.props = props.collision_props()
 
 
+## Save Layout (P): the current field to indented JSON, in registration
+## order, delivered per A2. Callable directly by suites.
+func save_layout() -> bool:
+	if props == null:
+		return false
+	return LayoutIO.export_layout(props, props.authored_boxes(), LayoutIO.layout_path())
+
+
+## Load Layout (L): validate first, then rebuild through the same path
+## regeneration uses — release-first, registered in file order (A3). A
+## refused file changes nothing.
+func load_layout() -> bool:
+	if props == null:
+		return false
+	var placements: Array = LayoutIO.import_layout(LayoutIO.layout_path(), props.authored_boxes())
+	if placements.is_empty():
+		return false
+	build_field(placements)
+	print("layout: restored %d props from %s" % [placements.size(), LayoutIO.layout_path()])
+	return true
+
+
 ## Regenerate World. The design document gives this action no required binding and
 ## leaves the exposure to the port; project.godot binds it and check_settings.py
 ## pins it.
@@ -292,6 +315,10 @@ func _read_input() -> void:
 	# Edge-triggered, not held: one press is one new world.
 	if Input.is_action_just_pressed("regenerate_world"):
 		regenerate_world()
+	if Input.is_action_just_pressed("save_layout"):
+		save_layout()
+	if Input.is_action_just_pressed("load_layout"):
+		load_layout()
 
 
 ## Every held input is released when the window loses focus.

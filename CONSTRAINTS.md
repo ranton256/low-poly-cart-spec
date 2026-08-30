@@ -253,8 +253,8 @@ carries the reasoning:
 | # | Ambiguity | Port's decision |
 |---|---|---|
 | A1 | HUD sizes are in px with no design resolution named | Resolved in M5: px are literal at the 1280×720 design viewport; `canvas_items` stretch scales other sizes |
-| A2 | Layout file delivery mechanism unspecified; differs desktop/web | ❓ settled in M7 |
-| A3 | Prop registration order after a layout reload — unstated, but it changes collision outcomes | ❓ settled in M7 |
+| A2 | Layout file delivery mechanism unspecified; differs desktop/web | Resolved in M7: desktop writes to the user data dir with the path printed; web offers a browser download; loading on the pinned `L`; `LPC_LAYOUT_FILE` for suites |
+| A3 | Prop registration order after a layout reload — unstated, but it changes collision outcomes | Resolved in M7: export order IS registration order, import registers in file order; asserted element by element |
 | A4 | The countdown must advance while "the physics update is skipped entirely" | Resolved: `Sim.step()` runs every tick in every state; the kart pipeline is gated on RACING |
 | A5 | Whether the lap gate and minimap read the stepped or interpolated position | Resolved: the stepped position; the view may lag it by up to one tick |
 | A6 | The kart's "+90° yaw correction" is stated in the reference build's frame | Resolved in M2: derived from the imported bounds and a committed capture, never copied |
@@ -336,7 +336,7 @@ is facing:
 |---|---|
 | `godot/tools/test.sh` green before any change is considered done | ✅ |
 | The standing suite is **headless and display-free** | ✅ verified with no display available |
-| No test touches the network or a real save file | ⚠️ `LPC_SAVE_FILE` is exported by every harness but nothing reads it until M7; the network half has no check |
+| No test touches the network or a real save file | ⚠️ `LPC_LAYOUT_FILE` redirects the layout writer (read since M7; `layout_test.gd` uses it); `LPC_SAVE_FILE` remains exported and unread — durable saves stay unimplemented (§15). The network half has no check |
 | Every suite is deterministic; a flaky test is a defect in the test | 📐 |
 | A runtime script error inside a suite fails the run — Godot exits 0 after a mid-test `SCRIPT ERROR`, and the suite still prints its own success line, so `test.sh`'s `run_suite` wrapper scans each suite's output for the error markers | ✅ verified by mutation (former att 19) |
 | Visual checks live in a separate windowed gate, never in `test.sh` — headless Godot has no renderer | 📐 by construction |
