@@ -428,7 +428,7 @@ baselines at a ~zero measured floor, capture staleness closed.
 
 ---
 
-## M7 — Persistence and tuning
+## M7 — Persistence and tuning ✅ COMPLETE
 
 **Goal.** A lucky procedural arrangement becomes a repeatable track, and the feel
 can be dialled in without a restart.
@@ -456,7 +456,28 @@ can be dialled in without a restart.
 - ✅ **Visual proof:** the same seeded field before saving and after reloading
 
 **Changes:** `add-layout-persistence` and `add-runtime-tuning-and-reset`,
-both archived. Critic pass pending before the milestone is called complete.
+both archived.
+
+**Completed 2026-08-30.** Critic pass (fresh reviewer, CONSTRAINTS §12 Review):
+**[REJECTED], then [APPROVED]** — the rejection's headline was the port's own
+delta spec promising cycle-zero byte-identity while the test asserted the
+weaker N-vs-N+1 convergence; a one-line probe disproved the spec as written.
+Remediated the strong way in `07e8e77` (the code up to the spec): 5-decimal
+export quantization plus the recorded Y applied verbatim on import — the
+probe's root cause, a re-derivation whose grounding dust broke identity — and
+the reviewer's re-run probe now reports first-cycle A==B and B==C true. Its
+other findings: the pin escape re-staged against the document's REAL two-prop
+pin (held hit-after-hit before R frees it), the mtime watch given cadence and
+detection coverage, the KEY_L pin's mutation check run and recorded, import
+validation covering all five GDD fields. Verified by its own hands besides:
+restored props genuinely collide, the restored capture is the same SHA-256 as
+the original, reset is surgical with best and banked persisting through it.
+Coverage: 63 verified + 1 visual-with-baseline, ZERO deferred — every
+scenario in the document is owned. Residuals on the record: the archived
+tasks notes tell the superseded convergence story (history, not truth — this
+note is the pointer); the reset's racing-only gate is undocumented in the
+delta (behaviour-equivalent pre-race); A2's web-download half waits for M8's
+smoke, as registered.
 
 ---
 
