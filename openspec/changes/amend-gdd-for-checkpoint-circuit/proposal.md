@@ -16,24 +16,36 @@ was reverse-engineered from LowPolyCartJS; the circuit is specified fresh.
 The Known Deviations section is untouched — there is nothing to deviate from
 — and every decision below is made on the record here instead.
 
+## The shape (owner's direction, 2026-08-30)
+
+**The game is circuit-only.** There is no free-roam mode to preserve: the
+game boots into the shipped circuit, and **Regenerate World becomes Restart
+Circuit** — `G` rebuilds the authored world, returns the kart to the start,
+resets gate progress, and restarts the clock, keeping the session best. The
+`minLapTime` farming defence retires entirely; the ordered gates are the
+better one and there is no mode left that needs the old one.
+
 ## What changes in the GDD (full text in `gdd-amendment.md`)
 
-- A new **Feature: Checkpoint Circuit** in the GDD's own idiom, after Lap
-  Detection.
-- The Lap feature's *Completing a valid lap* scenario and rejection table
-  are amended: in circuit mode the `minLapTime` condition is **replaced** by
-  all-gates-in-order; procedural mode keeps `minLapTime` unchanged.
-- **Track Layout Persistence** grows layout **version 2**: an optional
-  `circuit` object (name, ordered gates, medal targets) beside `props`, so a
-  circuit always ships with its curated prop field and no cottage can block
-  a gate mouth. Version-1 files stay valid and mean procedural mode.
-- The **HUD feature** gains the gate counter, the off-screen next-gate
-  chevron, and an amended hint line that finally names the objective.
-- The **Minimap feature** gains gate markers with the next gate emphasised.
-- **Tuning Constants** gains a Circuit table (gate depth, crossing
-  threshold, visual dimensions and state colours).
-- **Acceptance item 10 is amended** and an **item 15** added; the Optional
-  Features list marks 5 as promoted by this amendment.
+- A new **Feature: Checkpoint Circuit** in the GDD's own idiom.
+- **Session Bootstrap** amended: the world is built by loading the shipped
+  circuit layout; a load failure is the existing terminal LOADING state.
+- **Procedural World Generation** amended: the scatter rules survive as the
+  normative *authoring* machinery (they made the shipped field, and tools
+  and tests pin them), but the player-facing action is re-bound — the
+  *Regenerating the world on demand* scenario becomes *Restarting the
+  circuit*.
+- The Lap feature's *Completing a valid lap* and its rejection table are
+  amended: all-gates-in-order replaces `minLapTime`, which retires from the
+  tuning tables with a note.
+- **Track Layout Persistence** grows layout **version 2**: `circuit`
+  (name, ordered gates, medal targets) beside `props`. A loadable file must
+  carry a circuit; version-1 files are refused with a named error and
+  remain authoring artifacts.
+- The **HUD** gains the gate counter and edge chevron; the hint line
+  finally names the objective. The **Minimap** gains gate markers.
+- **Tuning Constants** gains a Circuit table; **acceptance item 10** is
+  amended, **item 15** added; Optional Feature 5 marked promoted.
 
 ## Decisions made here, on the record
 
@@ -41,36 +53,38 @@ The Known Deviations section is untouched — there is nothing to deviate from
    tested exactly like the band: position inside a thin gate-local slab,
    |lateral| under half the width, and the tick's **step-5** displacement
    component along gate-forward above the threshold. Same stage, same
-   observe-only ordering, same immunity to push-out and boundary shove that
-   the band's scenarios already argue for.
+   observe-only ordering, same immunity to push-out and boundary shove.
 2. **Out-of-order, repeated, and backwards passes are ignored** — only the
-   next expected gate advances progress; nothing resets or voids a lap.
-   Forgiveness keeps the failure mode legible (you simply haven't passed
-   gate N yet) and adds no punitive state a player can't see.
-3. **Reset Kart does not touch circuit progress.** Reset's own spec says
-   "the start pose and NOTHING else", and there is no shortcut to protect
-   against: the band still refuses to bank until the remaining gates are
-   passed.
-4. **Regenerate World returns to procedural mode.** G discards the circuit
-   with the world it decorated; loading a circuit layout arms circuit mode.
-5. **Best times are per context.** A session best belongs to the circuit
-   name that produced it (or to "procedural"); switching context switches
-   which best is shown. Medal targets only compare within their own circuit.
+   next expected gate advances the cursor; nothing resets or voids a lap.
+3. **Reset Kart does not touch circuit progress** — it stays "the start
+   pose and NOTHING else"; `G` is the full restart, and the two now form a
+   clean hierarchy (pose only / whole attempt).
+4. **`G` = Restart Circuit**: props rebuilt from the circuit file, kart to
+   the start pose, cursor to 1, clock from zero after the countdown-free
+   restart; the session best is kept. (Owner's direction; replaces the
+   earlier two-mode draft.)
+5. **Best times are per circuit** — keyed by the circuit `name`, since
+   other circuits remain loadable with `L` and times across courses are
+   incomparable. Medal targets compare only within their own circuit.
 6. **Gates are furniture, not obstacles** — non-colliding, like the band.
-   A clipped pylon that stops the kart dead in the gate mouth punishes the
-   exact line the game just asked the player to drive.
-7. **Gate visuals are generated geometry** in the band's family (pylon
-   pair, ground stripe, overhead chevron; state told by colour, animated on
-   the sim clock) — no new models, no textures, distinctness from props
-   guaranteed by vocabulary rather than asset budget.
-8. **The game ships at least one authored circuit** as a committed
-   version-2 layout file; authoring is by hand in JSON for now (no editor).
+7. **Gate visuals are generated geometry** in the band's family (pylons,
+   ground stripe, overhead chevron; state told by colour, animated on the
+   sim clock) — no new models, no textures.
+8. **The shipped circuit is a committed version-2 layout file**, authored
+   by hand from a curated scatter; the file carrying props and gates
+   together is the guarantee no prop blocks a gate mouth.
+
+## Implementation ripple, stated honestly
+
+Re-plumbing the boot (scatter-from-seed → load-shipped-circuit) touches
+more of the port than any prior feature: every gallery baseline re-blesses
+against the authored world, the suites that boot the real scene inherit the
+circuit, and the conformance items that assumed a random field (props at
+every random scale) need the authoring-machinery path instead. That cost is
+real and is the implementation changes' problem to itemise — it does not
+change what the document should say.
 
 ## What is deliberately excluded
 
-- Implementation. This change amends the document; the sim module, views,
-  file format code, the shipped circuit, and the conformance case arrive in
-  follow-up changes with delta specs against godot/* capabilities.
-- Sound (M10), session/end state and ghost (M11), any new input action.
-- An in-game circuit editor, multiple shipped circuits, checkpoint
-  time-splits — all future options, none required for the objective to work.
+- Implementation, sound (M10), session/end state and ghost (M11), any new
+  input action, an in-game circuit editor, checkpoint time-splits.

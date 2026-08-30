@@ -1,4 +1,4 @@
-# GDD amendment: Checkpoint Circuit
+# GDD amendment: Checkpoint Circuit (circuit-only)
 
 The exact edits to `low-poly-cart-game-design-document.md`, in order of
 appearance. Applied verbatim by the implementation's first task; until then
@@ -6,7 +6,39 @@ this file IS the draft under review.
 
 ---
 
-## Edit 1 — new feature section, inserted after *Lap Detection and Best-Time Tracking*
+## Edit 1 — *Session Bootstrap and Asset Normalisation*, boot source amended
+
+The world built at boot is no longer a seeded scatter: the game loads the
+**shipped circuit layout** (see Track Layout Persistence, version 2). The
+existing bootstrap verdict is unchanged in shape — a circuit that fails to
+load or validate is the same terminal LOADING state with a visible message,
+never a countdown into a broken world.
+
+## Edit 2 — *Procedural World Generation*: scatter becomes authoring machinery; G is re-bound
+
+The feature's scatter rules (counts, separation, scale variation, seeding)
+remain **normative for authoring**: they produced the shipped circuit's
+field, layout authoring starts from them, and the port's tools and tests
+continue to pin them. What changes is the player-facing action. The
+*Regenerating the world on demand* scenario is replaced by:
+
+```markdown
+### Scenario: Restarting the circuit
+
+* **Given** the player invokes the **Restart Circuit** action (the binding
+  formerly known as Regenerate World)
+* **When** the restart runs
+* **Then** every prop is removed and its resources released, and the world
+  is rebuilt from the loaded circuit layout — the same authored arrangement,
+  not a fresh scatter
+* **And** the kart returns to the start pose, the gate cursor returns to
+  gate 1, and the lap clock restarts from **0.00**
+* **And** the session's per-circuit best time is kept
+* **And** the race state does not leave **RACING** — no fresh countdown; the
+  restart is instant
+```
+
+## Edit 3 — new feature section, inserted after *Lap Detection and Best-Time Tracking*
 
 ```markdown
 ## Feature: Checkpoint Circuit
@@ -15,11 +47,9 @@ As a player,
 I want an ordered course of visible gates that my lap must thread,
 So that a lap time measures driving, not proximity to the finish line.
 
-The game has two modes and one rule for telling them apart: **circuit mode**
-is active exactly when the loaded layout carries a `circuit` object (see
-Track Layout Persistence); regenerating the world returns to **procedural
-mode**. Everything in this feature applies to circuit mode; procedural mode
-is unchanged by it.
+The game always plays a circuit. The shipped circuit is the default world,
+other circuits load through Track Layout Persistence, and there is no
+gateless mode: a layout the game will play always carries gates.
 
 ### Scenario: Defining a gate
 
@@ -48,41 +78,29 @@ is unchanged by it.
 
 ### Scenario: The band banks only a threaded lap
 
-* **Given** circuit mode
-* **When** the kart crosses the start/finish band satisfying every condition
-  of *Completing a valid lap*
+* **When** the kart crosses the start/finish band satisfying every other
+  condition of *Completing a valid lap*
 * **Then** the lap banks **only if the cursor has passed the final gate**;
   otherwise the crossing changes nothing and the clock keeps running
-* **And** the `minLapTime` condition is **not applied in circuit mode** —
-  ordered gates are the farming defence, and they are a better one
+* **And** there is no minimum lap time: the ordered gates are the farming
+  defence, and `minLapTime` is retired
 
 ### Scenario: Reset Kart and circuit progress
 
 * **Given** a lap in progress with some gates passed
 * **When** the player uses Reset Kart
 * **Then** the cursor is untouched — Reset Kart restores the start pose and
-  **nothing else**, exactly as Runtime Tuning and Player Actions states
+  **nothing else**, exactly as Runtime Tuning and Player Actions states; a
+  full fresh attempt is Restart Circuit's job
 * **And** no shortcut results: the band still refuses to bank until the
   remaining gates are passed
 
-### Scenario: Leaving circuit mode
-
-* **Given** circuit mode
-* **When** the player regenerates the world, or loads a layout without a
-  `circuit` object
-* **Then** the game returns to procedural mode: the gates and their HUD and
-  minimap presence are removed, and lap detection reverts to the
-  `minLapTime` rule
-* **And** the clock restarts and the cursor state is discarded
-
 ### Scenario: Best times belong to their circuit
 
-* **Given** laps banked in more than one context during a session
-* **Then** each session best is kept **per context** — one per circuit
-  `name`, one for procedural mode — and the `BEST` readout always shows the
-  best of the *current* context
-* **And** medal targets (below) are compared only against laps of their own
-  circuit
+* **Given** laps banked on more than one circuit during a session
+* **Then** each session best is kept per circuit `name`, and the `BEST`
+  readout always shows the best of the circuit being played
+* **And** medal targets are compared only against laps of their own circuit
 
 ### Scenario: Medal targets
 
@@ -111,7 +129,6 @@ is unchanged by it.
 
 ### Scenario: Finding the next gate
 
-* **Given** circuit mode
 * **Then** the HUD timer block gains a `GATE n/N` line
 * **And** when the next gate is off-screen, a chevron at the screen edge
   points along the shortest turn toward it — fog ends at `fogEnd` and the
@@ -122,59 +139,67 @@ is unchanged by it.
   invisibility-in-the-main-view guarantee the kart markers carry
 ```
 
----
+## Edit 4 — *Completing a valid lap* (Lap feature), amended conditions
 
-## Edit 2 — *Completing a valid lap* (Lap feature), amended conditions
-
-The scenario's `minLapTime` given becomes mode-dependent. Replace:
+Replace:
 
 > * **And** at least `minLapTime` has elapsed on the current clock
 
 with:
 
-> * **And** — in procedural mode — at least `minLapTime` has elapsed on the
->   current clock, **or** — in circuit mode — every gate has been passed in
->   order (see *Checkpoint Circuit*)
+> * **And** every gate has been passed in order — the progress cursor is
+>   past the final gate (see *Checkpoint Circuit*)
 
-and in the *Rejecting a crossing* outline, amend the **Too soon** row:
+and in the *Rejecting a crossing* outline, replace the **Too soon** row:
 
-> | Too soon | in procedural mode, the clock has been running for less than
->   `minLapTime`; in circuit mode, the progress cursor has not passed the
->   final gate — the player cannot farm times by shuttling across the line
->   in either mode |
+> | Course not threaded | the progress cursor has not passed the final gate —
+>   the player cannot farm times by shuttling across the line, because the
+>   line alone is never enough |
 
-## Edit 3 — *Track Layout Persistence*, layout version 2
+The *Persisting the best time for the session* scenario's trigger list is
+reworded for the renamed action ("when the circuit is restarted or the kart
+is reset, the best is retained").
+
+## Edit 5 — *Runtime Tuning and Player Actions* / *Input Handling*
+
+The **Regenerate World** action is renamed **Restart Circuit** wherever it
+appears (its binding stays unspecified, as before). Hint text (HUD feature,
+*Title & controls* row) becomes:
+
+> `W/S drive · A/D steer · G restart · follow the gates`
+
+## Edit 6 — *Track Layout Persistence*, layout version 2
 
 Append to the feature:
 
 ```markdown
-### Scenario: A layout that carries a circuit
+### Scenario: A layout is a circuit
 
 * **Given** a layout file with `"version": 2`
-* **Then** it may carry, beside `props`, a `circuit` object: a `name`, an
+* **Then** it carries, beside `props`, a `circuit` object: a `name`, an
   ordered `gates` list — each `{ "position": [X, Z], "yaw": r,
   "width": w }` — and an optional `targets` object with `bronze`, `silver`,
   and `gold` times in seconds
-* **And** a version-1 file (or a version-2 file without `circuit`) is a
-  procedural-mode layout, exactly as before
-* **And** loading a circuit file arms circuit mode with its curated props —
-  the file is the guarantee that no prop blocks a gate mouth, which is why
-  gates and props travel together
-* **And** saving while in circuit mode writes the circuit object back out
-  unchanged, so the round-trip guarantees extend to it
+* **And** the file is the guarantee that no prop blocks a gate mouth, which
+  is why gates and props travel together
+* **And** a file without a `circuit` object — version 1 included — is
+  **refused on load with a named error**: such files remain valid authoring
+  artifacts for building circuits from, but the game does not play them
+* **And** saving writes the loaded circuit object back out unchanged, so
+  the round-trip guarantees extend to it
 ```
 
-## Edit 4 — HUD feature table, two rows amended/added
+## Edit 7 — *Heads-Up Display* feature table
 
-* The **Title & controls** row's hint text is amended to name the
-  objective: the control hints read `W/S drive · A/D steer · G regenerate
-  world · cross the line to lap` in procedural mode and `W/S drive ·
-  A/D steer · follow the gates` in circuit mode.
-* A new row **Gate counter**: within the timer block, `GATE n/N` in the
-  timer label style, circuit mode only; plus the screen-edge chevron for an
-  off-screen next gate.
+A new row **Gate counter**: within the timer block, `GATE n/N` in the timer
+label style; plus the screen-edge chevron for an off-screen next gate. The
+*Title & controls* row's hint text as in Edit 5.
 
-## Edit 5 — Tuning Constants, new **Circuit** table
+## Edit 8 — Tuning Constants
+
+`minLapTime` is **retired**: its row is removed from the timing table and a
+one-line note under the table records that the checkpoint circuit replaced
+it at this amendment. A new **Circuit** table:
 
 | `name` | Value | Notes |
 |---|---|---|
@@ -191,27 +216,27 @@ Append to the feature:
 (Gate widths, positions, and targets are **content**, not tuning — they live
 in each circuit's layout file.)
 
-## Edit 6 — Acceptance Checklist
+## Edit 9 — Acceptance Checklist
 
-Item 10 is amended to:
+Item 1 gains the new boot source in passing ("boots **into the shipped
+circuit** to a countdown with no user interaction…"). Item 10 is amended to:
 
-> 10. In procedural mode, crossing the white band northbound after 5 s banks
->     a lap, freezes `TIME` on it for 0.5 s, flashes a new best in green
->     when appropriate, then restarts the clock; crossing it southbound
->     under power banks nothing. In circuit mode the same crossing banks
->     **only** when every gate has been passed in order — and then with no
->     minimum time.
+> 10. Crossing the white band northbound banks a lap **only when every gate
+>     has been passed in order** — with no minimum lap time — freezes
+>     `TIME` on it for 0.5 s, flashes a new best in green when appropriate,
+>     then restarts the clock. Crossing it southbound under power, or
+>     without the course threaded, banks nothing.
 
 New item 15:
 
-> 15. Loading the shipped circuit shows numbered gates; the next gate is
->     indicated on the gate itself, the HUD counter, and the minimap; a
->     lap that skips any gate refuses to bank; a lap that threads all of
->     them banks without the 5-second minimum.
+> 15. The shipped circuit loads at boot with numbered gates; the next gate
+>     is indicated on the gate itself, the HUD counter, and the minimap; a
+>     lap that skips any gate refuses to bank; Restart Circuit rebuilds the
+>     authored world, returns the kart to the start, and keeps the session
+>     best.
 
-## Edit 7 — Optional Features
+## Edit 10 — Optional Features
 
 Item 5's heading gains: *(promoted to the specification by
 amend-gdd-for-checkpoint-circuit; see Feature: Checkpoint Circuit)* — the
-body text is retained for the historical record, matching how the section
-already treats implemented requests.
+body text is retained for the historical record.
