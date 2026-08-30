@@ -383,30 +383,32 @@ safe to leave unfinished until the game underneath it is right. It is not
 optional — the GDD calls shadows "a load-bearing part of the look".
 
 **Done when**
-- Sun shadows at 2048², soft/PCF filtering, ±60 wu orthographic volume, near 0.5
+- ✅ Sun shadows at 2048², soft/PCF filtering, ±60 wu orthographic volume, near 0.5
   / far 200, ≈ −0.0001 depth bias. Every supplied model casts and receives
-- Linear fog from 50 wu to 150 wu in the sky colour, so distant props dissolve
+- ✅ Linear fog from 50 wu to 150 wu in the sky colour, so distant props dissolve
   rather than pop
-- Anisotropic filtering (16× where available) on base-colour maps, verified at a
-  grazing angle past a cone
-- Viewport resize recomputes aspect, resizes the surface, clips no HUD element,
+- ⚠️ Anisotropic filtering (16× where available) on base-colour maps — pinned
+  project-wide in `check_settings.py` and present in the gallery baselines;
+  a dedicated grazing-angle-past-a-cone state was not composed (disclosed)
+- ✅ Viewport resize recomputes aspect, resizes the surface, clips no HUD element,
   and keeps `minimapSize` and `minimapInset`
-- Render scale capped at **2×** on displays reporting a device pixel ratio above 2
-- The visual gate runs windowed with measured thresholds on all three criteria —
+- ✅ Render scale capped at **2×** on displays reporting a device pixel ratio above 2
+- ✅ The visual gate runs windowed with measured thresholds on all three criteria —
   mean, percentage changed, percentage changed strongly — with the noise floor
   recorded beside each number (**V9**)
-- Every scenario in G1's visual register has a baseline capture covering it
-- Web payload is within the 25 MB compressed budget, cold-load to countdown
-  within 5 s
-- **Visual proof:** the committed baseline set itself
+- ✅ Every scenario in G1's visual register has a baseline capture covering it
+- ⚠️ Web payload measured **20.5 MB** gzip-9 against the 25 MB budget (from
+  89.2 before the texture stamp); cold-load-to-countdown needs a served
+  browser session and lands with M8's web smoke (disclosed split, Backlog)
+- ✅ **Visual proof:** the committed baseline set itself
 
 > **Measure the thresholds, never guess them.** Capture twice with nothing
 > changed and diff; that is the floor. If the floor is not near zero the harness
 > is non-deterministic — fix the harness rather than raising the threshold.
 
-**Likely changes**
-- `add-render-pipeline-and-web-budget` — shadows, fog, filtering, resize, DPI cap, payload
-- `add-visual-conformance-gate` — the windowed gallery, thresholds, baselines
+**Changes:** `add-render-pipeline-and-web-budget` and
+`add-visual-conformance-gate`, both archived. Critic pass pending before the
+milestone is called complete.
 
 ---
 
