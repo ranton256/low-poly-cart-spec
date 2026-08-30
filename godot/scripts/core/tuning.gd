@@ -116,7 +116,10 @@ func apply_table(table: Dictionary) -> void:
 	var timing: Dictionary = table.get("timing", {})
 	countdown_step = float(timing.get("countdownStep", 0.0))
 	go_linger = float(timing.get("goLinger", 0.0))
-	min_lap_time = float(timing.get("minLapTime", 0.0))
+	# minLapTime was RETIRED from the GDD by amend-gdd-for-checkpoint-circuit;
+	# it lives in port_decisions as the interim farming defence until the M9
+	# gates replace it, and the M9 change deletes this read.
+	min_lap_time = float((table.get("port_decisions", {}) as Dictionary).get("minLapTime", 0.0))
 	lap_crossing_threshold = float(timing.get("lapCrossingThreshold", 0.0))
 	lap_restart_delay = float(timing.get("lapRestartDelay", 0.0))
 	best_flash_duration = float(timing.get("bestFlashDuration", 0.0))

@@ -136,9 +136,10 @@ func _test_regeneration_replaces_the_props() -> void:
 	_check(before != after, "and the arrangement actually changed")
 
 
-# @covers Procedural World Generation / Regenerating the world on demand
-## The design document's requirement, and the reason regeneration is a world
-## operation rather than a reset.
+## Regeneration is now the AUTHORING path (the GDD's scenario became
+## "Restarting the circuit" at amend-gdd-for-checkpoint-circuit, deferred to
+## the M9 implementation) — but the machinery's own guarantee below still
+## holds and still matters: a world operation is not a kart reset.
 func _test_regeneration_leaves_the_kart_alone() -> void:
 	var sim: RefCounted = _root.sim
 

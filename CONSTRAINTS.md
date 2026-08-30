@@ -443,7 +443,7 @@ Deterministic acceptance conditions — pass/fail with no judgment.
 | V4 | No physics-body symbol from §4 appears anywhere under `godot/` | ✅ `check_boundaries.py` + the commit hook on staged content |
 | V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py` |
 | V6 | **G1** — every GDD scenario claimed exactly once; a claim on a scenario the document lacks also fails | ✅ `check_spec_coverage.py` |
-| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ✅ `tests/conformance_test.gd`: `_item_01`…`_item_14`, self-counting; 14b recorded from `tools/refresh_probe.gd` |
+| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ⚠️ `tests/conformance_test.gd`: `_item_01`…`_item_14` green, but `amend-gdd-for-checkpoint-circuit` amended items 1 and 10 and added item 15 — the M9 implementation owes `_item_15` and the re-pointed 1/10 cases; until then G2 covers the pre-amendment checklist |
 | V8 | Pinned project settings match §6, and every model has a valid committed import preset | ✅ `check_settings.py` |
 | V9 | Gallery diffs within recorded thresholds on all three criteria | ✅ `tools/gallery.sh` + `gallery_compare.py`, five states, floor and limits recorded in `gallery_config.json`; verified by mutation (a painted band fails on all three criteria) |
 | V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py` |

@@ -240,3 +240,17 @@ New item 15:
 Item 5's heading gains: *(promoted to the specification by
 amend-gdd-for-checkpoint-circuit; see Feature: Checkpoint Circuit)* — the
 body text is retained for the historical record.
+
+---
+
+## Edits 11–12 — consequential sites found at application, recorded per the drift rule
+
+**Edit 11** — *Collision Detection and Response*, the prop-on-kart scenario:
+its Given/When referenced regeneration; reworded to the load-a-circuit case
+(title kept as a stable identifier). The acceptance — the response frees the
+kart, no second clearance test required — is unchanged.
+
+**Edit 12** — *Game Overview*: "no lap track" and "at least five seconds
+after the clock started" contradicted the amendment; the overview now names
+the gate course and the threaded-lap rule, and describes worlds as authored
+layout files. "Drive forever" and the session shape are untouched.

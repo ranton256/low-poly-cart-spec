@@ -545,6 +545,34 @@ camera, minimap disc visible over the kart. The tag follows the verdict.
 
 ---
 
+## M9 — The circuit
+
+**Goal.** The game becomes a game: the shipped checkpoint circuit is the
+world, `G` restarts it, and a lap time measures driving.
+
+**Changes**
+- `amend-gdd-for-checkpoint-circuit` — the GDD amendment (owner-approved
+  2026-08-30, applied; 12 edits incl. two consequential ones found at
+  application: the collision prop-on-kart scenario and the Game Overview)
+- implementation change(s), split proposed after this archives — owing:
+  - the circuit core module (gate test, cursor, per-circuit bests) and the
+    amended lap-gate condition
+  - layout v2 (circuit object, gateless-file refusal), boot-from-circuit,
+    Restart Circuit re-bind
+  - gate presentation (pylons/stripe/chevron/numerals, state colours on the
+    sim clock), GATE n/N + edge chevron, minimap gate markers
+  - the shipped circuit file itself, authored and tuned (targets by playtest)
+  - the 10 registered M9 deferrals claimed; **G2 re-pointed**: `_item_01`
+    and `_item_10` to the amended items, `_item_15` new; item 2's
+    random-scale grounding moves to the authoring-machinery path
+  - gallery re-blessed against the authored world (boot source changed)
+
+**Done when** the shipped circuit loads at boot and plays as specified; the
+gate goes back to green with zero M9 deferrals; the milestone Critic
+approves.
+
+---
+
 ## Backlog
 
 Work no accepted change covers: deferred scope, issues found in passing, and
