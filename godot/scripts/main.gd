@@ -95,19 +95,21 @@ var _jolts: int = 0
 @onready var minimap: SubViewportContainer = get_node_or_null("Minimap") as SubViewportContainer
 
 
-## The render-scale cap (Limiting render resolution on high-density displays):
-## a device pixel ratio above 2 is clamped to exactly 2 — the game never
-## renders at full native density of very dense displays.
-static func capped_scale(device_pixel_ratio: float) -> float:
-	return minf(device_pixel_ratio, 2.0)
+## The render-scale cap (Limiting render resolution on high-density displays).
+## The knob that governs the RENDER SURFACE is the viewport's 3D scale — the
+## first draft capped content_scale_factor, which scales the 2D canvas and
+## leaves the 3D target at native density (M6 Critic finding 2). Effective
+## render density = device pixel ratio × this factor, capped at exactly 2.
+static func capped_3d_scale(device_pixel_ratio: float) -> float:
+	return minf(1.0, 2.0 / maxf(device_pixel_ratio, 1.0))
 
 
 func _ready() -> void:
 	var tuning: RefCounted = TuningLoader.load_tuning()
-	# DPI cap, applied to the real window from the real screen's ratio.
-	var window := get_window()
-	if window != null:
-		window.content_scale_factor = capped_scale(DisplayServer.screen_get_scale())
+	# DPI cap, applied to the real render surface from the real screen's ratio.
+	var viewport := get_viewport()
+	if viewport != null:
+		viewport.scaling_3d_scale = capped_3d_scale(DisplayServer.screen_get_scale())
 	if tuning == null:
 		# The loader has already named what is missing. Refusing to run is the
 		# point: a simulation with a defaulted accel produces a kart that will

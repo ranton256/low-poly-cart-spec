@@ -50,9 +50,11 @@ REQUIRED = {
     "window/stretch/aspect": (
         '"expand"', "the stretch aspect A1's resolution records"),
     "textures/default_filters/anisotropic_filtering_level": (
-        "4", "16x anisotropic filtering, the document's section 5 — verified "
-             "at a grazing angle in the M6 gallery; a re-import or editor "
-             "save silently reverts unpinned settings"),
+        "4", "16x anisotropic filtering, the document's section 2. The LEVEL "
+             "alone is inert — materials must request the anisotropic sampler "
+             "mode, which scripts/view/anisotropy.gd applies to every "
+             "imported model and tests assert; a dedicated grazing-angle "
+             "gallery state is a Backlog item"),
 }
 
 MODELS = ("kart", "tree", "rock", "cone", "crate", "tires", "cottage")

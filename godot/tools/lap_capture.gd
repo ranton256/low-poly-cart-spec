@@ -12,6 +12,7 @@
 extends SceneTree
 
 const LapSuite := preload("res://tests/lap_gate_test.gd")
+const Common := preload("res://tools/capture_common.gd")
 
 ## Physics frames into the hold window before grabbing: far enough in to be
 ## unambiguous, well inside lapRestartDelay's 30 ticks and the 60-tick flash.
@@ -49,16 +50,17 @@ func _init() -> void:
 			break
 		var phase_end: int = phase_start + int(phase[3])
 		while root.sim.ticks < phase_end:
+			var held := PackedStringArray()
 			for action_index in range(PHASE_ACTIONS.size()):
 				if phase[action_index]:
-					Input.action_press(PHASE_ACTIONS[action_index])
+					held.append(PHASE_ACTIONS[action_index])
+			Common.press(held)
 			await physics_frame
 			if root.sim.lap.banked_this_tick:
 				banked = true
 				break
 		phase_start = phase_end
-		for action in PHASE_ACTIONS:
-			Input.action_release(action)
+		Common.release(PackedStringArray(PHASE_ACTIONS))
 
 	if not banked:
 		printerr("lap_capture: the scripted drive never banked — is lap_gate_test green?")
@@ -75,9 +77,7 @@ func _init() -> void:
 	for _i in range(SETTLE_FRAMES):
 		await process_frame
 
-	RenderingServer.force_draw()
-	await RenderingServer.frame_post_draw
-	var image := get_root().get_texture().get_image()
+	var image: Image = await Common.fresh_frame(self, root, "lap_capture")
 	if image == null:
 		printerr("lap_capture: no image — this needs a WINDOWED run")
 		quit(1)

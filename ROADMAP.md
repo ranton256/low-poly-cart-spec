@@ -483,19 +483,16 @@ belongs in the change that does the work. Milestone tags say where each most
 plausibly lands. (Numbered items migrated from the retired `att` tracker;
 their full histories are in git at `streamline-process`'s parent commit.)
 
-- **M6** — Pin per-texture import settings for the web payload budget: prop
-  textures to 1024², VRAM compression mode asserted, anisotropic 16× — as a
-  project-level or re-import decision, not 21 generated files. *(was att 5)*
 - **M7** — Reset Kart action: R returns the kart to X=0 Z=0 facing +Z with
   zero velocity, timer and world untouched. The start pose and the binding
   exist; the runtime action does not. Its change must also assert best-time
   persistence *through the reset* — the persistence scenario's claim today
   covers only regeneration. *(was att 10; M4 Critic finding 2)*
-- **M5/M6** — Fold the capture input re-press pattern (unfocused windows clear
-  held input) into a shared helper before more driving captures are written.
-  *(was att 16)*
 - Extend `check_static_typing.py` to member variables; V19 stays ⚠️ until
   then. *(was att 18)*
+- **M8** — A grazing-angle-past-a-cone gallery state, so the anisotropic
+  sampling the materials now request is verified by a dedicated capture
+  rather than incidentally by the standing baselines. *(M6 Critic finding 1)*
 - **M8** — Cold-load-to-countdown ≤ 5 s on the web build, measured in a
   served browser session at the web smoke; the payload half of §8's table is
   measured (20.5 MB gzip-9 vs 25) by add-render-pipeline-and-web-budget.

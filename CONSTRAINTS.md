@@ -264,6 +264,7 @@ carries the reasoning:
 | A10 | The camera eases per tick but frame ordering updates per frame | Resolved in M2: per tick. Time constant measured 0.200 s, settling 0.450 s, both predicted before measuring |
 | A11 | The GDD requires no ground edge be visible, and specifies numbers that make it visible from the boundary | Resolved in M6: a ground skirt in the same albedo past fog's end — every stated number untouched; capture + geometry test |
 | A12 | The two-prop pin is stated as permanent, but the specified radial push ejects the kart in 15–125 ticks | ❓ a GDD proposal (backlog) |
+| A13 | §2's 1024 downsample blessing states a floor only for the kart; whether props may ship below 1024 was unstated | Resolved in M6: props 512 / kart 1024 / Basis, forced by the 25 MB budget, gated by the baselines and the stamp check |
 
 ---
 
@@ -368,8 +369,8 @@ measurement beside the number.
 
 | | Budget | Status |
 |---|---|---|
-| Frame budget while racing | 16.7 ms (60 fps) on the reference machine | ✅ measured 1.34 ms avg over 240 racing frames, windowed (M6) |
-| Simulation step cost | The full 8-step tick over 54 props inside one 60 Hz slice at 144 fps, i.e. ≤ 2.3 ms for 2–3 steps | ✅ measured 0.0087 ms/step over 60 000 steps with 54 registered props (M6) |
+| Frame budget while racing | 16.7 ms (60 fps) on the reference machine | 📐 measured **1.37 ms** avg over 240 racing frames via `tools/fps_probe.gd` — windowed, a committed re-runnable tool rather than a suite gate (the ✅ legend means a gate) |
+| Simulation step cost | The full 8-step tick over 54 props inside one 60 Hz slice at 144 fps, i.e. ≤ 2.3 ms for 2–3 steps | ✅ `tools/step_bench.gd` in the standing suite fails over 0.77 ms/step; measures 0.0087 |
 | Input to visible response | One simulation tick. Never gated on a render frame | 📐 |
 
 ### Web target — the binding constraint
@@ -390,7 +391,7 @@ hostile on the web.
 
 | | Target | Status |
 |---|---|---|
-| Cold start → countdown, desktop | ≤ 2 s | 📋 M6 |
+| Cold start → countdown, desktop | ≤ 2 s | 📐 measured **1.05 s** via `tools/fps_probe.gd` (windowed, re-runnable) |
 | `godot/tools/test.sh` wall time | ≤ 60 s. Measured 8.4 s warm, 10.9 s cold; re-measure whenever a check is added | 📐 |
 
 A gate slow enough to skip stops being run, and a gate that is not run is not a
@@ -414,7 +415,7 @@ repository owner**. No change, task, or tool copies, generates, or commits a
 | Bounding boxes are **re-measured after scaling**, never reused from before it | ✅ `normalise_test.gd`, verified by mutation |
 | `sync_assets.sh` refuses a preset recording a failed import, which Godot never repairs | ✅ |
 | Anisotropic 16×, mipmaps, Basis compression, per-asset texture size — project-wide via a pinned setting and one committed stamp tool, never 21 generated files | ✅ `check_settings.py` (filtering) + `stamp_texture_imports.py --check` (the rest) |
-| Every supplied model both casts and receives shadows | 📋 M6 |
+| Every supplied model both casts and receives shadows | ✅ `minimap_test.gd` asserts cast=ON across every prop instance and the kart; the ground family is receive-only by deliberate exception (§5) |
 | Materials are physically-based and lit. No unlit substitute | 📐 |
 | No prop is authored in the scene tree; every instance is placed by scatter or a loaded layout | 📐 |
 

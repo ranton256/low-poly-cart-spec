@@ -332,7 +332,28 @@ geometry asserted by `world_test.gd`.
 |---|---|---|
 | A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
 | A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
+| A13 | §2 blesses downsampling "the texture set" to 1024² and states a floor only "for the kart"; whether props may ship below 1024 is unstated, and the 25 MB web budget forced the question | Resolved: props at 512, kart at 1024 (its stated floor), Basis Universal — the payload arithmetic (89.2 → 20.5 MB gzip-9 against 25) is the forcing function, the gallery baselines gate the look, and `stamp_texture_imports.py --check` enforces it |
 | A12 | The design document states that a kart pinned between two props at the minimum separation "cannot drive out", but its own collision response makes that state an unstable equilibrium: the kart is ejected in a fraction of a second at fourteen of sixteen headings, and in about two seconds at the other two | A GDD proposal — ROADMAP Backlog |
+
+### A13 — Props below the blessed 1024 (RESOLVED)
+
+**The specification says** (§2): *"downsampling the texture set to 1024 × 1024
+is acceptable and visually near-identical at gameplay distances; do not go
+below that for the kart."*
+
+**It does not say** whether anything other than the kart may go below 1024 —
+the floor's qualifier names only the kart. The 25 MB web budget forced the
+question: at 1024 across the set the payload measured well over budget.
+
+**The port resolves** (add-render-pipeline-and-web-budget, registered by the
+M6 review): props ship at 512, the kart at its stated 1024 floor, Basis
+Universal throughout. Defence: the budget is normative and something had to
+give; props are seen at gameplay distances where the document itself calls
+1024 "visually near-identical"; the gallery baselines gate the resulting look;
+and `tools/stamp_texture_imports.py --check` fails the suite if any sidecar
+drifts. Payload: 89.2 → 20.5 MB gzip-9.
+
+*Recorded during M6. Resolved.*
 
 ### A12 (open, detail) — The pinned kart cannot stay pinned
 

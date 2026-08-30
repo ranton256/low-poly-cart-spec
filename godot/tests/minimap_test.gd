@@ -40,6 +40,8 @@ func _init() -> void:
 	await _test_markers_track_the_kart_at_true_heading()
 	_test_markers_are_masked_not_moved()
 	_test_the_map_does_not_look_through_fog()
+	_test_models_cast_and_receive_shadows()
+	_test_base_colour_maps_sample_anisotropically()
 	get_root().remove_child(_root)
 	_root.free()
 	RVTest.finish(
@@ -182,3 +184,49 @@ func _test_the_map_does_not_look_through_fog() -> void:
 	var world_env: WorldEnvironment = _root.get_node("World/Environment") as WorldEnvironment
 	if world_env != null:
 		_check(world_env.environment.fog_enabled, "while the main view's fog is untouched")
+
+
+## CONSTRAINTS §9 Assets row: every supplied model casts and receives. The
+## kart and every prop instance cast (Godot's ON default, asserted so an
+## editor toggle cannot silently flip one); the ground family is receive-only
+## by deliberate exception.
+func _test_models_cast_and_receive_shadows() -> void:
+	var casters: int = 0
+	var wrong: Array = []
+	var meshes: Array = _root.get_node("PropField").find_children(
+		"*", "MeshInstance3D", true, false
+	)
+	meshes.append_array(_root.kart.find_children("*", "MeshInstance3D", true, false))
+	for mesh: MeshInstance3D in meshes:
+		casters += 1
+		if mesh.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_ON:
+			wrong.append(mesh.name)
+	_check(casters > 50, "every prop instance and the kart checked (%d meshes)" % casters)
+	_check(wrong.is_empty(), "all cast shadows: %s" % str(wrong.slice(0, 5)))
+
+
+## The GDD section 2: anisotropic filtering ON THE MATERIALS — the pinned level is
+## inert unless the sampler mode requests it (M6 Critic finding 1).
+func _test_base_colour_maps_sample_anisotropically() -> void:
+	var inspected: int = 0
+	var wrong: Array = []
+	var meshes: Array = _root.get_node("PropField").find_children(
+		"*", "MeshInstance3D", true, false
+	)
+	meshes.append_array(_root.kart.find_children("*", "MeshInstance3D", true, false))
+	for mesh: MeshInstance3D in meshes:
+		for surface in range(mesh.get_surface_override_material_count()):
+			var material: BaseMaterial3D = mesh.get_active_material(surface) as BaseMaterial3D
+			if material == null:
+				continue
+			inspected += 1
+			if (
+				material.texture_filter
+				!= BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+			):
+				wrong.append(mesh.name)
+	_check(inspected > 50, "imported materials inspected (%d)" % inspected)
+	_check(
+		wrong.is_empty(),
+		"every imported material requests the anisotropic sampler: %s" % str(wrong.slice(0, 5))
+	)

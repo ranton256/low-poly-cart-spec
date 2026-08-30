@@ -223,28 +223,45 @@ func _test_resize_leaves_the_instruments_intact() -> void:
 	var minimap: Control = _root.get_node("Minimap") as Control
 	var size_before: Vector2 = minimap.size
 	var inset_before: float = minimap.offset_left
-	get_root().size = Vector2i(1600, 900)
+	# A DIFFERENT aspect, not just a bigger 16:9 — the expand-aspect path is
+	# where stale anchors actually bite (M6 Critic finding 4).
+	get_root().size = Vector2i(1500, 1000)
 	await process_frame
 	await process_frame
 	_check(
 		minimap.size == size_before and minimap.offset_left == inset_before,
 		"the minimap keeps minimapSize and minimapInset through a resize"
 	)
-	var area: Vector2 = minimap.get_parent_area_size()
-	for element_name: String in ["Minimap"]:
-		var element: Control = _root.get_node(element_name) as Control
+	# EVERY visible HUD element, per the scenario's "no HUD element".
+	var elements: Array = [minimap]
+	for child_name: String in [
+		"Countdown",
+		"Loading",
+		"TimeLabel",
+		"TimeValue",
+		"BestLabel",
+		"BestValue",
+		"Title",
+		"Hints",
+		"Speedo",
+	]:
+		elements.append(_root.overlay.get_node(child_name))
+	for element: Control in elements:
+		if not element.visible:
+			continue
 		var rect: Rect2 = element.get_rect()
+		var element_area: Vector2 = element.get_parent_area_size()
 		var unclipped: bool = (
 			rect.position.x >= 0.0
 			and rect.position.y >= 0.0
-			and rect.end.x <= area.x
-			and rect.end.y <= area.y
+			and rect.end.x <= element_area.x
+			and rect.end.y <= element_area.y
 		)
 		_check(
 			unclipped,
 			(
 				"%s is unclipped and anchored to the LIVE corner (%s in %s)"
-				% [element_name, rect, area]
+				% [element.name, rect, element_area]
 			)
 		)
 	var time_value: Label = _root.overlay.get_node("TimeValue") as Label
@@ -259,13 +276,20 @@ func _test_resize_leaves_the_instruments_intact() -> void:
 # @covers Frame Loop and Render Pipeline / Limiting render resolution on high-density displays
 func _test_dense_displays_are_capped() -> void:
 	var main_script: GDScript = _root.get_script() as GDScript
-	_check(main_script.capped_scale(1.0) == 1.0, "an ordinary display is untouched")
-	_check(main_script.capped_scale(2.0) == 2.0, "a 2x display renders at 2x")
-	_check(main_script.capped_scale(3.0) == 2.0, "above 2, the scale is exactly 2 — never native")
-	var applied: float = _root.get_window().content_scale_factor
+	# The property the scenario states: EFFECTIVE render density (device pixel
+	# ratio × the applied 3D scale) never exceeds 2 — not merely that some
+	# factor was clamped somewhere.
+	for dpr: float in [1.0, 1.5, 2.0, 2.5, 3.0, 4.0]:
+		var effective: float = dpr * main_script.capped_3d_scale(dpr)
+		_check(
+			effective <= 2.0001 and (dpr <= 2.0001 or absf(effective - 2.0) < 0.001),
+			"at DPR %.1f the effective density is %.2f — capped at exactly 2" % [dpr, effective]
+		)
+	_check(main_script.capped_3d_scale(1.0) == 1.0, "an ordinary display renders 1:1")
+	var applied: float = _root.get_viewport().scaling_3d_scale
 	_check(
-		absf(applied - main_script.capped_scale(DisplayServer.screen_get_scale())) < 0.001,
-		"and the running window wears the capped factor"
+		absf(applied - main_script.capped_3d_scale(DisplayServer.screen_get_scale())) < 0.001,
+		"and the running RENDER SURFACE wears the capped factor (%.3f)" % applied
 	)
 
 

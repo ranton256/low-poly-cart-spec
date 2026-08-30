@@ -8,6 +8,8 @@
 # the same commands produce the same frame on a fast machine and a slow one.
 extends SceneTree
 
+const Common := preload("res://tools/capture_common.gd")
+
 const DEFAULT_TICKS := 200
 ## Rendered frames to wait before grabbing the viewport — belt only; the
 ## post-draw await in _fresh_frame is what guarantees freshness. Measured
@@ -46,13 +48,9 @@ func _init() -> void:
 	# the capture at different sim ticks run to run (the gallery's noise
 	# floor showed 2.0 mean on this state; sim-aligned it is ~0).
 	while root.sim.ticks < ticks:
-		for action in hold:
-			if InputMap.has_action(action):
-				Input.action_press(action)
+		Common.press(hold)
 		await physics_frame
-	for action in hold:
-		if InputMap.has_action(action):
-			Input.action_release(action)
+	Common.release(hold)
 	# FREEZE the tree before settling: the settle frames otherwise let the
 	# simulation coast a run-varying number of ticks after the target — the
 	# gallery's noise floor caught the whole scene shifted between two runs
@@ -67,7 +65,7 @@ func _init() -> void:
 	for _i in range(SETTLE_FRAMES):
 		await process_frame
 
-	var image := await _fresh_frame(root)
+	var image: Image = await Common.fresh_frame(self, root, "drive_capture")
 	if image == null:
 		printerr("drive_capture: no image — this needs a WINDOWED run")
 		quit(1)
@@ -109,41 +107,6 @@ func _init() -> void:
 		)
 	)
 	quit()
-
-
-## Grab a frame that is provably fresh: await the renderer's own post-draw
-## signal, then reject the known staleness signature — the countdown's huge
-## white glyphs at screen centre while the sim reports the race well past the
-## GO! linger. Retries re-await the renderer; persistent staleness fails the
-## run rather than writing a lie.
-func _fresh_frame(root: Node3D) -> Image:
-	for _attempt in range(5):
-		RenderingServer.force_draw()
-		await RenderingServer.frame_post_draw
-		var image := get_root().get_texture().get_image()
-		if image == null:
-			return null
-		if not _looks_like_stale_countdown(image, root):
-			return image
-		printerr("drive_capture: stale countdown frame detected — re-awaiting the renderer")
-	printerr("drive_capture: the renderer kept presenting stale frames; nothing written")
-	return null
-
-
-## The staleness signature this tool has actually produced: a raced sim but a
-## frame still showing the countdown through the inspection camera.
-func _looks_like_stale_countdown(image: Image, root: Node3D) -> bool:
-	var race: RefCounted = root.sim.race
-	var linger_ticks: int = int(roundf(root.sim.tuning.go_linger * 60.0))
-	if not (race.is_racing() and race.ticks_in_state > linger_ticks + 5):
-		return false  # a countdown on screen would be legitimate
-	var white: int = 0
-	for y in range(image.get_height() / 4, image.get_height() / 2, 4):
-		for x in range(image.get_width() / 2 - 100, image.get_width() / 2 + 100, 4):
-			var pixel := image.get_pixel(x, y)
-			if pixel.r > 0.98 and pixel.g > 0.98 and pixel.b > 0.98:
-				white += 1
-	return white > 40
 
 
 ## How much of the frame is pure black. Sampled on a grid rather than every

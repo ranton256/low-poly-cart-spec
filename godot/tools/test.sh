@@ -97,6 +97,11 @@ run_suite tests/race_state_test.gd
 run_suite tests/lap_gate_test.gd
 run_suite tests/hud_test.gd
 run_suite tests/minimap_test.gd
+
+# The step-cost budget as a standing check (CONSTRAINTS §8 Performance and
+# size budgets) — headless and fast; the frame-time half needs a window and
+# lives in tools/fps_probe.gd.
+run_suite tools/step_bench.gd
 run_suite tests/boundary_test.gd
 run_suite tests/determinism_test.gd
 

@@ -7,6 +7,7 @@
 extends Node3D
 
 const Normalise := preload("res://scripts/core/normalise.gd")
+const Anisotropy := preload("res://scripts/view/anisotropy.gd")
 const ArtTuning := preload("res://scripts/art_tuning.gd")
 
 const KART_MODEL := "res://assets/kart.glb"
@@ -48,6 +49,7 @@ func _ready() -> void:
 		push_error("kart view: no art tuning")
 		return
 	_model = (load(KART_MODEL) as PackedScene).instantiate() as Node3D
+	Anisotropy.apply(_model)
 	add_child(_model)
 
 	var authored: AABB = _authored_box(_model)

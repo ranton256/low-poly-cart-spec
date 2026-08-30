@@ -15,6 +15,7 @@
 extends Node3D
 
 const Scatter := preload("res://scripts/core/scatter.gd")
+const Anisotropy := preload("res://scripts/view/anisotropy.gd")
 const Normalise := preload("res://scripts/core/normalise.gd")
 const Collision := preload("res://scripts/core/collision.gd")
 
@@ -80,6 +81,7 @@ func build(placements: Array) -> void:
 	for placement in placements:
 		var p: Scatter.Placement = placement as Scatter.Placement
 		var instance: Node3D = (_scenes[p.asset] as PackedScene).instantiate() as Node3D
+		Anisotropy.apply(instance)
 		instance.name = "%s_%d" % [p.asset, records.size()]
 		instance.scale = Vector3.ONE * p.scale
 		# The offset is in authored space scaled by `scale`, and it centres the
