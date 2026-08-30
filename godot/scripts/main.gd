@@ -70,6 +70,13 @@ var field_seed: int = STARTING_SEED
 
 var _art: RefCounted = null
 
+## The live tuning surface (Runtime Tuning): data/tuning.json's mtime,
+## polled once a second on the SIMULATION clock; a change re-applies the
+## table into the same shared tuning object, in force next tick. A file, not
+## a panel — §7 bans player-facing instrumentation, and nothing draws this.
+var _tuning_mtime: int = 0
+var _tuning_poll_tick: int = 0
+
 var _steps: int = 0
 var _frames: int = 0
 var _begin_frame_calls: int = 0
@@ -163,6 +170,7 @@ func _physics_process(_delta: float) -> void:
 	if kart != null:
 		kart.remember(sim)
 	sim.step()
+	_poll_tuning()
 	# ONCE PER TICK, immediately after the simulation advances — ambiguity A10.
 	# Never in _process: the design document states the easing per tick, and per
 	# frame the time constant becomes 0.4 s at 30 fps and 0.083 s at 144 fps
@@ -242,6 +250,38 @@ func interpolation_fraction() -> float:
 	return Engine.get_physics_interpolation_fraction()
 
 
+## The live tuning watch. Reads the FILE's mtime once a second of sim time;
+## on change, re-applies the table into the shared object every consumer
+## already holds — the next tick simply reads new numbers. The kart's state
+## and the clock are untouched by the application itself.
+func _poll_tuning() -> void:
+	_tuning_poll_tick += 1
+	if _tuning_poll_tick < Sim.TICKS_PER_SECOND:
+		return
+	_tuning_poll_tick = 0
+	var path := ProjectSettings.globalize_path(TuningLoader.TUNING_PATH)
+	var mtime := FileAccess.get_modified_time(path)
+	if _tuning_mtime == 0:
+		_tuning_mtime = mtime
+		return
+	if mtime == _tuning_mtime:
+		return
+	_tuning_mtime = mtime
+	apply_tuning_file()
+
+
+## Re-parse the tuning file into the SHARED object. Callable by suites, which
+## must not write repo files; the watch above calls it on a real edit.
+func apply_tuning_file() -> bool:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(TuningLoader.TUNING_PATH))
+	if not (parsed is Dictionary):
+		push_error("tuning: live reload failed — the file is not a JSON object")
+		return false
+	sim.tuning.apply_table(parsed)
+	print("tuning: live table applied; in force next tick")
+	return true
+
+
 ## Scatter a field and hand it to the view.
 ##
 ## The design document's regeneration scenario requires the kart's position,
@@ -315,6 +355,8 @@ func _read_input() -> void:
 	# Edge-triggered, not held: one press is one new world.
 	if Input.is_action_just_pressed("regenerate_world"):
 		regenerate_world()
+	if Input.is_action_just_pressed("reset_kart") and sim.race.is_racing():
+		sim.reset_kart()
 	if Input.is_action_just_pressed("save_layout"):
 		save_layout()
 	if Input.is_action_just_pressed("load_layout"):

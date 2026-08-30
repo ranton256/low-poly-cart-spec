@@ -37,6 +37,8 @@ func _init() -> void:
 	_test_restore_rebuilds_exactly_in_file_order()
 	_test_repeated_cycles_are_byte_identical()
 	_test_malformed_file_is_refused_whole()
+	await _test_reset_kart_is_surgical()
+	_test_live_tuning_applies_next_tick()
 
 	OS.set_environment("LPC_LAYOUT_FILE", "")
 	get_root().remove_child(_root)
@@ -190,4 +192,70 @@ func _test_malformed_file_is_refused_whole() -> void:
 			and absf((field.records[0] as RefCounted).x - first_x) < 0.0001
 		),
 		"and the current world is untouched — nothing was released"
+	)
+
+
+# @covers Runtime Tuning and Player Actions / Resetting the kart
+func _test_reset_kart_is_surgical() -> void:
+	var sim: RefCounted = _root.sim
+	sim.race.start_racing_immediately()
+	for _i in range(40):
+		Input.action_press("accelerate")
+		await physics_frame
+	Input.action_release("accelerate")
+	_check(sim.pos_z > 1.0, "setup: the kart drove away (z=%.2f)" % sim.pos_z)
+	# A best and a banked time on the board — the M4 review's standing note:
+	# persistence THROUGH the reset, not only through regeneration.
+	sim.lap.best_seconds = 42.5
+	sim.lap.banked_seconds = 43.0
+	var clock_before: float = sim.lap.clock_seconds()
+	var ticks_before: int = sim.ticks
+
+	sim.reset_kart()
+	_check(
+		sim.pos_x == 0.0 and sim.pos_z == 0.0 and sim.yaw == 0.0 and sim.velocity == 0.0,
+		"the kart stands at the origin facing +Z at zero velocity"
+	)
+	_check(sim.lap.best_seconds == 42.5, "the session best is untouched")
+	_check(sim.lap.banked_seconds == 43.0, "the banked time is untouched")
+	_check(sim.lap.clock_seconds() == clock_before, "the clock did not move")
+	_check(sim.ticks == ticks_before, "the reset consumed no tick of its own")
+	_check(sim.race.is_racing(), "and the race state is untouched")
+	sim.lap.best_seconds = -1.0
+	sim.lap.banked_seconds = -1.0
+
+	# The pin's specified escape: hold the kart against a prop, then reset.
+	var target: RefCounted = sim.props[0]
+	sim.pos_x = target.centre_x() + 0.2
+	sim.pos_z = target.centre_z() + 0.2
+	await physics_frame
+	_check(sim.last_hit != null, "setup: the kart is held against a prop")
+	# Through the REAL binding: R while racing.
+	Input.action_press("reset_kart")
+	await physics_frame
+	await physics_frame
+	Input.action_release("reset_kart")
+	_check(
+		sim.pos_x == 0.0 and sim.pos_z == 0.0,
+		"R frees it to the origin — the document's escape from the pin is real"
+	)
+	await physics_frame
+	_check(sim.last_hit == null, "standing on clear ground (startClearance keeps the origin open)")
+
+
+## The live tuning surface: re-applying the file lands in the SHARED object
+## and is in force on the next tick, disturbing nothing else. (The
+## next-tick property itself is claimed by the determinism suite's
+## tuning-change test since M4; this proves the running game's surface.)
+func _test_live_tuning_applies_next_tick() -> void:
+	var sim: RefCounted = _root.sim
+	var file_accel: float = sim.tuning.accel
+	sim.tuning.accel = file_accel * 3.0  # a drifted live value
+	var x_before: float = sim.pos_x
+	var ticks_before: int = sim.ticks
+	_check(_root.apply_tuning_file(), "the tuning file re-applies while the game runs")
+	_check(sim.tuning.accel == file_accel, "into the same shared object every consumer holds")
+	_check(
+		sim.pos_x == x_before and sim.ticks == ticks_before,
+		"the application itself disturbs neither the kart nor the clock"
 	)

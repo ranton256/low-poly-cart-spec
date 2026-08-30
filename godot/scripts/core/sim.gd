@@ -258,6 +258,17 @@ func _stage_8_lap_gate() -> void:
 	lap.advance(pos_x, pos_z, last_step5_dz)
 
 
+## Reset Kart (Runtime Tuning and Player Actions): the start pose and
+## NOTHING else — the lap clock, banked time, session best, race state, and
+## world are untouched. Also the document's specified escape from the
+## two-prop pin: the pose it restores is clear ground.
+func reset_kart() -> void:
+	pos_x = 0.0
+	pos_z = 0.0
+	yaw = 0.0
+	velocity = 0.0
+
+
 ## A one-line state summary. Cheap, and far easier to diff between two runs than
 ## comparing object graphs — the determinism tests compare these strings.
 func stats_line() -> String:

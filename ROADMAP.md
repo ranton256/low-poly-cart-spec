@@ -434,30 +434,29 @@ baselines at a ~zero measured floor, capture staleness closed.
 can be dialled in without a restart.
 
 **Done when**
-- **Save Layout** (`P`) produces human-readable, indented `track_layout.json`
+- ✅ **Save Layout** (`P`) produces human-readable, indented `track_layout.json`
   with one record per prop: asset id, target height, full position, yaw, full
   scale — and delivers it to the player by a mechanism chosen per platform and
   recorded as ambiguity **A2**
-- Loading a layout releases every existing prop first, instantiates each record
+- ✅ Loading a layout releases every existing prop first, instantiates each record
   at exactly the recorded transform, and registers each as a solid obstacle
-- Saving and reloading reproduces the identical world, repeatably — the restored
+- ✅ Saving and reloading reproduces the identical world, repeatably — the restored
   scale is the **absolute final world scale**, never a factor re-applied on top of
   normalisation, so repeated cycles do not shrink or grow props (**acceptance 12**)
-- **Registration order survives the round trip**, so a reloaded track collides
+- ✅ **Registration order survives the round trip**, so a reloaded track collides
   identically to the one that was saved — recorded as ambiguity **A3**
-- Changing `accel`, `friction`, `turnRate`, or `maxSpeed` at runtime alters
+- ✅ Changing `accel`, `friction`, `turnRate`, or `maxSpeed` at runtime alters
   handling **on the next tick**, with no restart and no disturbance to position,
   heading, velocity, or the clock (**acceptance 13**)
-- **Reset Kart** (`R`) returns the kart to the origin facing +Z with zero
+- ✅ **Reset Kart** (`R`) returns the kart to the origin facing +Z with zero
   velocity, leaving the timer, the best time, and the world untouched — and frees
   a kart pinned between two props
-- Whatever tuning surface the port provides is **not** part of the player-facing
+- ✅ Whatever tuning surface the port provides is **not** part of the player-facing
   HUD
-- **Visual proof:** the same seeded field before saving and after reloading
+- ✅ **Visual proof:** the same seeded field before saving and after reloading
 
-**Likely changes**
-- `add-layout-persistence` — export, import, round-trip fidelity, registration order
-- `add-runtime-tuning-and-reset` — live tuning path, Reset Kart, Regenerate World binding
+**Changes:** `add-layout-persistence` and `add-runtime-tuning-and-reset`,
+both archived. Critic pass pending before the milestone is called complete.
 
 ---
 
@@ -499,11 +498,6 @@ belongs in the change that does the work. Milestone tags say where each most
 plausibly lands. (Numbered items migrated from the retired `att` tracker;
 their full histories are in git at `streamline-process`'s parent commit.)
 
-- **M7** — Reset Kart action: R returns the kart to X=0 Z=0 facing +Z with
-  zero velocity, timer and world untouched. The start pose and the binding
-  exist; the runtime action does not. Its change must also assert best-time
-  persistence *through the reset* — the persistence scenario's claim today
-  covers only regeneration. *(was att 10; M4 Critic finding 2)*
 - Extend `check_static_typing.py` to member variables; V19 stays ⚠️ until
   then. *(was att 18)*
 - **M8** — A grazing-angle-past-a-cone gallery state, so the anisotropic
