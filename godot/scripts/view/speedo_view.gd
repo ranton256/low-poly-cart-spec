@@ -99,6 +99,12 @@ func _make_label(
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(label)
+	# Full-width rects with ALL FOUR offsets explicit: the preset alone left
+	# the horizontal offsets untouched and each label collapsed to minimum
+	# width at the left anchor — centre-alignment then centred text inside an
+	# 11 px box (the M5 Critic's re-review). The centring is asserted now.
 	label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	label.offset_left = 0.0
+	label.offset_right = 0.0
 	label.offset_top = -bottom_up - 4.0
 	label.offset_bottom = -bottom_up + float(px)

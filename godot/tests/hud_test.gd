@@ -134,6 +134,13 @@ func _test_speedometer_reads_the_core_at_steady_state() -> void:
 				% [child.name, child.get_rect(), speedo.size]
 			)
 		)
+		_check(
+			absf(child.position.x + child.size.x / 2.0 - speedo.size.x / 2.0) < 2.0,
+			(
+				"%s is CENTRED under the pivot's x, not parked at an edge (%s wide at x=%.0f)"
+				% [child.name, child.size.x, child.position.x]
+			)
+		)
 	_check(
 		unit.label_settings.font_color.is_equal_approx(_art.colour("speedoUnitColour")),
 		"the unit label wears the data layer's grey"

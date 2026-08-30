@@ -37,6 +37,13 @@ keeps its proportions and anchors without any per-element arithmetic. All §7
 sizes and colours live in `data/tuning.json`'s `unnamed_in_spec` group and are
 asserted at these literal values by `tests/hud_test.gd`.
 
+One §7 sentence is self-tense under this resolution and is resolved as a
+recorded deviation rather than silently: the speedometer's unit label and
+readout are specified "beneath the pivot", but the pivot sits on the 160×90
+element's own bottom edge, inset 16 px from the screen — 30 px of text cannot
+sit strictly below it. The text sits inside the dial face, centred on the
+pivot's x, which the hud suite asserts.
+
 ### A4 — The countdown clock while the simulation is suspended
 
 **The specification says** the game states are LOADING, STARTING and RACING, that
