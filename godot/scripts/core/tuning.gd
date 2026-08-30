@@ -69,6 +69,14 @@ var lap_gate_z_min: float = 0.0
 var lap_gate_z_max: float = 0.0
 var lap_gate_abs_x_limit: float = 0.0
 
+# --- circuit, from the document's Circuit table ---
+# Only the two the core reads. The pylon height and the six colours in the same
+# table are presentation and belong to the change that draws a gate; adding
+# fields nothing reads would put them in missing_fields() and fail a loader for
+# values no simulation needs.
+var gate_depth: float = 0.0
+var gate_crossing_threshold: float = 0.0
+
 # --- per-asset target heights, from the design document's §3 table ---
 # A dictionary rather than named fields: the asset set is data, and M3 adds
 # prop counts alongside these. Empty until apply_table() fills it.
@@ -127,6 +135,9 @@ func apply_table(table: Dictionary) -> void:
 	lap_gate_z_min = float(unnamed.get("lapGateZMin", 0.0))
 	lap_gate_z_max = float(unnamed.get("lapGateZMax", 0.0))
 	lap_gate_abs_x_limit = float(unnamed.get("lapGateAbsXLimit", 0.0))
+	var circuit: Dictionary = table.get("circuit", {})
+	gate_depth = float(circuit.get("gateDepth", 0.0))
+	gate_crossing_threshold = float(circuit.get("gateCrossingThreshold", 0.0))
 	var counts: Dictionary = table.get("prop_counts", {})
 	prop_counts = {}
 	for key in counts:
@@ -200,6 +211,8 @@ func missing_fields() -> PackedStringArray:
 		"lap_gate_z_min",
 		"lap_gate_z_max",
 		"lap_gate_abs_x_limit",
+		"gate_depth",
+		"gate_crossing_threshold",
 	]:
 		if float(get(field)) == 0.0:
 			missing.append(field)

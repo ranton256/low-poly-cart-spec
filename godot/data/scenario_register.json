@@ -29,46 +29,6 @@
   },
   {
    "feature": "Checkpoint Circuit",
-   "scenario": "Defining a gate",
-   "kind": "deferred",
-   "reason": "The gate-passing test in the circuit core module.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
-  },
-  {
-   "feature": "Checkpoint Circuit",
-   "scenario": "Progress is a cursor, not a checklist",
-   "kind": "deferred",
-   "reason": "Cursor advance plus the ignored out-of-order/repeat/backwards passes.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
-  },
-  {
-   "feature": "Checkpoint Circuit",
-   "scenario": "The band banks only a threaded lap",
-   "kind": "deferred",
-   "reason": "The amended lap gate condition; replaces the retired minLapTime defence.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
-  },
-  {
-   "feature": "Checkpoint Circuit",
-   "scenario": "Reset Kart and circuit progress",
-   "kind": "deferred",
-   "reason": "Reset leaves the cursor; the band still refuses until threaded.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
-  },
-  {
-   "feature": "Checkpoint Circuit",
-   "scenario": "Best times belong to their circuit",
-   "kind": "deferred",
-   "reason": "Per-circuit session bests keyed by circuit name.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
-  },
-  {
-   "feature": "Checkpoint Circuit",
    "scenario": "Medal targets",
    "kind": "deferred",
    "reason": "Target comparison and the medal flash in the hold window.",
@@ -95,9 +55,9 @@
    "feature": "Track Layout Persistence",
    "scenario": "A layout is a circuit",
    "kind": "deferred",
-   "reason": "Layout v2: circuit object round-trip, refusal of gateless files with a named error.",
+   "reason": "Layout v2: the circuit object's round-trip is now tested (add-checkpoint-circuit-core \u2014 tests/layout_test.gd stages a v2 file, proves cycle-zero byte identity with the circuit written back, and proves a malformed circuit refuses the whole file). The claim stays DEFERRED because the scenario's other half \u2014 refusing a file WITHOUT a circuit, version 1 included, with a named error \u2014 is deliberately not implemented yet: the game must stay playable until the boot ships a circuit.",
    "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
+   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). The refusal half is owed by add-circuit-world-and-presentation, which ships the boot circuit that makes it safe."
   }
  ]
 }

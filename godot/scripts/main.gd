@@ -344,24 +344,30 @@ func build_field(placements: Array) -> void:
 
 
 ## Save Layout (P): the current field to indented JSON, in registration
-## order, delivered per A2. Callable directly by suites.
+## order, delivered per A2. The loaded circuit rides along, so a version-2 file
+## saves back as a version-2 file. Callable directly by suites.
 func save_layout() -> bool:
 	if props == null:
 		return false
-	return LayoutIO.export_layout(props, props.authored_boxes(), LayoutIO.layout_path())
+	return LayoutIO.export_layout(
+		props, props.authored_boxes(), LayoutIO.layout_path(), sim.circuit
+	)
 
 
 ## Load Layout (L): validate first, then rebuild through the same path
 ## regeneration uses — release-first, registered in file order (A3). A
-## refused file changes nothing.
+## refused file changes nothing. A version-2 file also ARMS its circuit, which
+## is the only way a circuit exists until the boot swap ships one.
 func load_layout() -> bool:
 	if props == null:
 		return false
-	var placements: Array = LayoutIO.import_layout(LayoutIO.layout_path(), props.authored_boxes())
-	if placements.is_empty():
+	var loaded: RefCounted = LayoutIO.import_layout(LayoutIO.layout_path(), props.authored_boxes())
+	if not loaded.ok:
 		return false
-	build_field(placements)
-	print("layout: restored %d props from %s" % [placements.size(), LayoutIO.layout_path()])
+	build_field(loaded.placements)
+	if loaded.circuit != null:
+		sim.arm_circuit(loaded.circuit)
+	print("layout: restored %d props from %s" % [loaded.placements.size(), LayoutIO.layout_path()])
 	return true
 
 

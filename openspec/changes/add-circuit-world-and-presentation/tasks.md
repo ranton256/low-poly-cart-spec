@@ -15,7 +15,8 @@
        consumers, asserted like the standing HUD suites.
 - [ ] 6. Medal display in the hold window, from the core verdict.
 - [ ] 7. G2 re-pointed: `_item_01`, `_item_02` (authoring path),
-       `_item_10`, new `_item_15`; CONSTRAINTS §5 G2 row back to ✅.
+       `_item_10`, new `_item_15`; the CONSTRAINTS §5 Conformance to the
+       specification G2 row back to ✅.
 - [ ] 8. Gallery: re-bless against the authored world + the new `gate_next`
        state; double-capture noise floor re-measured and recorded.
 - [ ] 9. Coverage: the remaining five M9 deferrals claimed; register's M9

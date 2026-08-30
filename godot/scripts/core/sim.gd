@@ -21,6 +21,7 @@ extends RefCounted
 const Collision := preload("res://scripts/core/collision.gd")
 const RaceState := preload("res://scripts/core/race_state.gd")
 const LapGate := preload("res://scripts/core/lap_gate.gd")
+const Circuit := preload("res://scripts/core/circuit.gd")
 
 const TICKS_PER_SECOND := 60
 
@@ -37,6 +38,12 @@ var race: RefCounted = RaceState.new()
 
 ## The lap gate, clock, and session best — stage 8's owner (godot/lap-timing).
 var lap: RefCounted = LapGate.new()
+
+## The checkpoint circuit — gates and the progress cursor, advanced at stage 8
+## beside the lap gate (godot/checkpoint-circuit). Empty until a v2 layout arms
+## one: the game still boots procedural until the presentation change ships the
+## boot circuit, and an empty circuit changes nothing about the tick.
+var circuit: RefCounted = Circuit.new()
 var velocity: float = 0.0
 var yaw: float = 0.0
 var pos_x: float = 0.0
@@ -51,6 +58,12 @@ var bounced_this_tick: bool = false
 ## collision may have zeroed the velocity, and net position change is moved
 ## by the clamp and the push-out too.
 var last_step5_dz: float = 0.0
+
+## The +X half of the same observable. The band only ever needed +Z; a gate at
+## an arbitrary yaw needs the whole displacement to project onto gate-forward,
+## and it must be THIS vector rather than the net position change for the same
+## reason the band's is — the clamp and the push-out move the kart too.
+var last_step5_dx: float = 0.0
 
 ## The props this tick collides with, in REGISTRATION ORDER. Supplied by the
 ## caller like the tuning is, so the simulation stays constructible with no scene
@@ -191,8 +204,9 @@ func _stage_4_friction() -> void:
 ## Displaced along the kart's own heading. No lateral component: this game has
 ## no drift and no sideways velocity.
 func _stage_5_integrate() -> void:
+	last_step5_dx = forward_x() * velocity
 	last_step5_dz = forward_z() * velocity
-	pos_x += forward_x() * velocity
+	pos_x += last_step5_dx
 	pos_z += last_step5_dz
 
 
@@ -248,20 +262,39 @@ func _stage_7_collision() -> void:
 	last_hit = hit
 
 
-## Stage 8 — the lap gate. Runs last and observes only: a kart that clipped a
-## prop inside the band has already been stopped and displaced before the gate
-## is tested, and the gate reads stage 5's own displacement, which none of the
-## later stages can have influenced.
+## Stage 8 — the circuit, then the lap gate. Both run last and observe only: a
+## kart that clipped a prop inside the band has already been stopped and
+## displaced before either is tested, and both read stage 5's own displacement,
+## which none of the later stages can have influenced.
+##
+## THE CIRCUIT GOES FIRST, so a final gate sited on the start/finish line itself
+## threads the course on the tick it is passed rather than the tick after.
 func _stage_8_lap_gate() -> void:
 	if lap.tuning == null:
 		lap.tuning = tuning
+	if circuit.tuning == null:
+		circuit.tuning = tuning
+	if lap.circuit == null:
+		lap.circuit = circuit
+	circuit.advance(pos_x, pos_z, last_step5_dx, last_step5_dz)
 	lap.advance(pos_x, pos_z, last_step5_dz)
 
 
+## Arm a circuit — what loading a version-2 layout does. The lap gate is
+## re-pointed at it in the same breath, so the threaded condition, the best key,
+## and the medal targets can never belong to a circuit that is not being played.
+func arm_circuit(loaded: RefCounted) -> void:
+	circuit = loaded
+	circuit.tuning = tuning
+	lap.circuit = circuit
+	lap.select_circuit(circuit.key())
+
+
 ## Reset Kart (Runtime Tuning and Player Actions): the start pose and
-## NOTHING else — the lap clock, banked time, session best, race state, and
-## world are untouched. Also the document's specified escape from the
-## two-prop pin: the pose it restores is clear ground.
+## NOTHING else — the lap clock, banked time, session best, race state, the
+## CIRCUIT PROGRESS CURSOR, and the world are untouched. Also the document's
+## specified escape from the two-prop pin: the pose it restores is clear ground.
+## A full fresh attempt is Restart Circuit's job, not this one.
 func reset_kart() -> void:
 	pos_x = 0.0
 	pos_z = 0.0
@@ -273,7 +306,10 @@ func reset_kart() -> void:
 ## comparing object graphs — the determinism tests compare these strings.
 func stats_line() -> String:
 	return (
-		"t=%d state=%d ts=%d lc=%d hold=%d bank=%.2f best=%.2f v=%.9f yaw=%.9f x=%.9f z=%.9f"
+		(
+			"t=%d state=%d ts=%d lc=%d hold=%d bank=%.2f best=%.2f"
+			+ " circuit=%s gate=%d/%d medal=%s v=%.9f yaw=%.9f x=%.9f z=%.9f"
+		)
 		% [
 			ticks,
 			race.state,
@@ -282,6 +318,10 @@ func stats_line() -> String:
 			lap.hold_ticks,
 			lap.banked_seconds,
 			lap.best_seconds,
+			circuit.key(),
+			circuit.cursor,
+			circuit.gate_count(),
+			lap.banked_medal if lap.banked_medal != "" else "-",
 			velocity,
 			yaw,
 			pos_x,

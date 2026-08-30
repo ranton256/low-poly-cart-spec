@@ -14,11 +14,30 @@ const RVTest := preload("res://tests/harness.gd")
 const MainScene := preload("res://scenes/main.tscn")
 const LayoutIO := preload("res://scripts/world/layout_io.gd")
 const Collision := preload("res://scripts/core/collision.gd")
+const Circuit := preload("res://scripts/core/circuit.gd")
 
 const TEST_PATH := "user://layout_test.json"
 const SECOND_PATH := "user://layout_test_2.json"
 const BAD_PATH := "user://layout_test_bad.json"
 const THIRD_PATH := "user://layout_test_3.json"
+const V2_SEED_PATH := "user://layout_test_v2_seed.json"
+const V2_A_PATH := "user://layout_test_v2_a.json"
+const V2_B_PATH := "user://layout_test_v2_b.json"
+const V2_C_PATH := "user://layout_test_v2_c.json"
+const BAD_CIRCUIT_PATH := "user://layout_test_bad_circuit.json"
+
+## The circuit the v2 cases carry. Deliberately not five-decimal values: the
+## export's own quantization is what has to make the cycles agree.
+const SEED_CIRCUIT: Dictionary = {
+	"name": "round_trip",
+	"gates":
+	[
+		{"position": [12.3456789, -4.2], "yaw": 0.7853981633974483, "width": 9.87654321},
+		{"position": [-30.5, 41.25], "yaw": -1.5707963267948966, "width": 12.0},
+		{"position": [0.0, 5.0], "yaw": 0.0, "width": 10.0},
+	],
+	"targets": {"bronze": 60.0, "silver": 45.5, "gold": 38.25},
+}
 
 var _root: Node3D = null
 
@@ -41,6 +60,8 @@ func _init() -> void:
 	await _test_reset_kart_is_surgical()
 	_test_live_tuning_applies_next_tick()
 	await _test_the_watch_detects_a_change_on_the_sim_clock()
+	_test_a_malformed_circuit_refuses_the_whole_file()
+	_test_a_circuit_round_trips_byte_identically()
 
 	OS.set_environment("LPC_LAYOUT_FILE", "")
 	get_root().remove_child(_root)
@@ -307,3 +328,101 @@ func _test_live_tuning_applies_next_tick() -> void:
 		sim.pos_x == x_before and sim.ticks == ticks_before,
 		"the application itself disturbs neither the kart nor the clock"
 	)
+
+
+## Write the current saved layout back out as version 2 carrying `circuit`,
+## so the props half is known-good and only the circuit is under test.
+func _write_v2(path: String, circuit: Variant) -> void:
+	var parsed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(TEST_PATH))
+	var document: Dictionary = parsed.duplicate(true)
+	document["version"] = 2
+	document["circuit"] = circuit
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(document, "  ") + "\n")
+	file.close()
+
+
+## Save the current field to `path` through the real Save Layout action.
+func _save_to(path: String) -> bool:
+	OS.set_environment("LPC_LAYOUT_FILE", path)
+	return _root.save_layout()
+
+
+## Load `path` through the real Load Layout action.
+func _load_from(path: String) -> bool:
+	OS.set_environment("LPC_LAYOUT_FILE", path)
+	return _root.load_layout()
+
+
+func _test_a_malformed_circuit_refuses_the_whole_file() -> void:
+	var field: Node3D = _root.props
+	var sim: RefCounted = _root.sim
+	var count_before: int = field.records.size()
+	var first_x: float = (field.records[0] as RefCounted).x
+	var clock_before: int = sim.lap.clock_ticks
+
+	# The delta spec's two named cases: a gate missing its width, and a
+	# non-numeric target.
+	var no_width: Dictionary = SEED_CIRCUIT.duplicate(true)
+	(no_width["gates"] as Array)[1].erase("width")
+	_write_v2(BAD_CIRCUIT_PATH, no_width)
+	_check(not _load_from(BAD_CIRCUIT_PATH), "a gate missing its width refuses the whole file")
+
+	var bad_target: Dictionary = SEED_CIRCUIT.duplicate(true)
+	bad_target["targets"] = {"gold": "fast"}
+	_write_v2(BAD_CIRCUIT_PATH, bad_target)
+	_check(not _load_from(BAD_CIRCUIT_PATH), "a non-numeric target refuses it too")
+
+	_write_v2(BAD_CIRCUIT_PATH, {"name": "empty", "gates": []})
+	_check(not _load_from(BAD_CIRCUIT_PATH), "and so does a circuit that declares no gates")
+
+	OS.set_environment("LPC_LAYOUT_FILE", TEST_PATH)
+	_check(
+		(
+			field.records.size() == count_before
+			and absf((field.records[0] as RefCounted).x - first_x) < 0.0001
+		),
+		"no prop was released — the current world is untouched"
+	)
+	_check(not sim.circuit.has_gates(), "and no gate was armed")
+	_check(sim.lap.clock_ticks == clock_before, "and the clock did not move")
+
+
+## The circuit half of "A layout is a circuit". NO `@covers` claim: that
+## scenario also requires refusing a gateless file with a named error, which
+## this change deliberately does not implement, so the register keeps its
+## deferral open and says the round-trip half is now tested.
+func _test_a_circuit_round_trips_byte_identically() -> void:
+	var sim: RefCounted = _root.sim
+	_write_v2(V2_SEED_PATH, SEED_CIRCUIT)
+	_check(_load_from(V2_SEED_PATH), "a version-2 layout loads")
+	_check(sim.circuit.gate_count() == 3, "and arms its three gates in file order")
+	_check(sim.circuit.circuit_name == "round_trip", "under the file's own name")
+	_check(float(sim.circuit.targets["silver"]) == 45.5, "carrying its medal targets")
+	_check(sim.lap.best_key == "round_trip", "and the best readout is keyed to it")
+
+	# Cycle zero onwards, exactly as the v1 case: save, load, save, load, save.
+	_check(_save_to(V2_A_PATH), "the first re-export succeeds")
+	_check(_load_from(V2_A_PATH), "re-importing it succeeds")
+	_check(_save_to(V2_B_PATH), "the second re-export succeeds")
+	_check(_load_from(V2_B_PATH), "and re-importing that one too")
+	_check(_save_to(V2_C_PATH), "the third re-export succeeds")
+	OS.set_environment("LPC_LAYOUT_FILE", TEST_PATH)
+
+	var a := FileAccess.get_file_as_string(V2_A_PATH)
+	var b := FileAccess.get_file_as_string(V2_B_PATH)
+	var c := FileAccess.get_file_as_string(V2_C_PATH)
+	_check(a != "" and a == b, "a v2 cycle is BYTE-identical from CYCLE ZERO, circuit included")
+	_check(b == c, "and every later cycle agrees")
+	var written: Dictionary = JSON.parse_string(a)
+	_check(int(written["version"]) == 2, "the re-export is a version-2 file")
+	_check(written.has("circuit"), "carrying the circuit object beside props")
+	var gates: Array = (written["circuit"] as Dictionary)["gates"]
+	_check(gates.size() == 3, "with every gate written back, in order")
+	_check(
+		(written["circuit"] as Dictionary)["name"] == "round_trip",
+		"and the circuit's name unchanged"
+	)
+
+	# Leave the world as the suite found it: no circuit armed, the v1 file live.
+	sim.arm_circuit(Circuit.new())
