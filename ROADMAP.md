@@ -554,7 +554,9 @@ world, `G` restarts it, and a lap time measures driving.
 - `amend-gdd-for-checkpoint-circuit` — the GDD amendment (owner-approved
   2026-08-30, applied; 12 edits incl. two consequential ones found at
   application: the collision prop-on-kart scenario and the Game Overview)
-- implementation change(s), split proposed after this archives — owing:
+- `add-checkpoint-circuit-core` then `add-circuit-world-and-presentation`
+  (proposed; split on visibility — mechanics land dark, then the world
+  flips) — owing between them:
   - the circuit core module (gate test, cursor, per-circuit bests) and the
     amended lap-gate condition
   - layout v2 (circuit object, gateless-file refusal), boot-from-circuit,
