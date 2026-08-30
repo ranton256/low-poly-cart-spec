@@ -19,9 +19,9 @@ The document is organised as:
 
 ## Game Overview
 
-LowPolyCartJS is a single-player, arcade-style 3D go-kart time-trial set in an open, sunlit green field scattered with low-poly props. The player drives a stylised kart with momentum-based "tank drive" handling — hold forward to build speed, steer while rolling, coast to a stop — through a procedurally scattered obstacle field of trees, rocks, cones, crates, tyre stacks, and cottages. There is no opponent, no lap track, and no fail state: the entire game is the pleasure of driving plus a stopwatch. A 3-2-1-GO countdown starts the clock; crossing the start/finish band northbound under power, at least five seconds after the clock started, banks a lap time, holds it on screen for half a second, then restarts the clock for the next attempt. A best time persists for the session.
+LowPolyCartJS is a single-player, arcade-style 3D go-kart time-trial set in an open, sunlit green field scattered with low-poly props. The player drives a stylised kart with momentum-based "tank drive" handling — hold forward to build speed, steer while rolling, coast to a stop — through an authored obstacle field of trees, rocks, cones, crates, tyre stacks, and cottages, threading an ordered course of checkpoint gates. There is no opponent and no fail state: the entire game is the pleasure of driving plus a stopwatch. A 3-2-1-GO countdown starts the clock; crossing the start/finish band northbound under power, with every gate passed in order, banks a lap time, holds it on screen for half a second, then restarts the clock for the next attempt. A best time persists for the session.
 
-The design goal is **feel over content**: a responsive chase camera that widens its field of view with speed, a needle speedometer, a live minimap, and chunky physical collisions that shove the kart aside and kill its momentum. Handling is tunable at runtime so the feel can be dialled in without restarting. The scattered world can be saved to a layout file and reloaded, turning a lucky procedural arrangement into a repeatable track.
+The design goal is **feel over content**: a responsive chase camera that widens its field of view with speed, a needle speedometer, a live minimap, and chunky physical collisions that shove the kart aside and kill its momentum. Handling is tunable at runtime so the feel can be dialled in without restarting. Worlds are authored as layout files — a curated scatter plus its gates — and the game ships with one; saving and loading layouts turns any arrangement into a repeatable track.
 
 **Session shape:** load → countdown → drive forever. The player is never ejected to a menu, never loses, and never runs out of anything.
 
@@ -150,8 +150,9 @@ All HUD elements are screen-space overlays that do not receive world lighting an
 
 | Element | Anchor | Specification |
 |---|---|---|
-| **Title & controls** | Top-left | Game title in bright green `#00FF00` at ~20 px; control hints beneath in white at ~14 px, 80% opacity. Soft black drop shadow on all text. Light sans-serif face. |
+| **Title & controls** | Top-left | Game title in bright green `#00FF00` at ~20 px; control hints beneath in white at ~14 px, 80% opacity. The hints name the objective: `W/S drive · A/D steer · G restart · follow the gates`. Soft black drop shadow on all text. Light sans-serif face. |
 | **Timer block** | Top-right | Monospace. Label `TIME` (12 px, 70% opacity) above the running time in green `#00FF00` at 24 px, formatted to **two decimal places**. Below it, label `BEST` above the best time in yellow `#FFFF00`, same size, showing `--.--` until a lap is banked. |
+| **Gate counter** | Top-right | Within the timer block, `GATE n/N` in the timer label style. When the next gate is off-screen, a chevron at the screen edge points along the shortest turn toward it. |
 | **Speedometer** | Bottom-right | A 160 × 90 px half-dial: a 160 px circle with an 8 px `#444444` rim, bottom half clipped away. A 4 px × 70 px needle pivoting at the dial's bottom centre, filled with a vertical red→yellow gradient (`#FF0000` at base → `#FFFF00` at tip), with ~0.1 s eased motion. Beneath the pivot: the unit label `KM/H` in grey `#888888` at 10 px, and the integer speed readout in white at 18 px. |
 | **Countdown overlay** | Screen centre | Heavy black sans face at ~120 px with a strong 4 px black drop shadow. White for `READY`, `3`, `2`, `1`; switches to green `#00FF00` for `GO!`. Hidden outside the start sequence. |
 | **Loading indicator** | Screen centre | Monospace white 18 px, `Loading assets...`. Replaced in place by an error message on failure. |
@@ -185,6 +186,12 @@ The remainder of this document specifies behaviour as Gherkin scenarios. Numeric
 As a player,
 I want the game to come up on its own with everything correctly sized and standing on the ground,
 So that I can start driving without configuring anything.
+
+The world built at boot is the **shipped circuit layout** (see Track Layout
+Persistence, version 2), not a seeded scatter. The bootstrap verdict is
+unchanged in shape: a circuit that fails to load or validate is a terminal
+**LOADING** state with a visible message, never a countdown into a broken
+world. *(Amended by `amend-gdd-for-checkpoint-circuit`.)*
 
 ### Scenario: Presenting a loading state while assets stream in
 
@@ -236,6 +243,13 @@ So that I can start driving without configuring anything.
 As a player,
 I want a differently arranged field of obstacles each time,
 So that the open field stays interesting and the start area is always clear.
+
+This feature's rules are **normative for authoring**: they produced the
+shipped circuit's prop field, layout authoring starts from a scatter, and a
+port's tools and tests continue to pin them. Since
+`amend-gdd-for-checkpoint-circuit`, the game itself always plays an authored
+circuit — the player-facing action this feature used to carry is re-bound
+below.
 
 ### Scenario: Scattering the standard prop population
 
@@ -294,13 +308,14 @@ Because `cottageClearance` is more than twice `startClearance`, cottages only ev
 * **Then** they enter an empty expanse of grass with no props, no grid lines, and no boundary wall visible
 * **And** the world continues to render correctly out to the drivable limit
 
-### Scenario: Regenerating the world on demand
+### Scenario: Restarting the circuit
 
-* **Given** the player invokes the **Regenerate World** action
-* **When** regeneration runs
-* **Then** every existing prop is removed from the world and its resources released
-* **And** a fresh population is scattered using the same rules and counts
-* **And** the kart's position, heading, velocity, and the running timer are all left untouched
+* **Given** the player invokes the **Restart Circuit** action (the binding formerly known as Regenerate World)
+* **When** the restart runs
+* **Then** every prop is removed and its resources released, and the world is rebuilt from the loaded circuit layout — the same authored arrangement, not a fresh scatter
+* **And** the kart returns to the start pose, the gate cursor returns to gate 1, and the lap clock restarts from **0.00**
+* **And** the session's per-circuit best time is kept
+* **And** the race state does not leave **RACING** — no fresh countdown; the restart is instant
 
 ---
 
@@ -513,8 +528,8 @@ So that the obstacle field actually matters.
 
 ### Scenario: Colliding with the kart's own start position after regeneration
 
-* **Given** the player regenerates the world while the kart sits away from the origin
-* **When** props are scattered using only the origin-based clearance rule
+* **Given** a circuit is loaded while the kart sits away from the start
+* **When** the loaded arrangement was authored with only the origin-based clearance rule
 * **Then** a prop may be placed overlapping the kart's current position
 * **And** the collision response pushes the kart clear on the following tick rather than trapping it
 
@@ -646,7 +661,7 @@ So that I can chase a personal best.
 ### Scenario: Completing a valid lap
 
 * **Given** the state is **RACING**
-* **And** at least `minLapTime` has elapsed on the current clock
+* **And** every gate has been passed in order — the progress cursor is past the final gate (see *Checkpoint Circuit*)
 * **And** no lap has already been banked for this clock
 * **When** the kart's position is within the finish band — **Z ∈ (4, 6)** and **|X| < 5** —
 * **And** the **+Z component of the tick's step-5 integration** — that is, `v × (forward axis · +Z)` — exceeds `lapCrossingThreshold`, i.e. the kart is under its own power crossing the band in the direction the band is meant to be crossed
@@ -688,7 +703,7 @@ Two things this test is deliberately **not**: it is not the sign of the scalar v
 
   | Rule | Condition |
   |---|---|
-  | Too soon | the clock has been running for less than `minLapTime` — the player cannot farm times by shuttling across the line at the start |
+  | Course not threaded | the progress cursor has not passed the final gate — the player cannot farm times by shuttling across the line, because the line alone is never enough |
   | Wrong way | the kart's **+Z** displacement is `lapCrossingThreshold` or less, including reversing and including driving forward while heading south |
   | Outside the band | the kart passes the plane **Z = 5** at a lateral offset of **\|X\| ≥ 5** — it must go through the visible white band, not around it |
   | Already banked | a lap has already been recorded for this clock and detection has not yet been re-armed |
@@ -696,9 +711,78 @@ Two things this test is deliberately **not**: it is not the sign of the scalar v
 ### Scenario: Persisting the best time for the session
 
 * **Given** a best time has been set
-* **When** the world is regenerated or the kart is reset
+* **When** the circuit is restarted or the kart is reset
 * **Then** the best time is retained for the remainder of the session
 * **And** it is not written to durable storage; a fresh session starts with no best time
+
+---
+
+## Feature: Checkpoint Circuit
+
+As a player,
+I want an ordered course of visible gates that my lap must thread,
+So that a lap time measures driving, not proximity to the finish line.
+
+The game always plays a circuit. The shipped circuit is the default world,
+other circuits load through Track Layout Persistence, and there is no
+gateless mode: a layout the game will play always carries gates.
+*(Added by `amend-gdd-for-checkpoint-circuit`; this feature has no reference
+build — it is specified fresh, and Known Deviations does not apply to it.)*
+
+### Scenario: Defining a gate
+
+* **Given** a loaded circuit
+* **Then** each gate is a directed segment on the ground: a centre **(X, Z)**, a yaw, and a width, in world units
+* **And** a gate is **passed** on a tick when, in the gate's own frame, the kart's position lies within half the width of the centre laterally and inside a slab `gateDepth` deep ahead of the segment, while the component of the tick's **step-5 integration** along gate-forward exceeds `gateCrossingThreshold`
+* **And** the test runs at the same stage as lap detection, observes only, and therefore shares the band's immunities: a push-out or boundary shove cannot pass a gate, and a kart heading backwards through one cannot either
+
+### Scenario: Progress is a cursor, not a checklist
+
+* **Given** gates numbered **1..N** in file order and a progress cursor starting at **1**
+* **When** the kart passes the gate the cursor names
+* **Then** the cursor advances by one
+* **And** passing any *other* gate — already passed, not yet due, or the right gate backwards — changes **nothing**: no reset, no voided lap, no message; the only cure for a missed gate is to go and pass it
+* **And** banking a lap returns the cursor to **1**
+
+### Scenario: The band banks only a threaded lap
+
+* **When** the kart crosses the start/finish band satisfying every other condition of *Completing a valid lap*
+* **Then** the lap banks **only if the cursor has passed the final gate**; otherwise the crossing changes nothing and the clock keeps running
+* **And** there is no minimum lap time: the ordered gates are the farming defence, and `minLapTime` is retired
+
+### Scenario: Reset Kart and circuit progress
+
+* **Given** a lap in progress with some gates passed
+* **When** the player uses Reset Kart
+* **Then** the cursor is untouched — Reset Kart restores the start pose and **nothing else**, exactly as Runtime Tuning and Player Actions states; a full fresh attempt is Restart Circuit's job
+* **And** no shortcut results: the band still refuses to bank until the remaining gates are passed
+
+### Scenario: Best times belong to their circuit
+
+* **Given** laps banked on more than one circuit during a session
+* **Then** each session best is kept per circuit `name`, and the `BEST` readout always shows the best of the circuit being played
+* **And** medal targets are compared only against laps of their own circuit
+
+### Scenario: Medal targets
+
+* **Given** a circuit whose file declares `bronze`, `silver`, and `gold` target times
+* **When** a lap banks at or under a target
+* **Then** the held `TIME` readout is joined, for the hold window, by the name of the best target met, in that medal's colour (`medalGoldColour`, `medalSilverColour`, `medalBronzeColour`)
+* **And** a circuit may omit targets, in which case nothing extra is shown
+
+### Scenario: What a gate looks like
+
+* **Given** a loaded circuit
+* **Then** each gate is drawn as generated geometry in the band's visual family — two unlit pylons of height `gatePylonHeight` at the segment's ends, a translucent ground stripe between them, and an overhead chevron — never as a scatterable prop, so course furniture and obstacles cannot be confused
+* **And** gates are **not** collision obstacles: the kart drives through pylons unimpeded, as it does through the band
+* **And** the gate the cursor names is shown in `gateNextColour` with a pulse animated on the **simulation clock**; gates already passed this lap show `gatePassedColour`; gates not yet due show `gateIdleColour`
+* **And** each gate shows its number above the chevron, facing the camera
+
+### Scenario: Finding the next gate
+
+* **Then** the HUD timer block gains a `GATE n/N` line
+* **And** when the next gate is off-screen, a chevron at the screen edge points along the shortest turn toward it — fog ends at `fogEnd` and the playfield is wider than that; the player must never need to memorise the course to find it
+* **And** the minimap shows every gate as a marker on the marker layer, the next gate emphasised (larger and in `gateNextColour`), with the same invisibility-in-the-main-view guarantee the kart markers carry
 
 ---
 
@@ -722,7 +806,7 @@ So that the kart always does what I am asking.
   | Reset Kart | `R` | — |
   | Save Layout | `P` | — |
 
-* **And** a **Regenerate World** action exists but has no required binding — how a port exposes it is unspecified
+* **And** a **Restart Circuit** action (formerly Regenerate World; renamed by `amend-gdd-for-checkpoint-circuit`) exists but has no required binding — how a port exposes it is unspecified
 
 ### Scenario: Tracking held inputs as continuous state
 
@@ -810,6 +894,14 @@ So that a lucky procedural layout becomes a repeatable track.
 * **Then** every prop occupies the same position, heading, and size as before, within floating-point tolerance
 * **And** in particular the restored scale is the **absolute final world scale**, not a factor re-applied on top of the asset's normalisation
 * **And** repeated export/import cycles produce identical layouts rather than progressively shrinking or growing props
+
+### Scenario: A layout is a circuit
+
+* **Given** a layout file with `"version": 2`
+* **Then** it carries, beside `props`, a `circuit` object: a `name`, an ordered `gates` list — each `{ "position": [X, Z], "yaw": r, "width": w }` — and an optional `targets` object with `bronze`, `silver`, and `gold` times in seconds
+* **And** the file is the guarantee that no prop blocks a gate mouth, which is why gates and props travel together
+* **And** a file without a `circuit` object — version 1 included — is **refused on load with a named error**: such files remain valid authoring artifacts for building circuits from, but the game does not play them
+* **And** saving writes the loaded circuit object back out unchanged, so the round-trip guarantees extend to it
 
 ---
 
@@ -925,11 +1017,30 @@ The speedometer is **cosmetic, not calibrated**. Top speed is 11.5 wu/s ≈ 8.6 
 | Countdown sequence | READY → 3 → 2 → 1 → **GO! = control released** |
 | Total pre-race delay | **4.0 s** from world-ready to control |
 | `goLinger` | 0.5 s — the GO! overlay stays up this long *after* control is released |
-| `minLapTime` | 5.00 s |
 | `lapRestartDelay` | 0.5 s — `TIME` freezes on the banked lap for this long, then resets |
 | `bestFlashDuration` | 1.0 s green, then yellow |
 | `lapCrossingThreshold` | 0.01 wu/tick of **+Z** displacement |
 | Lap gate | Z ∈ (4, 6), \|X\| < 5, +Z displacement > `lapCrossingThreshold` |
+
+`minLapTime` (5.00 s) was **retired** by `amend-gdd-for-checkpoint-circuit`:
+the ordered checkpoint gates replaced it as the farming defence.
+
+## Circuit
+
+| `name` | Value | Notes |
+|---|---|---|
+| `gateDepth` | 2 wu | Slab thickness, matching the band's depth |
+| `gateCrossingThreshold` | 0.01 wu/tick | Same defence as `lapCrossingThreshold`, in gate-forward terms |
+| `gatePylonHeight` | 6 wu | Above every prop's normalised height |
+| `gateNextColour` | `#FFFF00` | The BEST/needle-tip family |
+| `gatePassedColour` | `#00FF00` | The timeValue family |
+| `gateIdleColour` | `#888888` | The speedoUnit family |
+| `medalGoldColour` | `#FFD700` | |
+| `medalSilverColour` | `#C0C0C0` | |
+| `medalBronzeColour` | `#CD7F32` | |
+
+Gate widths, positions, and targets are **content**, not tuning — they live
+in each circuit's layout file.
 
 ---
 
@@ -939,7 +1050,7 @@ A port is considered faithful when all of the following are demonstrable:
 
 Where a criterion gives a tolerance, that tolerance is normative — "approximately" is not a defence.
 
-1. The game boots to a countdown with no user interaction and no configuration, and hands over control **4.0 s ± 0.1 s** later, on the GO! frame.
+1. The game boots into the shipped circuit, to a countdown with no user interaction and no configuration, and hands over control **4.0 s ± 0.1 s** later, on the GO! frame.
 2. Every prop stands exactly on the ground — none floating, none sunk — at every random scale.
 3. The kart drives in the direction it visually faces, at all headings, forward and reverse.
 4. Holding accelerate from rest passes 90% of steady-state speed — dial **103** — within **0.94 s ± 0.05 s**, and the dial first reads **115** at **2.60 s ± 0.05 s** and stays there. Coasting from steady state falls below `steerThreshold` in **1.21 s ± 0.05 s**.
@@ -948,11 +1059,12 @@ Where a criterion gives a tolerance, that tolerance is normative — "approximat
 7. Driving to the boundary produces a soft rebound with grass still visible beyond.
 8. The camera lags through turns and settles behind the kart, and the field of view visibly widens with speed.
 9. The minimap tracks the kart, stays north-up, shows the marker and heading arrow, and those markers are invisible in the main view.
-10. Crossing the white band northbound after 5 s banks a lap, freezes `TIME` on it for 0.5 s, flashes a new best in green when appropriate, then restarts the clock. Crossing it southbound under power banks nothing.
+10. Crossing the white band northbound banks a lap **only when every gate has been passed in order** — with no minimum lap time — freezes `TIME` on it for 0.5 s, flashes a new best in green when appropriate, then restarts the clock. Crossing it southbound under power, or without the course threaded, banks nothing.
 11. Releasing focus mid-throttle stops the kart from driving away.
 12. Saving and reloading a layout reproduces the identical world, repeatably.
 13. Changing `accel`, `friction`, `turnRate`, or `maxSpeed` at runtime alters handling on the next tick, with no restart.
 14. A scripted 60-second input sequence replayed at 30, 60, and 144 frames per second ends with the kart **within 0.5 wu** of the same position and **within 0.05 s** of the same lap time.
+15. The shipped circuit loads at boot with numbered gates; the next gate is indicated on the gate itself, the HUD counter, and the minimap; a lap that skips any gate refuses to bank; Restart Circuit rebuilds the authored world, returns the kart to the start, and keeps the session best.
 
 ---
 
@@ -1002,7 +1114,7 @@ These are additional, optional features to consider for specification and implem
 * **Requirement:** Scale the turn rate with speed rather than holding it constant, so low-speed manoeuvring is tight and high-speed cornering is wide.
 * **Requirement:** Tie tyre-mark decals and dust emission to the magnitude of lateral slip.
 
-### 5. Checkpoints and a real circuit
+### 5. Checkpoints and a real circuit *(promoted to the specification by `amend-gdd-for-checkpoint-circuit`; see Feature: Checkpoint Circuit)*
 
 * **Requirement:** Define an ordered sequence of checkpoint gates that must each be passed, in order, before a finish-band crossing counts as a lap — replacing the current 5-second minimum with genuine lap validation.
 * **Requirement:** Show the next checkpoint's direction on the HUD and highlight it on the minimap.
