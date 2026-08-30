@@ -374,7 +374,7 @@ pins, 57 scenarios verified, only M7's four deferrals remaining.
 
 ---
 
-## M6 — The look
+## M6 — The look ✅ COMPLETE
 
 **Goal.** The game looks the way the spec says, and a gate notices when it stops.
 
@@ -407,8 +407,24 @@ optional — the GDD calls shadows "a load-bearing part of the look".
 > is non-deterministic — fix the harness rather than raising the threshold.
 
 **Changes:** `add-render-pipeline-and-web-budget` and
-`add-visual-conformance-gate`, both archived. Critic pass pending before the
-milestone is called complete.
+`add-visual-conformance-gate`, both archived.
+
+**Completed 2026-08-29.** Critic pass (fresh reviewer, CONSTRAINTS §12 Review):
+**[REJECTED], then [APPROVED]** — the rejection caught two claims whose pinned
+property was weaker than the specification's: the anisotropic *level* pinned
+while no material requested the anisotropic sampler (probed: 55/55 materials
+now request it), and a DPI cap on the 2D canvas knob while the 3D surface
+rendered at native density (moved to the viewport's 3D scale; the test asserts
+effective density ≤ 2). Its review also registered A13 (props at 512 below the
+blessed 1024 — a port decision the register's charter owns), extended the
+resize test to every HUD element at a changed aspect, and drove the §8 budget
+rows to honest statuses — the step-cost budget is now a standing suite gate.
+On the record as residuals: >2-DPR behaviour is asserted by property, not
+hardware; and the step bench is a wall-clock bound in a suite whose own §8
+advice prefers work-counting (~87× headroom makes the flake risk negligible).
+Milestone highlights: A11 settled with the last UNMET scenario met, the web
+payload measured 89.2 → 20.5 MB against 25, the visual gate live over five
+baselines at a ~zero measured floor, capture staleness closed.
 
 ---
 

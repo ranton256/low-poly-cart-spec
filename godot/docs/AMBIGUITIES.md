@@ -332,7 +332,6 @@ geometry asserted by `world_test.gd`.
 |---|---|---|
 | A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
 | A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
-| A13 | §2 blesses downsampling "the texture set" to 1024² and states a floor only "for the kart"; whether props may ship below 1024 is unstated, and the 25 MB web budget forced the question | Resolved: props at 512, kart at 1024 (its stated floor), Basis Universal — the payload arithmetic (89.2 → 20.5 MB gzip-9 against 25) is the forcing function, the gallery baselines gate the look, and `stamp_texture_imports.py --check` enforces it |
 | A12 | The design document states that a kart pinned between two props at the minimum separation "cannot drive out", but its own collision response makes that state an unstable equilibrium: the kart is ejected in a fraction of a second at fourteen of sixteen headings, and in about two seconds at the other two | A GDD proposal — ROADMAP Backlog |
 
 ### A13 — Props below the blessed 1024 (RESOLVED)
