@@ -54,6 +54,7 @@ func _ready() -> void:
 func build() -> void:
 	add_child(_environment())
 	add_child(_ground())
+	add_child(_ground_skirt())
 	add_child(_grid_minor())
 	add_child(_grid_axes())
 	add_child(_start_finish_band())
@@ -139,6 +140,29 @@ func _ground() -> MeshInstance3D:
 	node.material_override = material
 	# §5: receives shadows, does not cast. A ground plane casting into its own
 	# shadow map spends texels on a surface nothing is ever behind.
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return node
+
+
+## A11's settlement — the register's fourth option: a skirt of ground in the
+## Ground's own albedo, spanning far past fog's end (edges ≥ 310 wu from any
+## drivable position against a 150 wu fogEnd), sitting a hair below Y = 0 so
+## the specified 200×200 Ground stays exactly what §5 states. No grid, no
+## shadow casting, no collision, no scatter — scenery whose only job is that
+## no ground edge is ever drawn nearer than full fog.
+func _ground_skirt() -> MeshInstance3D:
+	var mesh := PlaneMesh.new()
+	var size: float = art.num("groundSkirtSize")
+	mesh.size = Vector2(size, size)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = art.colour("groundColour")
+	material.roughness = art.num("groundRoughness")
+	material.metallic = art.num("groundMetalness")
+	var node := MeshInstance3D.new()
+	node.name = "GroundSkirt"
+	node.mesh = mesh
+	node.material_override = material
+	node.position.y = -art.num("groundSkirtDropWu")
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return node
 

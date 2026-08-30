@@ -76,6 +76,17 @@ tools/sync_assets.sh
 # they back the delta spec's "all seven models resolve and import successfully".
 godot --headless --import >/dev/null
 
+# The web-budget texture params (CONSTRAINTS §8 Performance and size budgets): extraction writes default
+# sidecars, the stamp rewrites them, and a re-import applies them. Idempotent
+# after the first pass; the --check keeps a fresh clone from silently
+# shipping lossless 2048s again.
+STAMP_OUT=$("$PY" tools/stamp_texture_imports.py)
+echo "$STAMP_OUT"
+if [[ "$STAMP_OUT" != *" 0 (re)stamped" ]]; then
+	godot --headless --import >/dev/null
+fi
+"$PY" tools/stamp_texture_imports.py --check
+
 run_suite tests/assets_test.gd
 run_suite tests/smoke_test.gd
 

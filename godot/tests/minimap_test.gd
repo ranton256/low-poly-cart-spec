@@ -39,6 +39,7 @@ func _init() -> void:
 	await _test_the_map_never_rotates()
 	await _test_markers_track_the_kart_at_true_heading()
 	_test_markers_are_masked_not_moved()
+	_test_the_map_does_not_look_through_fog()
 	get_root().remove_child(_root)
 	_root.free()
 	RVTest.finish(
@@ -170,3 +171,14 @@ func _test_markers_are_masked_not_moved() -> void:
 		"the chase camera's cull mask drops layer 2 — the main view never shows the markers"
 	)
 	_check((minimap_cam.cull_mask & LAYER_TWO_BIT) != 0, "the minimap camera's mask includes it")
+
+
+## The M6 fog decision: the instrument's camera carries its own fog-free
+## Environment; the main view's fog is untouched.
+func _test_the_map_does_not_look_through_fog() -> void:
+	var cam: Camera3D = _minimap.get_node("Viewport/Camera") as Camera3D
+	_check(cam.environment != null, "the minimap camera has its own Environment")
+	_check(not cam.environment.fog_enabled, "with fog disabled — the map stays legible")
+	var world_env: WorldEnvironment = _root.get_node("World/Environment") as WorldEnvironment
+	if world_env != null:
+		_check(world_env.environment.fog_enabled, "while the main view's fog is untouched")

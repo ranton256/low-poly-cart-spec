@@ -65,6 +65,8 @@ func _init() -> void:
 	for _i in range(SETTLE_FRAMES):
 		await process_frame
 
+	RenderingServer.force_draw()
+	await RenderingServer.frame_post_draw
 	var image := get_root().get_texture().get_image()
 	if image == null:
 		printerr("lap_capture: no image — this needs a WINDOWED run")

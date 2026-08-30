@@ -492,17 +492,12 @@ their full histories are in git at `streamline-process`'s parent commit.)
 - **M5/M6** — Fold the capture input re-press pattern (unfocused windows clear
   held input) into a shared helper before more driving captures are written.
   *(was att 16)*
-- **M6** — Measure `drive_capture.gd`'s settle-frame floor and black-frame
-  threshold instead of the guessed 12 frames / 20% — and the staleness is
-  worse than a settle floor: the M5 Critic's probe of a committed command
-  once returned a frame ~340 ticks stale (READY overlay, inspection camera)
-  while reporting a correctly-raced sim. "Captures must be deterministic"
-  currently holds only on a lucky run. *(was att 17; M5 Critic finding 8)*
-- **M6** — Decide whether the minimap camera sees fog: the ortho camera at
-  100 wu looks down through fog starting at 50 wu, washing the map out; the
-  GDD says only "a live top-down view". *(M5 Critic finding 5)*
 - Extend `check_static_typing.py` to member variables; V19 stays ⚠️ until
   then. *(was att 18)*
+- **M8** — Cold-load-to-countdown ≤ 5 s on the web build, measured in a
+  served browser session at the web smoke; the payload half of §8's table is
+  measured (20.5 MB gzip-9 vs 25) by add-render-pipeline-and-web-budget.
+  *(disclosed split)*
 - **M8** — A discriminating test for the lap gate's place in the tick order:
   a gate moved before stage 7 currently fails nothing, because the
   stage-5-displacement observable makes the ordering nearly moot.

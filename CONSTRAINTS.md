@@ -262,7 +262,7 @@ carries the reasoning:
 | A8 | Godot has two shadow bias parameters; the GDD specifies one | Resolved in `spike-compatibility-renderer-shadows` |
 | A9 | Light intensities are in the reference build's units | Resolved: the ratios are normative, the scale is not; one shared `lightScale` = 0.2809; tonemapping linear |
 | A10 | The camera eases per tick but frame ordering updates per frame | Resolved in M2: per tick. Time constant measured 0.200 s, settling 0.450 s, both predicted before measuring |
-| A11 | The GDD requires no ground edge be visible, and specifies numbers that make it visible from the boundary | ❓ settled in M6 |
+| A11 | The GDD requires no ground edge be visible, and specifies numbers that make it visible from the boundary | Resolved in M6: a ground skirt in the same albedo past fog's end — every stated number untouched; capture + geometry test |
 | A12 | The two-prop pin is stated as permanent, but the specified radial push ejects the kart in 15–125 ticks | ❓ a GDD proposal (backlog) |
 
 ---
@@ -376,11 +376,12 @@ hostile on the web.
 
 | | Budget | Status |
 |---|---|---|
-| Total web payload, compressed | ≤ 25 MB | 📋 M6 |
-| Prop textures | Downsampled to **1024²** (GDD-permitted) | 📋 M3 |
-| Kart textures | **2048² retained** — the one asset the GDD says not to reduce | 📐 |
-| Texture compression | VRAM-compressed on import, not raw | 📋 M3 — `check_settings.py` asserts the presets exist, not their compression mode. Backlog |
-| Cold load → countdown, web, warm cache | ≤ 5 s | 📋 M6 |
+| Total web payload, compressed | ≤ 25 MB | ✅ measured 20.5 MB — see the measured row below |
+| Prop textures | Downsampled to **512** — the GDD blesses 1024 for "the texture set" and states a floor only *for the kart*; props carry none and are seen at gameplay distances | ✅ `stamp_texture_imports.py --check` in the standing suite |
+| Kart textures | **1024 floor** — an earlier row here read "2048² retained", a misreading of the GDD's "do not go below that [1024] for the kart"; the qualifier is the kart's floor, not a retention rule | ✅ same stamp check |
+| Texture compression | Basis Universal on import (transcodes on load), stamped by `tools/stamp_texture_imports.py` — the project-level decision the old att-5 row asked for | ✅ `--check` in the suite |
+| Total web payload, measured | **20.5 MB gzip-9** against the 25 MB budget (wasm 9.4 + pck 11) — from 89.2 MB before the stamp | ✅ measured in add-render-pipeline-and-web-budget |
+| Cold load → countdown, web, warm cache | ≤ 5 s | 📋 M8's web smoke (needs a served browser session; the payload number above carries forward) |
 
 ### Design targets — measured on the reference machine
 
@@ -409,7 +410,7 @@ repository owner**. No change, task, or tool copies, generates, or commits a
 | The normalisation contract (GDD §3) is implemented in **`scripts/core/`** and unit-tested against synthetic boxes, with no `.glb` present | ✅ `normalise_test.gd` |
 | Bounding boxes are **re-measured after scaling**, never reused from before it | ✅ `normalise_test.gd`, verified by mutation |
 | `sync_assets.sh` refuses a preset recording a failed import, which Godot never repairs | ✅ |
-| Anisotropic 16×, mipmaps, VRAM compression, per-asset texture size — set project-wide, not per generated file | 📋 M3 (web budget), M6 (filtering) |
+| Anisotropic 16×, mipmaps, Basis compression, per-asset texture size — project-wide via a pinned setting and one committed stamp tool, never 21 generated files | ✅ `check_settings.py` (filtering) + `stamp_texture_imports.py --check` (the rest) |
 | Every supplied model both casts and receives shadows | 📋 M6 |
 | Materials are physically-based and lit. No unlit substitute | 📐 |
 | No prop is authored in the scene tree; every instance is placed by scatter or a loaded layout | 📐 |

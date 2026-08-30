@@ -57,6 +57,13 @@ func configure(art: RefCounted, world_parent: Node3D) -> void:
 	_camera.near = art.num("minimapNear")
 	_camera.far = art.num("minimapFar")
 	_camera.cull_mask = (1 << 0) | (1 << 1)
+	# The map is an instrument: its camera carries its own Environment with
+	# fog disabled, so the field stays legible instead of washing out through
+	# 50 wu of fog (M6 decision; the main view's fog is untouched).
+	var map_env := Environment.new()
+	map_env.background_mode = Environment.BG_CLEAR_COLOR
+	map_env.fog_enabled = false
+	_camera.environment = map_env
 	viewport.add_child(_camera)
 	_camera.global_transform = Transform3D(
 		DOWN_BASIS, Vector3(0.0, art.num("minimapAltitude"), 0.0)

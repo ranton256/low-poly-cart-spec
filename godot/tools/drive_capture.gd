@@ -9,7 +9,10 @@
 extends SceneTree
 
 const DEFAULT_TICKS := 200
-## Rendered frames to wait before grabbing the viewport. See the settle loop.
+## Rendered frames to wait before grabbing the viewport — belt only; the
+## post-draw await in _fresh_frame is what guarantees freshness. Measured
+## settle floor with it in place: mean 0.0217 / changed 0.177% / strong
+## 0.020% over a double-capture diff of an identical 330-tick drive.
 const SETTLE_FRAMES := 12
 ## A rendered frame of this game is grass, sky and props. If most of it is pure
 ## black the renderer had not caught up, and the capture is not evidence — refuse
@@ -46,14 +49,15 @@ func _init() -> void:
 	for action in hold:
 		if InputMap.has_action(action):
 			Input.action_release(action)
-	# Let the frame settle. THREE WAS NOT ENOUGH: a capture taken after 420 physics
-	# frames came back with a pure-black sky and near-black ground, while two
-	# re-runs of the same command were correct. Grabbing the viewport before the
-	# renderer has caught up produces a frame that looks like evidence and is not.
+	# Let the frame settle, then grab ONLY after the renderer has presented a
+	# frame (frame_post_draw) — the render target otherwise lags the scene,
+	# and this tool has returned frames hundreds of ticks stale (M5 Critic
+	# finding 8; it then bit the M5 proof re-capture). The settle loop stays
+	# as belt for effects; the post-draw await is the braces.
 	for _i in range(SETTLE_FRAMES):
 		await process_frame
 
-	var image := get_root().get_texture().get_image()
+	var image := await _fresh_frame(root)
 	if image == null:
 		printerr("drive_capture: no image — this needs a WINDOWED run")
 		quit(1)
@@ -95,6 +99,41 @@ func _init() -> void:
 		)
 	)
 	quit()
+
+
+## Grab a frame that is provably fresh: await the renderer's own post-draw
+## signal, then reject the known staleness signature — the countdown's huge
+## white glyphs at screen centre while the sim reports the race well past the
+## GO! linger. Retries re-await the renderer; persistent staleness fails the
+## run rather than writing a lie.
+func _fresh_frame(root: Node3D) -> Image:
+	for _attempt in range(5):
+		RenderingServer.force_draw()
+		await RenderingServer.frame_post_draw
+		var image := get_root().get_texture().get_image()
+		if image == null:
+			return null
+		if not _looks_like_stale_countdown(image, root):
+			return image
+		printerr("drive_capture: stale countdown frame detected — re-awaiting the renderer")
+	printerr("drive_capture: the renderer kept presenting stale frames; nothing written")
+	return null
+
+
+## The staleness signature this tool has actually produced: a raced sim but a
+## frame still showing the countdown through the inspection camera.
+func _looks_like_stale_countdown(image: Image, root: Node3D) -> bool:
+	var race: RefCounted = root.sim.race
+	var linger_ticks: int = int(roundf(root.sim.tuning.go_linger * 60.0))
+	if not (race.is_racing() and race.ticks_in_state > linger_ticks + 5):
+		return false  # a countdown on screen would be legitimate
+	var white: int = 0
+	for y in range(image.get_height() / 4, image.get_height() / 2, 4):
+		for x in range(image.get_width() / 2 - 100, image.get_width() / 2 + 100, 4):
+			var pixel := image.get_pixel(x, y)
+			if pixel.r > 0.98 and pixel.g > 0.98 and pixel.b > 0.98:
+				white += 1
+	return white > 40
 
 
 ## How much of the frame is pure black. Sampled on a grid rather than every

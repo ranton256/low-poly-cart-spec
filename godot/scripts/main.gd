@@ -95,8 +95,19 @@ var _jolts: int = 0
 @onready var minimap: SubViewportContainer = get_node_or_null("Minimap") as SubViewportContainer
 
 
+## The render-scale cap (Limiting render resolution on high-density displays):
+## a device pixel ratio above 2 is clamped to exactly 2 — the game never
+## renders at full native density of very dense displays.
+static func capped_scale(device_pixel_ratio: float) -> float:
+	return minf(device_pixel_ratio, 2.0)
+
+
 func _ready() -> void:
 	var tuning: RefCounted = TuningLoader.load_tuning()
+	# DPI cap, applied to the real window from the real screen's ratio.
+	var window := get_window()
+	if window != null:
+		window.content_scale_factor = capped_scale(DisplayServer.screen_get_scale())
 	if tuning == null:
 		# The loader has already named what is missing. Refusing to run is the
 		# point: a simulation with a defaulted accel produces a kart that will

@@ -277,16 +277,7 @@ camera is stepped again per frame and when it is not stepped at all.
 `docs/progress/2026-08-29-m2-camera.md`.*
 
 
-## Open
-
-| # | Ambiguity | Settled by |
-|---|---|---|
-| A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
-| A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
-| A11 | The ground is specified as a finite 200 wu plane, the drivable extent as ±90, and fog as beginning at 50 wu. From the boundary the ground's edge is 10 wu away — far inside fog's start — so it renders as a hard line, while acceptance item 7 asks for grass beyond the boundary and no drawn edge | M6 |
-| A12 | The design document states that a kart pinned between two props at the minimum separation "cannot drive out", but its own collision response makes that state an unstable equilibrium: the kart is ejected in a fraction of a second at fourteen of sixteen headings, and in about two seconds at the other two | A GDD proposal — ROADMAP Backlog |
-
-### A11 (open, detail) — A finite ground cannot have an invisible edge
+### A11 — A finite ground cannot have an invisible edge (RESOLVED)
 
 **The specification says**, in *World Boundary Containment / Keeping the boundary
 invisible*, that when the kart is held against the boundary "there is still
@@ -323,10 +314,25 @@ document's own numbers" was an assertion this entry had not earned.
 What decides it is how the edge reads through the specified chase camera, whose
 pitch and field of view do not exist yet.
 
-**Owner: M6**, which owns the look and the visual conformance gate, with the chase
-camera change expected to sharpen the question first.
+**Resolved in M6** (`add-render-pipeline-and-web-budget`), by the fourth
+option: a `GroundSkirt` plane in the Ground's own albedo, spanning
+`groundSkirtSize` (800 wu — nearest edge ≥ 310 wu from any drivable position,
+against a 150 wu `fogEnd`), a hair below Y = 0. §5's Ground stays exactly
+200×200, the boundary ±90, fog 50→150. Judged through the specified chase
+camera at the pinned boundary: grass dissolves into fog with no drawn edge —
+`docs/progress/2026-08-29-m6-boundary-skirt.png`, with the guaranteeing
+geometry asserted by `world_test.gd`.
 
-*Recorded during `add-world-presentation-layer` (M2). Open.*
+*Recorded during `add-world-presentation-layer` (M2). Resolved in M6.*
+
+
+## Open
+
+| # | Ambiguity | Settled by |
+|---|---|---|
+| A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
+| A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
+| A12 | The design document states that a kart pinned between two props at the minimum separation "cannot drive out", but its own collision response makes that state an unstable equilibrium: the kart is ejected in a fraction of a second at fourteen of sixteen headings, and in about two seconds at the other two | A GDD proposal — ROADMAP Backlog |
 
 ### A12 (open, detail) — The pinned kart cannot stay pinned
 

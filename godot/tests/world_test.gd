@@ -43,6 +43,7 @@ func _init() -> void:
 
 	_test_every_specified_element_exists()
 	_test_ground_matches_the_document()
+	_test_ground_skirt_settles_a11()
 	_test_grid_geometry_is_derived_not_typed()
 	_test_band_sits_where_the_document_puts_it()
 	_test_fog_and_tonemapping()
@@ -117,6 +118,35 @@ func _test_ground_matches_the_document() -> void:
 ## this asserts the arithmetic rather than a number someone counted. 20 divisions
 ## over the central extent means 21 lines per axis; one of them passes through
 ## zero on each axis and is an axis line, leaving 20 minor lines per axis.
+## A11's settlement: the skirt keeps every stated number intact while putting
+## every ground edge past fog's end from anywhere drivable.
+func _test_ground_skirt_settles_a11() -> void:
+	var skirt: MeshInstance3D = _node("GroundSkirt") as MeshInstance3D
+	var art: RefCounted = _world.art
+	_check(skirt != null, "the skirt exists")
+	var size: float = art.num("groundSkirtSize")
+	_check((skirt.mesh as PlaneMesh).size == Vector2(size, size), "spanning groundSkirtSize")
+	_check(
+		size / 2.0 - art.num("drivableExtent") > art.num("fogEnd"),
+		(
+			"its nearest edge from the boundary (%d wu) lies past fogEnd (%d wu)"
+			% [int(size / 2.0 - art.num("drivableExtent")), int(art.num("fogEnd"))]
+		)
+	)
+	var material: StandardMaterial3D = skirt.material_override as StandardMaterial3D
+	_check(
+		material.albedo_color.is_equal_approx(art.colour("groundColour")),
+		"in the Ground's own albedo"
+	)
+	_check(skirt.position.y < 0.0, "a hair below Y = 0 — §5's Ground stays exactly 200×200")
+	_check(skirt.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "casting nothing")
+	var ground: MeshInstance3D = _node("Ground") as MeshInstance3D
+	_check(
+		(ground.mesh as PlaneMesh).size == Vector2(art.num("groundSize"), art.num("groundSize")),
+		"and the specified Ground is untouched"
+	)
+
+
 func _test_grid_geometry_is_derived_not_typed() -> void:
 	var divisions: int = int(_art.num("gridDivisions"))
 	var height: float = _art.num("gridHeight")

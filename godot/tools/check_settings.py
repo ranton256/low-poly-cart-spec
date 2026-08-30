@@ -49,6 +49,10 @@ REQUIRED = {
         '"canvas_items"', "what scales A1's literal px for other window sizes"),
     "window/stretch/aspect": (
         '"expand"', "the stretch aspect A1's resolution records"),
+    "textures/default_filters/anisotropic_filtering_level": (
+        "4", "16x anisotropic filtering, the document's section 5 — verified "
+             "at a grazing angle in the M6 gallery; a re-import or editor "
+             "save silently reverts unpinned settings"),
 }
 
 MODELS = ("kart", "tree", "rock", "cone", "crate", "tires", "cottage")

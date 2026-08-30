@@ -39,6 +39,8 @@ func _init() -> void:
 	await _test_speedometer_reads_the_core_at_steady_state()
 	_test_title_and_hints_present()
 	_test_no_hud_element_intercepts_pointer_input()
+	await _test_resize_leaves_the_instruments_intact()
+	_test_dense_displays_are_capped()
 	get_root().remove_child(_root)
 	_root.free()
 	RVTest.finish(
@@ -214,6 +216,57 @@ func _test_title_and_hints_present() -> void:
 	)
 	_check(hints != null and hints.visible and hints.modulate.a < 1.0, "hints beneath, dimmed")
 	_check(title.anchor_left == 0.0 and title.anchor_top == 0.0, "anchored to the top-left corner")
+
+
+# @covers Frame Loop and Render Pipeline / Adapting to a resized viewport
+func _test_resize_leaves_the_instruments_intact() -> void:
+	var minimap: Control = _root.get_node("Minimap") as Control
+	var size_before: Vector2 = minimap.size
+	var inset_before: float = minimap.offset_left
+	get_root().size = Vector2i(1600, 900)
+	await process_frame
+	await process_frame
+	_check(
+		minimap.size == size_before and minimap.offset_left == inset_before,
+		"the minimap keeps minimapSize and minimapInset through a resize"
+	)
+	var area: Vector2 = minimap.get_parent_area_size()
+	for element_name: String in ["Minimap"]:
+		var element: Control = _root.get_node(element_name) as Control
+		var rect: Rect2 = element.get_rect()
+		var unclipped: bool = (
+			rect.position.x >= 0.0
+			and rect.position.y >= 0.0
+			and rect.end.x <= area.x
+			and rect.end.y <= area.y
+		)
+		_check(
+			unclipped,
+			(
+				"%s is unclipped and anchored to the LIVE corner (%s in %s)"
+				% [element_name, rect, area]
+			)
+		)
+	var time_value: Label = _root.overlay.get_node("TimeValue") as Label
+	_check(
+		time_value.position.x > time_value.get_parent_area_size().x - 200.0,
+		"the timer block follows the new right edge"
+	)
+	get_root().size = Vector2i(1280, 720)
+	await process_frame
+
+
+# @covers Frame Loop and Render Pipeline / Limiting render resolution on high-density displays
+func _test_dense_displays_are_capped() -> void:
+	var main_script: GDScript = _root.get_script() as GDScript
+	_check(main_script.capped_scale(1.0) == 1.0, "an ordinary display is untouched")
+	_check(main_script.capped_scale(2.0) == 2.0, "a 2x display renders at 2x")
+	_check(main_script.capped_scale(3.0) == 2.0, "above 2, the scale is exactly 2 — never native")
+	var applied: float = _root.get_window().content_scale_factor
+	_check(
+		absf(applied - main_script.capped_scale(DisplayServer.screen_get_scale())) < 0.001,
+		"and the running window wears the capped factor"
+	)
 
 
 func _test_no_hud_element_intercepts_pointer_input() -> void:
