@@ -81,7 +81,10 @@
     "totalPreRaceDelay": 4.0,
     "lapGateZMin": 4,
     "lapGateZMax": 6,
-    "lapGateAbsXLimit": 5
+    "lapGateAbsXLimit": 5,
+    "countdownTextColour": "#FFFFFF",
+    "countdownGoColour": "#00FF00",
+    "countdownFontPx": 120
   },
   "asset_target_heights": {
     "_note": "From the design document's §3 Asset normalisation contract table, not its four Tuning Constants tables. Every instance of an asset is scaled so its height is this value before any random variation.",

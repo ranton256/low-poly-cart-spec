@@ -69,6 +69,8 @@ func _sim() -> RefCounted:
 	var s := Sim.new()
 	s.tuning = TuningLoader.load_tuning()
 	s.input = InputState.new()
+	# Pipeline suite: skip the countdown (race-state seam; race_state_test owns it).
+	s.race.start_racing_immediately()
 	return s
 
 

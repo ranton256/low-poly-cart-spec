@@ -12,6 +12,7 @@
 extends SceneTree
 
 const RVTest := preload("res://tests/harness.gd")
+const RaceState := preload("res://scripts/core/race_state.gd")
 
 var _root: Node3D = null
 
@@ -26,6 +27,10 @@ func _init() -> void:
 	get_root().add_child(_root)
 	await process_frame
 
+	await _test_boots_into_the_countdown_and_suspends()
+	# From here the suite studies the racing pipeline; the countdown itself is
+	# race_state_test's subject (race-state seam).
+	_root.sim.race.start_racing_immediately()
 	await _test_stepping_tracks_the_fixed_rate_callback()
 	_test_the_view_never_writes_back()
 	_test_the_game_looks_through_the_specified_camera()
@@ -37,6 +42,32 @@ func _init() -> void:
 	RVTest.finish(
 		self, "driver: one step per fixed callback, view reads only, props wired", "driver check(s)"
 	)
+
+
+## The shipped boot: straight into the countdown, with the simulation stepping,
+## the chase camera suspended, and the camera holding the inspection pose.
+# @covers Race Start Sequence and Game State Machine / Viewing the kart before the start
+func _test_boots_into_the_countdown_and_suspends() -> void:
+	var sim: RefCounted = _root.sim
+	_check(
+		sim.race.state == RaceState.STARTING,
+		"the game boots into the countdown with no interaction and no configuration"
+	)
+	var camera_before: int = _root.camera_steps()
+	var steps_before: int = _root.steps()
+	for _i in range(6):
+		await process_frame
+	_check(_root.steps() > steps_before, "the simulation still steps outside RACING (A4)")
+	_check(
+		_root.camera_steps() == camera_before,
+		"the chase camera does not run before RACING (suspension)"
+	)
+	var cam: Camera3D = _root.chase_camera
+	if cam != null:
+		_check(
+			cam.global_position.distance_to(Vector3(0, 5, -10)) < 0.01,
+			"the camera holds the fixed inspection pose behind and above the kart"
+		)
 
 
 ## THE CHANGE'S HEADLINE DELIVERABLE, AND NOTHING GUARDED IT.

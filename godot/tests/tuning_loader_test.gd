@@ -62,6 +62,7 @@ func _test_the_real_table_produces_the_acceptance_timings() -> void:
 	var spin := Sim.new()
 	spin.tuning = tuning
 	spin.input = InputState.new()
+	spin.race.start_racing_immediately()  # timing suite: skip the countdown
 	spin.input.forward = true
 	var t103 := -1
 	var t115 := -1
@@ -94,6 +95,7 @@ func _test_the_real_table_produces_the_acceptance_timings() -> void:
 	var coast := Sim.new()
 	coast.tuning = tuning
 	coast.input = InputState.new()
+	coast.race.start_racing_immediately()  # timing suite: skip the countdown
 	coast.input.forward = true
 	for _i in range(SETTLE_TICKS):
 		coast.step()

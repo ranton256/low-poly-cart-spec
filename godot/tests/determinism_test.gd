@@ -48,6 +48,9 @@ func _sim() -> RefCounted:
 	var s := Sim.new()
 	s.tuning = _tuning()
 	s.input = InputState.new()
+	# Boot from LOADING through the real countdown: acceptance 14a spans it
+	# (godot/race-state, "Two runs agree through the countdown").
+	s.race.mark_world_ready()
 	return s
 
 
@@ -106,6 +109,7 @@ func _test_precision_is_far_below_the_tolerance() -> void:
 # @covers Runtime Tuning and Player Actions / Adjusting handling without a restart
 func _test_tuning_change_applies_next_tick() -> void:
 	var s := _sim()
+	s.race.start_racing_immediately()  # pipeline check, not a countdown check
 	s.input.forward = true
 	for _i in range(50):
 		s.step()
@@ -133,6 +137,7 @@ func _test_tuning_change_applies_next_tick() -> void:
 
 func _test_constructible_without_a_file() -> void:
 	var s := _sim()
+	s.race.start_racing_immediately()  # pipeline check, not a countdown check
 	s.input.forward = true
 	s.step()
 	_check(

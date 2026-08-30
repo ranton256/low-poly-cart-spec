@@ -6,8 +6,8 @@
       "deferred": "Not yet due. Needs the milestone that owns it."
     },
     "the_other_kind": "A scenario VERIFIED by a test is not listed here. Its claim lives beside the test, as a '# @covers <Feature> / <Scenario>' line, so it moves with the code it describes.",
-    "matching": "Feature and scenario text are quoted from the design document VERBATIM. check_spec_coverage.py requires a bijection, so rewording a heading in the document breaks every claim on it \u2014 deliberately. A fuzzy match would absorb the rename silently, which is the failure the gate exists to prevent.",
-    "honesty": "The gate can check that every scenario is claimed and that a deferral names a milestone. It CANNOT check that a deferred scenario really belongs to the milestone named, nor that a verified claim's test really tests that scenario. Those are review's job \u2014 see design D4 of add-determinism-and-coverage-harness."
+    "matching": "Feature and scenario text are quoted from the design document VERBATIM. check_spec_coverage.py requires a bijection, so rewording a heading in the document breaks every claim on it — deliberately. A fuzzy match would absorb the rename silently, which is the failure the gate exists to prevent.",
+    "honesty": "The gate can check that every scenario is claimed and that a deferral names a milestone. It CANNOT check that a deferred scenario really belongs to the milestone named, nor that a verified claim's test really tests that scenario. Those are review's job — see design D4 of add-determinism-and-coverage-harness."
   },
   "entries": [
     {
@@ -18,55 +18,13 @@
       "milestone": "M5"
     },
     {
-      "feature": "Session Bootstrap and Asset Normalisation",
-      "scenario": "Completing bootstrap and handing off to the start sequence",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Session Bootstrap and Asset Normalisation",
-      "scenario": "Failing to load an asset",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Race Start Sequence and Game State Machine",
-      "scenario": "Enumerating the game states",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Race Start Sequence and Game State Machine",
-      "scenario": "Running the countdown",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Race Start Sequence and Game State Machine",
-      "scenario": "Releasing control on the GO frame",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Race Start Sequence and Game State Machine",
-      "scenario": "Freezing the kart during the countdown",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
-      "feature": "Race Start Sequence and Game State Machine",
-      "scenario": "Viewing the kart before the start",
-      "kind": "deferred",
-      "milestone": "M4"
-    },
-    {
       "feature": "World Boundary Containment",
       "scenario": "Keeping the boundary invisible",
       "kind": "visual",
       "reason": "Requires seeing that grass is still visible beyond the kart and that no wall or ground edge is drawn. Nothing about that is measurable from state.",
       "milestone": "M6",
       "capture": "docs/progress/2026-08-29-m2-camera-boundary.png",
-      "note": "Captured through the camera the design document specifies, with the kart driven into the boundary and rebounding \u2014 z=89.997, v=-0.00165, reported by the capture tool. The scenario is still UNMET: the document requires that no edge of the ground be visible, and its own numbers (+/-100 wu plane, +/-90 drivable extent, fog from 50 wu) put the edge five times nearer than fog reaches. From this viewpoint the grass-to-sky transition reads as a plain horizon with no wall, fence or discontinuity, which is the most favourable evidence so far \u2014 and still M6's decision on the whole look rather than one frame. Ambiguity A11, att 15. An earlier note said the kart-height capture 'waits for the chase camera'; it has shipped, and this is it. docs/progress/2026-08-29-m2-boundary.png remains as the elevated oblique view, where the same geometry reads as an edge.",
+      "note": "Captured through the camera the design document specifies, with the kart driven into the boundary and rebounding — z=89.997, v=-0.00165, reported by the capture tool. The scenario is still UNMET: the document requires that no edge of the ground be visible, and its own numbers (+/-100 wu plane, +/-90 drivable extent, fog from 50 wu) put the edge five times nearer than fog reaches. From this viewpoint the grass-to-sky transition reads as a plain horizon with no wall, fence or discontinuity, which is the most favourable evidence so far — and still M6's decision on the whole look rather than one frame. Ambiguity A11, att 15. An earlier note said the kart-height capture 'waits for the chase camera'; it has shipped, and this is it. docs/progress/2026-08-29-m2-boundary.png remains as the elevated oblique view, where the same geometry reads as an edge.",
       "unmet": true
     },
     {
@@ -184,12 +142,6 @@
       "kind": "deferred",
       "milestone": "M5",
       "note": "The scenario requires the camera, the minimap re-centre AND the HUD update to be ordered after post-physics, and closes on the kart's position, the speedometer and the minimap marker agreeing within a frame. Neither a minimap nor a HUD exists before M5, which owns that clause almost verbatim. M2 can verify at most the physics-then-camera half."
-    },
-    {
-      "feature": "Frame Loop and Render Pipeline",
-      "scenario": "Suspending the simulation outside the racing state",
-      "kind": "deferred",
-      "milestone": "M4"
     },
     {
       "feature": "Frame Loop and Render Pipeline",

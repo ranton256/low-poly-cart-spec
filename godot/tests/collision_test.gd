@@ -108,6 +108,8 @@ func _sim() -> RefCounted:
 	s.input = InputState.new()
 	s.kart_normalised = _normalised
 	s.kart_yaw_offset = _correction
+	# Pipeline suite: skip the countdown (race-state seam; race_state_test owns it).
+	s.race.start_racing_immediately()
 	return s
 
 

@@ -51,6 +51,9 @@ func _sim() -> RefCounted:
 	var s := Sim.new()
 	s.tuning = _tuning()
 	s.input = InputState.new()
+	# Boot from LOADING through the real countdown: batch-independence must
+	# hold across the frozen prefix too (godot/race-state).
+	s.race.mark_world_ready()
 	return s
 
 

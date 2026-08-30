@@ -19,6 +19,7 @@
 extends RefCounted
 
 const Collision := preload("res://scripts/core/collision.gd")
+const RaceState := preload("res://scripts/core/race_state.gd")
 
 const TICKS_PER_SECOND := 60
 
@@ -27,6 +28,11 @@ var tuning: RefCounted = null
 var input: RefCounted = null
 
 # --- state ---
+## The race state machine, advanced first every tick in every state
+## (ambiguity A4). The kart stages run only while it is RACING. Its countdown
+## length is wired from the tuning on the first step, so the machine stays
+## constructible bare.
+var race: RefCounted = RaceState.new()
 var velocity: float = 0.0
 var yaw: float = 0.0
 var pos_x: float = 0.0
@@ -126,14 +132,25 @@ func step() -> void:
 	bounced_this_tick = false
 	last_hit = null
 
-	_stage_1_accelerate()
-	_stage_2_clamp()
-	_stage_3_steer()
-	_stage_4_friction()
-	_stage_5_integrate()
-	_stage_6_boundary()
-	_stage_7_collision()
-	_stage_8_lap_gate()
+	# Stage 0 — the race state, every tick in every state (godot/race-state).
+	# Its countdown length comes from the tuning like every other constant.
+	if race.countdown_step_ticks == 0 and tuning != null:
+		race.countdown_step_ticks = int(roundf(tuning.countdown_step * TICKS_PER_SECOND))
+	race.advance()
+
+	# The kart pipeline is gated on RACING: held input stays tracked (the
+	# caller writes it every tick) but nothing accelerates, steers, or moves.
+	# The GO! tick transitions AND runs the pipeline, so a key held through
+	# the countdown takes effect on this very tick.
+	if race.is_racing():
+		_stage_1_accelerate()
+		_stage_2_clamp()
+		_stage_3_steer()
+		_stage_4_friction()
+		_stage_5_integrate()
+		_stage_6_boundary()
+		_stage_7_collision()
+		_stage_8_lap_gate()
 
 	ticks += 1
 
@@ -230,4 +247,7 @@ func _stage_8_lap_gate() -> void:
 ## A one-line state summary. Cheap, and far easier to diff between two runs than
 ## comparing object graphs — the determinism tests compare these strings.
 func stats_line() -> String:
-	return "t=%d v=%.9f yaw=%.9f x=%.9f z=%.9f" % [ticks, velocity, yaw, pos_x, pos_z]
+	return (
+		"t=%d state=%d ts=%d v=%.9f yaw=%.9f x=%.9f z=%.9f"
+		% [ticks, race.state, race.ticks_in_state, velocity, yaw, pos_x, pos_z]
+	)

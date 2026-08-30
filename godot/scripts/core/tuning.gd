@@ -56,6 +56,10 @@ var shake_vertical: float = 0.0
 # --- dial ---
 var speedo_max: float = 0.0
 
+# --- race timing ---
+var countdown_step: float = 0.0
+var go_linger: float = 0.0
+
 # --- per-asset target heights, from the design document's §3 table ---
 # A dictionary rather than named fields: the asset set is data, and M3 adds
 # prop counts alongside these. Empty until apply_table() fills it.
@@ -100,6 +104,9 @@ func apply_table(table: Dictionary) -> void:
 	shake_horizontal = float(hud.get("shakeHorizontal", 0.0))
 	shake_vertical = float(hud.get("shakeVertical", 0.0))
 	speedo_max = float(hud.get("speedoMax", 0.0))
+	var timing: Dictionary = table.get("timing", {})
+	countdown_step = float(timing.get("countdownStep", 0.0))
+	go_linger = float(timing.get("goLinger", 0.0))
 	var counts: Dictionary = table.get("prop_counts", {})
 	prop_counts = {}
 	for key in counts:
@@ -164,6 +171,8 @@ func missing_fields() -> PackedStringArray:
 		"shake_horizontal",
 		"shake_vertical",
 		"speedo_max",
+		"countdown_step",
+		"go_linger",
 	]:
 		if float(get(field)) == 0.0:
 			missing.append(field)

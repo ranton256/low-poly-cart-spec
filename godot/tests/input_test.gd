@@ -24,6 +24,10 @@ func _init() -> void:
 	get_root().add_child(_root)
 	await process_frame
 
+	await _test_a_held_input_is_tracked_but_frozen_while_starting()
+	# From here the suite studies the racing input path; the countdown is
+	# race_state_test's subject (race-state seam).
+	_root.sim.race.start_racing_immediately()
 	await _test_a_held_action_reaches_the_core_every_tick()
 	await _test_releasing_stops_it()
 	await _test_focus_loss_clears_everything()
@@ -43,6 +47,23 @@ func _release_all() -> void:
 	for action in ["accelerate", "reverse", "steer_left", "steer_right"]:
 		if InputMap.has_action(action):
 			Input.action_release(action)
+
+
+## The freeze, through the REAL input path: during the countdown a held key is
+## tracked — so it can take effect on the first racing tick — while the kart
+## does not move. (The scenario is claimed by race_state_test; this is the
+## running game's half.)
+func _test_a_held_input_is_tracked_but_frozen_while_starting() -> void:
+	Input.action_press("accelerate")
+	for _i in range(6):
+		await process_frame
+	_check(_root.input.forward, "a held accelerate is tracked during the countdown")
+	_check(
+		_root.sim.velocity == 0.0,
+		"and the frozen kart does not accelerate (velocity %.5f)" % _root.sim.velocity
+	)
+	Input.action_release("accelerate")
+	await process_frame
 
 
 func _test_a_held_action_reaches_the_core_every_tick() -> void:

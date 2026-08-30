@@ -82,6 +82,7 @@ run_suite tests/smoke_test.gd
 # The simulation core — the design document's tick order, the boundary, and the
 # reproducibility every other headless suite rests on.
 run_suite tests/tick_test.gd
+run_suite tests/race_state_test.gd
 run_suite tests/boundary_test.gd
 run_suite tests/determinism_test.gd
 

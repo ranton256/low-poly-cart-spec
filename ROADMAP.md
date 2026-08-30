@@ -470,6 +470,10 @@ their full histories are in git at `streamline-process`'s parent commit.)
   threshold instead of the guessed 12 frames / 20%. *(was att 17)*
 - Extend `check_static_typing.py` to member variables; V19 stays ⚠️ until
   then. *(was att 18)*
+- Give `PropField` a load seam (an env override in the `LPC_SAVE_FILE`
+  tradition) so `driver_test.gd` can prove the broken-model boot halts in
+  LOADING through the real driver, not only at the race-state level.
+  *(deferred by add-race-state-and-countdown)*
 - **GDD proposal** — A12: the two-prop pin's "cannot drive out" is not
   producible by the specified response; raise the wording fix against the
   design document. *(was att 20)*

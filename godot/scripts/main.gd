@@ -25,6 +25,7 @@ const TuningLoader := preload("res://scripts/tuning_loader.gd")
 const ChaseCamera := preload("res://scripts/core/chase_camera.gd")
 const ArtTuning := preload("res://scripts/art_tuning.gd")
 const Scatter := preload("res://scripts/core/scatter.gd")
+const RaceState := preload("res://scripts/core/race_state.gd")
 
 ## Actions declared in project.godot's InputMap, mapped to the core's held-state
 ## fields. The design document's control table also binds Reset Kart and Save
@@ -42,6 +43,10 @@ const STARTING_SEED := 20260829
 ## and it must not reset when the player regenerates the world. Same value would
 ## have worked and read as though the two were one thing.
 const SHAKE_SEED := 704221
+
+## The pre-race inspection pose — the design document's approximate (0, 5, −10),
+## stated in its own world frame, looking toward the origin.
+const INSPECT_POSITION := Vector3(0, 5, -10)
 
 const DRIVE_ACTIONS := {
 	"accelerate": "forward",
@@ -83,6 +88,9 @@ var _jolts: int = 0
 ## root without one.
 @onready var props: Node3D = get_node_or_null("PropField") as Node3D
 
+## The start-sequence overlay. Optional like the other views.
+@onready var overlay: CanvasLayer = get_node_or_null("Overlay") as CanvasLayer
+
 
 func _ready() -> void:
 	var tuning: RefCounted = TuningLoader.load_tuning()
@@ -109,7 +117,14 @@ func _ready() -> void:
 	_art = ArtTuning.load_art()
 	scatter = Scatter.new()
 	scatter.tuning = tuning
-	_generate_field(field_seed)
+	# Bootstrap verdict (godot/race-state): success hands off to the countdown
+	# automatically; failure is a terminal LOADING with a visible message —
+	# never a countdown into a broken world. The underlying error has already
+	# been logged by the loader that hit it.
+	if _generate_field(field_seed):
+		sim.race.mark_world_ready()
+	else:
+		sim.race.fail_load("Could not load the game's models — see the log")
 
 
 ## Exactly one step. Never a loop: the loop is Godot's, and duplicating it here is
@@ -129,15 +144,20 @@ func _physics_process(_delta: float) -> void:
 	# Never in _process: the design document states the easing per tick, and per
 	# frame the time constant becomes 0.4 s at 30 fps and 0.083 s at 144 fps
 	# against a stated 0.2 s.
-	camera.step(sim.pos_x, sim.pos_z, sim.yaw, sim.speed_ratio())
-	# AFTER the camera's own step, so the displacement survives into the following
-	# ticks instead of being eased away by the step that produced it. The easing
-	# absorbs it from here with no separate decay.
-	if sim.last_hit != null:
-		camera.jolt()
-		_jolts += 1
+	# ONLY WHILE RACING ("Suspending the simulation outside the racing state"):
+	# before the race starts the chase camera does not engage — the view holds
+	# the fixed inspection pose — so stepping it here would ease it toward a
+	# kart it is not yet following.
+	if sim.race.is_racing():
+		camera.step(sim.pos_x, sim.pos_z, sim.yaw, sim.speed_ratio())
+		# AFTER the camera's own step, so the displacement survives into the
+		# following ticks instead of being eased away by the step that produced
+		# it. The easing absorbs it from here with no separate decay.
+		if sim.last_hit != null:
+			camera.jolt()
+			_jolts += 1
+		_camera_steps += 1
 	_steps += 1
-	_camera_steps += 1
 
 
 ## Once per rendered frame. This advances NOTHING — the count below exists so a
@@ -152,7 +172,15 @@ func _process(_delta: float) -> void:
 	if kart != null:
 		kart.draw_from(sim, interpolation_fraction())
 	if chase_camera != null and _art != null:
-		chase_camera.apply(camera, _art.num("nearClip"), _art.num("farClip"))
+		if sim.race.is_racing():
+			chase_camera.apply(camera, _art.num("nearClip"), _art.num("farClip"))
+		else:
+			# "Viewing the kart before the start": a fixed inspection pose
+			# behind and above the start line, looking at the origin. The chase
+			# camera engages on the first RACING frame.
+			chase_camera.look_at_from_position(INSPECT_POSITION, Vector3.ZERO)
+	if overlay != null:
+		overlay.draw_from(sim, _art)
 
 
 func steps() -> int:
@@ -195,14 +223,18 @@ func interpolation_fraction() -> float:
 ## heading, velocity and the running clock be left untouched — which is why
 ## nothing here touches the simulation. Regenerating is a world operation, not a
 ## reset.
-func _generate_field(seed_value: int) -> void:
+## Returns whether the world is ready to race in. A headless root with no
+## PropField has nothing to load and succeeds; a field whose models cannot be
+## loaded fails, and the caller turns that into the terminal LOADING error.
+func _generate_field(seed_value: int) -> bool:
 	if props == null:
-		return
+		return true
 	if props.authored_boxes().is_empty() and not props.load_assets():
 		push_error("main: could not load the prop models; the field is empty")
-		return
+		return false
 	build_field(scatter.generate(seed_value, props.authored_boxes()))
 	print("world: seed %d — %s" % [seed_value, scatter.shortfall_report()])
+	return true
 
 
 ## Instantiate a field and hand it to the simulation, in registration order.

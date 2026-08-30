@@ -1,36 +1,46 @@
 {
   "_meta": {
     "purpose": "Numeric literals that collide with a tuning value but are genuinely not that constant.",
-    "rules": "Every entry needs file, value and a written reason. An entry without a reason fails the gate, and so does an entry that no longer matches anything \u2014 an exemption must not outlive its reason.",
-    "granularity": "An entry is keyed on (file, value), NOT on line, and matches on magnitude, so it covers both signs and every occurrence in that file. That is deliberate \u2014 a line-keyed entry goes stale on every edit above it \u2014 but it means an entry is a broader promise than it looks. Keep the file scope narrow.",
+    "rules": "Every entry needs file, value and a written reason. An entry without a reason fails the gate, and so does an entry that no longer matches anything — an exemption must not outlive its reason.",
+    "granularity": "An entry is keyed on (file, value), NOT on line, and matches on magnitude, so it covers both signs and every occurrence in that file. That is deliberate — a line-keyed entry goes stale on every edit above it — but it means an entry is a broader promise than it looks. Keep the file scope narrow.",
     "warning": "A growing allowlist means the gate is being worked around rather than obeyed. The count is printed on every run.",
-    "history": "Held two entries during M0, both justifying coincidences in the inherited placeholder sim.gd (a 0.3 sound volume against pushDistance, and 1000.0 milliseconds against farClip). add-simulation-tick-core replaced that file and the staleness rule failed the suite until they were removed \u2014 the mechanism working as intended."
+    "history": "Held two entries during M0, both justifying coincidences in the inherited placeholder sim.gd (a 0.3 sound volume against pushDistance, and 1000.0 milliseconds against farClip). add-simulation-tick-core replaced that file and the staleness rule failed the suite until they were removed — the mechanism working as intended."
   },
   "exemptions": [
     {
       "file": "godot/scripts/core/sim.gd",
       "value": 60,
-      "reason": "TICKS_PER_SECOND \u2014 the design document's Reference Tick section fixes the simulation at 60 ticks per second, and it is pinned in project.godot rather than tuned. The collision is with lighting.shadowVolumeExtent, which add-world-presentation-layer added and which is +/-60 wu of shadow volume: an unrelated quantity that happens to share a magnitude. Note what this shows \u2014 adding a value to tuning.json can make a gate fail in a file the change never touched, because the scan matches magnitudes, not meanings."
+      "reason": "TICKS_PER_SECOND — the design document's Reference Tick section fixes the simulation at 60 ticks per second, and it is pinned in project.godot rather than tuned. The collision is with lighting.shadowVolumeExtent, which add-world-presentation-layer added and which is +/-60 wu of shadow volume: an unrelated quantity that happens to share a magnitude. Note what this shows — adding a value to tuning.json can make a gate fail in a file the change never touched, because the scan matches magnitudes, not meanings."
     },
     {
       "file": "godot/scripts/world/world_builder.gd",
       "value": 90,
-      "reason": "The hemisphere fill lights are aimed straight down and straight up: a quarter turn about X, in degrees. Geometry, not camera_and_hud.fovMax and not world.drivableExtent, which are the two constants that share the magnitude. Aiming them is load-bearing \u2014 design D2a records that the renderer spike once had both horizontal, tinting nothing."
+      "reason": "The hemisphere fill lights are aimed straight down and straight up: a quarter turn about X, in degrees. Geometry, not camera_and_hud.fovMax and not world.drivableExtent, which are the two constants that share the magnitude. Aiming them is load-bearing — design D2a records that the renderer spike once had both horizontal, tinting nothing."
     },
     {
       "file": "godot/scripts/view/kart_view.gd",
       "value": 0.02,
-      "reason": "CENTROID_MIN_OFFSET \u2014 how far the kart mesh's vertex centroid must sit from its bounding-box centre for the asymmetry to indicate which end is the nose. The supplied model measures 0.0764, so this is roughly a quarter of it: below this the mesh is too symmetric for the heuristic to speak and the test says so rather than reporting a coin flip as corroboration. The collision is with unnamed_in_spec.startFinishBandHeightY, the height the start/finish band floats above the ground \u2014 an unrelated quantity that happens to share a magnitude."
+      "reason": "CENTROID_MIN_OFFSET — how far the kart mesh's vertex centroid must sit from its bounding-box centre for the asymmetry to indicate which end is the nose. The supplied model measures 0.0764, so this is roughly a quarter of it: below this the mesh is too symmetric for the heuristic to speak and the test says so rather than reporting a coin flip as corroboration. The collision is with unnamed_in_spec.startFinishBandHeightY, the height the start/finish band floats above the ground — an unrelated quantity that happens to share a magnitude."
     },
     {
       "file": "godot/scripts/core/rng.gd",
       "value": 15,
-      "reason": "A bit shift in mulberry32 \u2014 `_state >> 15` \u2014 and part of the algorithm's definition, not a tuning value. Changing it would produce a different generator, which is why the file's own header warns that getting the masking wrong makes the sequence diverge silently. The collision is with prop_counts.treeCount, added by add-seeded-world-scatter."
+      "reason": "A bit shift in mulberry32 — `_state >> 15` — and part of the algorithm's definition, not a tuning value. Changing it would produce a different generator, which is why the file's own header warns that getting the masking wrong makes the sequence diverge silently. The collision is with prop_counts.treeCount, added by add-seeded-world-scatter."
     },
     {
       "file": "godot/scripts/world/world_builder.gd",
       "value": 12,
       "reason": "The placeholder camera's look-at target on Z. A viewpoint, not a population: it is written down so the world scene's captures are reproducible, and add-chase-camera replaced it for the running game. The collision is with prop_counts.coneCount, added by add-seeded-world-scatter."
+    },
+    {
+      "file": "godot/scripts/main.gd",
+      "value": 10,
+      "reason": "INSPECT_POSITION's Z — the pre-race inspection pose the design document states as 'approximately (0, 5, −10)' in prose (Viewing the kart before the start), a viewpoint rather than a named constant, like the placeholder camera's 12 above. The collision is with camera_and_hud.minimapInset, prop_counts.rockCount and unnamed_in_spec.startFinishBandWidthX, three unrelated quantities sharing the magnitude."
+    },
+    {
+      "file": "godot/scripts/core/race_state.gd",
+      "value": 60,
+      "reason": "TICKS_PER_SECOND, mirrored from sim.gd because a preload between the two would be circular — the same fixed 60 ticks per second the sim.gd entry above justifies, colliding with the same lighting.shadowVolumeExtent."
     }
   ]
 }
