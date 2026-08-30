@@ -21,11 +21,11 @@
 #      played — every reader keeps working — and `bests` holds the rest.
 #      "procedural" is the key while no circuit is loaded.
 #
-# THE THREADED-LAP CONDITION. With a circuit loaded the band banks only when the
-# progress cursor is past the final gate, and there is NO minimum lap time: the
-# ordered gates are the farming defence. With no circuit loaded — the interim
-# that ends when add-circuit-world-and-presentation ships the boot circuit —
-# port_decisions' minLapTime remains the defence, unchanged.
+# THE THREADED-LAP CONDITION. The band banks only when the progress cursor is
+# past the final gate, and there is NO minimum lap time: the ordered gates are
+# the farming defence, and `minLapTime` is gone from the data, the loader and
+# this file. The game always plays a circuit, so the gateless branch below is
+# reachable only by a synthetic simulation a suite built itself.
 #
 # Observes only. Nothing in this file writes a position, a velocity, or a yaw;
 # the one thing it writes outside itself is the cursor's rewind on a bank, which
@@ -87,13 +87,12 @@ func advance(pos_x: float, pos_z: float, step5_dz: float) -> void:
 
 	clock_ticks += 1
 
-	if circuit != null and circuit.has_gates():
-		# The threaded condition REPLACES the minimum entirely — the document
-		# retires minLapTime, it does not keep it as a second hurdle.
-		if not circuit.is_threaded():
-			return  # the course has not been threaded; the line alone is never enough
-	elif clock_seconds() < tuning.min_lap_time:
-		return  # the no-circuit interim: too soon — no farming the line at the start
+	# The threaded condition REPLACES the old minimum entirely — the document
+	# retires minLapTime, it does not keep it as a second hurdle, and there is
+	# nothing left of it to keep: the key, the loader read and this branch's
+	# other half all went with add-circuit-world-and-presentation.
+	if circuit != null and circuit.has_gates() and not circuit.is_threaded():
+		return  # the course has not been threaded; the line alone is never enough
 	if pos_z <= tuning.lap_gate_z_min or pos_z >= tuning.lap_gate_z_max:
 		return  # not in the band
 	if absf(pos_x) >= tuning.lap_gate_abs_x_limit:
@@ -115,6 +114,18 @@ func _bank() -> void:
 	# The document: banking a lap returns the cursor to 1.
 	if circuit != null:
 		circuit.rewind()
+
+
+## Restart Circuit's half of the clock: the attempt starts again from 0.00 with
+## no hold and nothing banked on it, while the SESSION state — this circuit's
+## best, every other circuit's best, and a best flash already running — is kept.
+## "The session's per-circuit best time is kept" is the document's own sentence.
+func restart_attempt() -> void:
+	clock_ticks = 0
+	hold_ticks = 0
+	banked_seconds = -1.0
+	banked_medal = ""
+	banked_this_tick = false
 
 
 ## Point the best readout at another circuit, stashing the outgoing one. Called

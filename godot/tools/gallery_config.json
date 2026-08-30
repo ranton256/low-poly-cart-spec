@@ -55,6 +55,21 @@
     "boot_ready re-blessed deliberately: the old baseline was the placeholder",
     "camera's view WITH the minimap disc visible over the kart (item 9 breach,",
     "caught by the graze capture); the new one is the intended inspection pose.",
-    "Limits unchanged."
+    "Limits unchanged.",
+    "Re-measured 2026-08-30 at M9, after the boot world became the shipped",
+    "circuit and gate_next joined the set (tools/gallery.sh --capture-only into",
+    "two scratch directories, then gallery_compare.py between them):",
+    "  boot_ready / boundary_skirt / countdown_go / graze_cones: 0.0000 / 0.000% / 0.000%",
+    "  gate_next: 0.0060 / 0.035% / 0.006%   hud_at_speed: 0.0029 / 0.028% / 0.003%",
+    "  lap_banked: 0.0047 / 0.034% / 0.004%",
+    "A bless-then-compare pass (two more captures) measured the same states at",
+    "0.0131 / 0.104% / 0.013% (gate_next) and 0.0139 / 0.098% / 0.012%",
+    "(lap_banked) — the same order, still ~40x inside the limits, which stay at",
+    "0.50 / 1.00% / 0.10%. EVERY baseline was re-blessed at M9 and that is",
+    "expected, not drift: the world the game boots is now authored content with",
+    "six gates standing in it, and the HUD gained the GATE n/N line, the amended",
+    "hint text and the medal readout. gate_next is captured at tick 336, an exact",
+    "multiple of the 48-tick pulse period, so the next gate sits at full",
+    "gateNextColour rather than at whatever phase the frame caught."
   ]
 }

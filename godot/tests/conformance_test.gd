@@ -1,8 +1,14 @@
-# G2 — the Acceptance Checklist as fourteen named cases (V7), each quoting
+# G2 — the Acceptance Checklist as fifteen named cases (V7), each quoting
 # its item and asserting the stated tolerance as a LITERAL. The machinery
 # behind every item is proven across the other suites; this file is the one
-# place a reviewer reads fourteen names against fourteen items and sees the
+# place a reviewer reads fifteen names against fifteen items and sees the
 # document's own numbers. Plus the lap-gate ordering discriminator (Backlog).
+#
+# THREE CASES MOVED WITH THE CHECKLIST when amend-gdd-for-checkpoint-circuit
+# amended it: item 1 now boots into the SHIPPED CIRCUIT, item 2 reaches the
+# random scales through the AUTHORING scatter (the boot world is authored
+# content and no longer random at all), item 10 banks on a threaded course with
+# no minimum lap time, and item 15 is new.
 #
 #   godot --headless -s tests/conformance_test.gd
 #
@@ -19,8 +25,11 @@ const TuningLoader := preload("res://scripts/tuning_loader.gd")
 const ChaseCamera := preload("res://scripts/core/chase_camera.gd")
 const Collision := preload("res://scripts/core/collision.gd")
 const Normalise := preload("res://scripts/core/normalise.gd")
+const ArtTuning := preload("res://scripts/art_tuning.gd")
+const Circuit := preload("res://scripts/core/circuit.gd")
+const LayoutIO := preload("res://scripts/world/layout_io.gd")
 
-const ITEMS := 14
+const ITEMS := 15
 const GO_TICK := 240  # item 1: 4.0 s at 60 Hz; ± 0.1 s is ± 6 ticks
 const TIMING_TOL := 0.05  # items 4: the checklist's ± 0.05 s
 const KART_BOX := AABB(Vector3(-1.1, 0.0, -1.18), Vector3(2.2, 1.2, 2.36))
@@ -63,6 +72,7 @@ func _init() -> void:
 	_item_12_layout_round_trip()
 	_item_13_live_tuning_next_tick()
 	_item_14_frame_rate_independence()
+	await _item_15_the_shipped_circuit_is_the_game()
 	_ordering_discriminator()
 
 	_check(_ran == ITEMS, "all %d checklist items ran as named cases (%d)" % [ITEMS, _ran])
@@ -70,7 +80,7 @@ func _init() -> void:
 	get_root().remove_child(_root)
 	_root.free()
 	RVTest.finish(
-		self, "conformance: 14 items at their stated tolerances ok", "conformance check(s)"
+		self, "conformance: 15 items at their stated tolerances ok", "conformance check(s)"
 	)
 
 
@@ -82,8 +92,9 @@ func _sim() -> RefCounted:
 	return s
 
 
-## "boots to a countdown with no user interaction … hands over control
-## 4.0 s ± 0.1 s later, on the GO! frame."
+## "The game boots into the shipped circuit, to a countdown with no user
+## interaction and no configuration, and hands over control 4.0 s ± 0.1 s
+## later, on the GO! frame." (Amended: the world is the shipped circuit.)
 func _item_01_boot_to_countdown_control_at_four_seconds() -> void:
 	_ran += 1
 	var s := Sim.new()
@@ -101,16 +112,51 @@ func _item_01_boot_to_countdown_control_at_four_seconds() -> void:
 		"item 1: control at tick %d — 4.0 s ± 0.1 s (± 6 ticks) after boot" % control_tick
 	)
 	_check(_root.sim.race.state != 0, "item 1: the real boot reached the countdown unaided")
+	# INTO THE SHIPPED CIRCUIT, not a scatter that resembles one: the armed
+	# circuit is the committed file's, and the field is the file's own props.
+	var document: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(LayoutIO.SHIPPED_CIRCUIT_PATH)
+	)
+	var shipped: Array = document["props"]
+	var circuit: RefCounted = _root.sim.circuit
+	var placed := true
+	for i in range(mini(_root.props.records.size(), shipped.size())):
+		var record: RefCounted = _root.props.records[i]
+		var position: Array = (shipped[i] as Dictionary)["position"]
+		if (
+			record.asset != (shipped[i] as Dictionary)["asset"]
+			or absf(record.x - float(position[0])) > 0.001
+			or absf(record.z - float(position[2])) > 0.001
+		):
+			placed = false
+	_check(
+		(
+			circuit.has_gates()
+			and circuit.circuit_name == "first-light"
+			and _root.props.records.size() == shipped.size()
+			and placed
+		),
+		(
+			"item 1: and it booted into the SHIPPED CIRCUIT — %s, %d gates, the file's own %d props"
+			% [circuit.circuit_name, circuit.gate_count(), shipped.size()]
+		)
+	)
 
 
 ## "Every prop stands exactly on the ground — none floating, none sunk — at
 ## every random scale."
+##
+## THROUGH THE AUTHORING SCATTER, twice. The boot world is authored content
+## now, so "every random scale" is no longer a property of it — the random
+## scales live in the scatter this checks directly, which is also the machinery
+## every circuit's props are authored from.
 func _item_02_every_prop_grounded_at_every_scale() -> void:
 	_ran += 1
 	var field: Node3D = _root.props
 	var checked := 0
 	var sunk := 0
 	for generation in range(2):
+		_root.regenerate_world()
 		for i in range(field.records.size()):
 			var record: RefCounted = field.records[i]
 			var node: Node3D = field.get_child(i) as Node3D
@@ -122,11 +168,9 @@ func _item_02_every_prop_grounded_at_every_scale() -> void:
 			if absf(world_bottom) > 0.001 or absf(record.normalised.box.position.y) > 0.001:
 				sunk += 1
 			checked += 1
-		if generation == 0:
-			_root.regenerate_world()
 	_check(
 		sunk == 0 and checked > 100,
-		"item 2: %d props over two generations grounded — none floating, none sunk" % checked
+		"item 2: %d props over two fresh scatters grounded — none floating, none sunk" % checked
 	)
 
 
@@ -340,25 +384,58 @@ func _item_09_minimap() -> void:
 	)
 
 
-## "Crossing the white band northbound after 5 s banks a lap, freezes TIME on
-## it for 0.5 s, flashes a new best in green when appropriate, then restarts
-## the clock. Crossing it southbound under power banks nothing."
+## "Crossing the white band northbound banks a lap ONLY when every gate has
+## been passed in order — with no minimum lap time — freezes TIME on it for
+## 0.5 s, flashes a new best in green when appropriate, then restarts the
+## clock. Crossing it southbound under power, or without the course threaded,
+## banks nothing." (Item 10 as amended.)
 func _item_10_lap_banking_rules() -> void:
 	_ran += 1
-	var s := _sim()
-	for _i in range(301):
-		s.step()
-	s.pos_z = -3.0
-	s.input.forward = true
+	# UNTHREADED, and given every chance: the shipped circuit armed, a long
+	# clock behind it, and a clean northbound crossing of the REAL band.
+	var unthreaded := _sim()
+	unthreaded.arm_circuit(LayoutIO.read_circuit(LayoutIO.SHIPPED_CIRCUIT_PATH))
+	for _i in range(401):
+		unthreaded.step()
+	unthreaded.pos_z = -3.0
+	unthreaded.input.forward = true
 	for _i in range(120):
+		unthreaded.step()
+	unthreaded.input.forward = false
+	_check(unthreaded.pos_z > 6.0, "item 10: the unthreaded kart crossed the band")
+	_check(
+		unthreaded.lap.banked_seconds < 0.0 and unthreaded.lap.clock_seconds() > 5.0,
+		(
+			"item 10: %.2f s of clock and a clean crossing bank NOTHING unthreaded"
+			% unthreaded.lap.clock_seconds()
+		)
+	)
+
+	# THREADED, and fast: one gate on the way to the line, the whole lap inside
+	# the retired 5 s minimum — which is the point, there is no minimum.
+	var s := _sim()
+	var course := Circuit.new()
+	course.circuit_name = "item10"
+	course.add_gate(0.0, -2.0, 0.0, 10.0)
+	s.arm_circuit(course)
+	s.pos_z = -4.0
+	s.input.forward = true
+	for _i in range(200):
 		s.step()
 		if s.lap.banked_this_tick:
 			break
 	s.input.forward = false
-	_check(s.lap.banked_seconds >= 5.0, "item 10: northbound after 5 s banks")
+	_check(
+		s.lap.banked_seconds > 0.0 and s.lap.banked_seconds < 5.0,
+		"item 10: a threaded lap banks in %.2f s — no minimum applies" % s.lap.banked_seconds
+	)
 	_check(s.lap.hold_ticks == 30, "item 10: TIME freezes for 0.5 s (30 ticks)")
 	_check(s.lap.best_flash_ticks == 60, "item 10: the first best flashes for 1.0 s")
+	_check(s.circuit.cursor == 1, "item 10: and banking returns the cursor to gate 1")
+
 	var southbound := _sim()
+	southbound.arm_circuit(course)
+	southbound.circuit.cursor = 2  # threaded: the only thing left to refuse is the direction
 	for _i in range(301):
 		southbound.step()
 	southbound.yaw = PI
@@ -454,6 +531,10 @@ func _item_14_frame_rate_independence() -> void:
 	var finals: Array = []
 	for _run in range(2):
 		var s := _sim()
+		# ON THE SHIPPED CIRCUIT, like the probe: the recorded run below is the
+		# real game, which threads six gates before it can bank, and the two
+		# halves of this item must describe the same drive.
+		s.arm_circuit(LayoutIO.read_circuit(LayoutIO.SHIPPED_CIRCUIT_PATH))
 		var phase_index := 0
 		var phase_start := 0
 		for tick in range(3600):
@@ -497,6 +578,126 @@ func _item_14_frame_rate_independence() -> void:
 		record.count("best lap 15.05") == 3,
 		"item 14: and the recorded run really banked its lap at all three rates"
 	)
+
+
+## "The shipped circuit loads at boot with numbered gates; the next gate is
+## indicated on the gate itself, the HUD counter, and the minimap; a lap that
+## skips any gate refuses to bank; Restart Circuit rebuilds the authored world,
+## returns the kart to the start, and keeps the session best."
+##
+## Item 15, and the one item that spans the whole change: the file, the
+## furniture, the HUD, the minimap, the core's refusal, and the binding. Each
+## half is proven in depth elsewhere (circuit_content_test, gate_view_test,
+## circuit_test, driver_test); this reads the checklist item against the
+## running game, in one place, the way the other fourteen do.
+func _item_15_the_shipped_circuit_is_the_game() -> void:
+	_ran += 1
+	var sim: RefCounted = _root.sim
+	var circuit: RefCounted = sim.circuit
+	_check(
+		circuit.circuit_name == "first-light" and circuit.gate_count() == 6,
+		(
+			"item 15: the shipped circuit is loaded — %s, %d gates"
+			% [circuit.circuit_name, circuit.gate_count()]
+		)
+	)
+	# NUMBERED, each gate carrying its own place in the order.
+	var numbered := true
+	for number in range(1, circuit.gate_count() + 1):
+		var numeral: Label3D = (
+			_root.get_node_or_null("Gates/GateFurniture/Gate%d/Numeral" % number) as Label3D
+		)
+		if numeral == null or numeral.text != str(number):
+			numbered = false
+	_check(numbered, "item 15: with numbered gates standing in the world")
+
+	# THE NEXT GATE, indicated in all three places the item names.
+	circuit.cursor = 2
+	# Three frames, not one: process_frame fires around the tree's own _process,
+	# and the views are drawn from it — reading a label on the first frame after
+	# a state change reads the frame BEFORE the change.
+	for _i in range(3):
+		await process_frame
+	var art: RefCounted = ArtTuning.load_art()
+	var next_colour: Color = art.colour("gateNextColour")
+	var pylon: MeshInstance3D = (
+		_root.get_node("Gates/GateFurniture/Gate2/PylonWest") as MeshInstance3D
+	)
+	var painted: Color = (pylon.material_override as StandardMaterial3D).albedo_color
+	var on_the_gate: bool = Vector3(painted.r, painted.g, painted.b).normalized().is_equal_approx(
+		Vector3(next_colour.r, next_colour.g, next_colour.b).normalized()
+	)
+	var counter: Label = _root.overlay.get_node("GateCounter") as Label
+	var markers: Node3D = _root.get_node("GateMarkers") as Node3D
+	var next_radius: float = (
+		((markers.get_child(1) as MeshInstance3D).mesh as CylinderMesh).top_radius
+	)
+	var idle_radius: float = (
+		((markers.get_child(2) as MeshInstance3D).mesh as CylinderMesh).top_radius
+	)
+	_check(
+		on_the_gate and counter.text == "GATE 2/6" and next_radius > idle_radius,
+		(
+			"item 15: the next gate is indicated on the gate, the HUD (%s) and the minimap (%.1f vs %.1f wu)"
+			% [counter.text, next_radius, idle_radius]
+		)
+	)
+	circuit.cursor = 1
+
+	# A LAP THAT SKIPS A GATE REFUSES TO BANK — under the real band, on the
+	# shipped course, with a long clock behind it.
+	var skipper := _sim()
+	skipper.arm_circuit(LayoutIO.read_circuit(LayoutIO.SHIPPED_CIRCUIT_PATH))
+	skipper.circuit.cursor = skipper.circuit.gate_count() - 1  # four of six passed
+	for _i in range(401):
+		skipper.step()
+	skipper.pos_z = -3.0
+	skipper.input.forward = true
+	for _i in range(120):
+		skipper.step()
+	_check(
+		skipper.lap.banked_seconds < 0.0,
+		(
+			"item 15: a lap that skips one gate of six refuses to bank, %.2f s in"
+			% skipper.lap.clock_seconds()
+		)
+	)
+
+	# RESTART CIRCUIT, through the real binding.
+	sim.lap.best_seconds = 11.5
+	sim.lap.bests[sim.lap.best_key] = 11.5
+	sim.circuit.cursor = 3
+	for _i in range(30):
+		Input.action_press("accelerate")
+		await physics_frame
+	Input.action_release("accelerate")
+	Input.action_press("regenerate_world")
+	await physics_frame
+	await physics_frame
+	Input.action_release("regenerate_world")
+	var document: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(LayoutIO.SHIPPED_CIRCUIT_PATH)
+	)
+	_check(
+		(
+			sim.pos_x == 0.0
+			and sim.pos_z == 0.0
+			and sim.velocity == 0.0
+			and sim.circuit.cursor == 1
+			and sim.lap.clock_seconds() < 0.05
+			and sim.lap.best_seconds == 11.5
+			and _root.props.prop_count() == (document["props"] as Array).size()
+		),
+		(
+			(
+				"item 15: Restart Circuit rebuilt the authored world (%d props), returned the kart, "
+				+ "and kept the session best"
+			)
+			% _root.props.prop_count()
+		)
+	)
+	sim.lap.best_seconds = -1.0
+	sim.lap.bests.clear()
 
 
 ## The Backlog's ordering discriminator: a push-out carries the kart INTO the

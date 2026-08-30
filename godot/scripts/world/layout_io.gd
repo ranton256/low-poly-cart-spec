@@ -26,12 +26,11 @@
 # the loaded circuit back through the same five-decimal quantization the props
 # use, so the byte-identity guarantee extends to it.
 #
-# DELIBERATE INTERIM. The design document says a file WITHOUT a circuit —
-# version 1 included — is refused on load with a named error. This change does
-# NOT implement that refusal: the game must stay playable until the boot ships
-# a circuit, so gateless files still load. The refusal lands with
-# add-circuit-world-and-presentation, and the register's deferral for
-# "A layout is a circuit" stays open until it does.
+# A GATELESS FILE IS REFUSED, version 1 included — the design document's own
+# sentence, and the interim add-checkpoint-circuit-core recorded ends here. Such
+# a file is still a valid AUTHORING artifact: export_layout writes one whenever
+# no circuit is armed, and tools/author_first_light.gd builds the shipped
+# circuit from exactly that. What changed is that the game will not play one.
 extends RefCounted
 
 const Scatter := preload("res://scripts/core/scatter.gd")
@@ -39,6 +38,12 @@ const Normalise := preload("res://scripts/core/normalise.gd")
 const Circuit := preload("res://scripts/core/circuit.gd")
 
 const DEFAULT_PATH := "user://track_layout.json"
+
+## The shipped circuit: the world the game boots into (Session Bootstrap, as
+## amended — "the world built at boot is the shipped circuit layout"). Read
+## through the same import path as any other layout, from res:// rather than
+## the user directory, because it is committed content.
+const SHIPPED_CIRCUIT_PATH := "res://data/circuits/first-light.json"
 
 ## The file version a layout carrying a circuit is written as.
 const CIRCUIT_VERSION := 2
@@ -55,7 +60,7 @@ class Loaded:
 	extends RefCounted
 	var ok: bool = false
 	var placements: Array = []
-	## The file's circuit, or null when it carried none (the v1 interim).
+	## The file's circuit. Never null when `ok` — a file without one is refused.
 	var circuit: RefCounted = null
 
 
@@ -98,7 +103,7 @@ static func export_layout(
 	var document: Dictionary = {"version": PROP_ONLY_VERSION, "props": records}
 	if circuit != null and circuit.has_gates():
 		document["version"] = CIRCUIT_VERSION
-		document["circuit"] = _circuit_record(circuit)
+		document["circuit"] = circuit_record(circuit)
 	file.store_string(JSON.stringify(document, "  ") + "\n")
 	file.close()
 	print("layout: saved %d props to %s" % [records.size(), ProjectSettings.globalize_path(path)])
@@ -122,14 +127,25 @@ static func import_layout(path: String, boxes: Dictionary) -> Loaded:
 		push_error("layout: %s is not a layout file" % path)
 		return loaded
 
-	# The circuit FIRST, so a malformed one costs nothing to refuse. A file
-	# carrying no circuit is not an error here — see the header's interim.
+	# The circuit FIRST, so a malformed one costs nothing to refuse — and a file
+	# with no circuit at all is refused here by name: the document says a layout
+	# the game will play always carries gates.
 	var document: Dictionary = parsed
-	if document.has("circuit"):
-		var circuit: RefCounted = _read_circuit(document["circuit"])
-		if circuit == null:
-			return loaded  # the reason is already logged; nothing is released
-		loaded.circuit = circuit
+	if not document.has("circuit"):
+		push_error(
+			(
+				(
+					"layout: %s carries no circuit (version %s) — the game plays circuits only; "
+					+ "such a file is an authoring artifact, not a track"
+				)
+				% [path, document.get("version", PROP_ONLY_VERSION)]
+			)
+		)
+		return loaded
+	var circuit: RefCounted = _read_circuit(document["circuit"])
+	if circuit == null:
+		return loaded  # the reason is already logged; nothing is released
+	loaded.circuit = circuit
 
 	var placements: Array = []
 	var raw: Array = document["props"]
@@ -156,6 +172,23 @@ static func import_layout(path: String, boxes: Dictionary) -> Loaded:
 	loaded.placements = placements
 	loaded.ok = true
 	return loaded
+
+
+## Just the COURSE from a layout file — the gates, the name and the targets,
+## with no prop instantiated and no authored box needed. For the suites and
+## tools that drive a bare simulation around the shipped circuit: the scripted
+## lap has to thread the real gates to bank, and loading a whole world to learn
+## where they are would make every one of those proofs need a scene.
+static func read_circuit(path: String) -> RefCounted:
+	var text := FileAccess.get_file_as_string(path)
+	if text == "":
+		push_error("layout: %s is missing or empty" % path)
+		return null
+	var parsed: Variant = JSON.parse_string(text)
+	if not (parsed is Dictionary) or not (parsed as Dictionary).has("circuit"):
+		push_error("layout: %s carries no circuit" % path)
+		return null
+	return _read_circuit((parsed as Dictionary)["circuit"])
 
 
 ## The circuit object, or null with the reason logged. WHOLE OR NOT AT ALL: one
@@ -234,8 +267,10 @@ static func _is_number(value: Variant) -> bool:
 
 
 ## The circuit as it goes back out, quantized like every other value the file
-## carries so a load/save cycle is byte-identical from cycle zero.
-static func _circuit_record(circuit: RefCounted) -> Dictionary:
+## carries so a load/save cycle is byte-identical from cycle zero. Public
+## because tools/author_first_light.gd writes the shipped file through it —
+## authoring and saving must produce the same bytes for the same circuit.
+static func circuit_record(circuit: RefCounted) -> Dictionary:
 	var gates: Array = []
 	for gate: RefCounted in circuit.gates:
 		(

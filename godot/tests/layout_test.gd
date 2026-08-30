@@ -14,7 +14,6 @@ const RVTest := preload("res://tests/harness.gd")
 const MainScene := preload("res://scenes/main.tscn")
 const LayoutIO := preload("res://scripts/world/layout_io.gd")
 const Collision := preload("res://scripts/core/collision.gd")
-const Circuit := preload("res://scripts/core/circuit.gd")
 
 const TEST_PATH := "user://layout_test.json"
 const SECOND_PATH := "user://layout_test_2.json"
@@ -25,6 +24,7 @@ const V2_A_PATH := "user://layout_test_v2_a.json"
 const V2_B_PATH := "user://layout_test_v2_b.json"
 const V2_C_PATH := "user://layout_test_v2_c.json"
 const BAD_CIRCUIT_PATH := "user://layout_test_bad_circuit.json"
+const GATELESS_PATH := "user://layout_test_gateless.json"
 
 ## The circuit the v2 cases carry. Deliberately not five-decimal values: the
 ## export's own quantization is what has to make the cycles agree.
@@ -62,6 +62,7 @@ func _init() -> void:
 	await _test_the_watch_detects_a_change_on_the_sim_clock()
 	_test_a_malformed_circuit_refuses_the_whole_file()
 	_test_a_circuit_round_trips_byte_identically()
+	_test_a_gateless_file_is_refused()
 
 	OS.set_environment("LPC_LAYOUT_FILE", "")
 	get_root().remove_child(_root)
@@ -384,14 +385,17 @@ func _test_a_malformed_circuit_refuses_the_whole_file() -> void:
 		),
 		"no prop was released — the current world is untouched"
 	)
-	_check(not sim.circuit.has_gates(), "and no gate was armed")
+	_check(
+		sim.circuit.circuit_name == "first-light",
+		"and no gate was armed — the boot circuit is still the one being played"
+	)
 	_check(sim.lap.clock_ticks == clock_before, "and the clock did not move")
 
 
-## The circuit half of "A layout is a circuit". NO `@covers` claim: that
-## scenario also requires refusing a gateless file with a named error, which
-## this change deliberately does not implement, so the register keeps its
-## deferral open and says the round-trip half is now tested.
+## The circuit half of "A layout is a circuit": the round trip. The refusal
+## half is _test_a_gateless_file_is_refused below, and the two together are what
+## claims the scenario.
+# @covers Track Layout Persistence / A layout is a circuit
 func _test_a_circuit_round_trips_byte_identically() -> void:
 	var sim: RefCounted = _root.sim
 	_write_v2(V2_SEED_PATH, SEED_CIRCUIT)
@@ -424,5 +428,46 @@ func _test_a_circuit_round_trips_byte_identically() -> void:
 		"and the circuit's name unchanged"
 	)
 
-	# Leave the world as the suite found it: no circuit armed, the v1 file live.
-	sim.arm_circuit(Circuit.new())
+	# Leave the world as the suite found it: the shipped circuit armed, which is
+	# what the boot loaded and what the refusal case below expects to survive.
+	_check(_load_from(LayoutIO.SHIPPED_CIRCUIT_PATH), "and the shipped circuit re-loads")
+	OS.set_environment("LPC_LAYOUT_FILE", TEST_PATH)
+
+
+## The refusal half of "A layout is a circuit", through the REAL binding and on
+## a file the game itself would write: exporting with no circuit armed is
+## exactly how an authoring artifact is made, and the document says the game
+## does not play one. The interim add-checkpoint-circuit-core recorded — that
+## gateless files still loaded — ends here.
+func _test_a_gateless_file_is_refused() -> void:
+	var field: Node3D = _root.props
+	var sim: RefCounted = _root.sim
+	var count_before: int = field.records.size()
+	var first_x: float = (field.records[0] as RefCounted).x
+	var name_before: String = sim.circuit.circuit_name
+	var gates_before: int = sim.circuit.gate_count()
+
+	# A version-1 file: the shipped circuit's own props with the circuit removed,
+	# so the props half is known-good and only its absence is under test.
+	var document: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(LayoutIO.SHIPPED_CIRCUIT_PATH)
+	)
+	document.erase("circuit")
+	document["version"] = LayoutIO.PROP_ONLY_VERSION
+	var file := FileAccess.open(GATELESS_PATH, FileAccess.WRITE)
+	file.store_string(JSON.stringify(document, "  ") + "\n")
+	file.close()
+
+	_check(not _load_from(GATELESS_PATH), "a version-1 layout is refused on load, by name")
+	OS.set_environment("LPC_LAYOUT_FILE", TEST_PATH)
+	_check(
+		(
+			field.records.size() == count_before
+			and absf((field.records[0] as RefCounted).x - first_x) < 0.0001
+		),
+		"and the world is unchanged — nothing was released"
+	)
+	_check(
+		sim.circuit.circuit_name == name_before and sim.circuit.gate_count() == gates_before,
+		"and the circuit being played is untouched (%s, %d gates)" % [name_before, gates_before]
+	)

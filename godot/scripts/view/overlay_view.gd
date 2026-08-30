@@ -18,12 +18,17 @@ extends CanvasLayer
 const RaceState := preload("res://scripts/core/race_state.gd")
 const Sim := preload("res://scripts/core/sim.gd")
 const SpeedoView := preload("res://scripts/view/speedo_view.gd")
+const GateChevronView := preload("res://scripts/view/gate_chevron_view.gd")
 
 const COUNTDOWN_GLYPHS: Array[String] = ["READY", "3", "2", "1"]
 const LOADING_TEXT := "Loading assets..."
 const GO_TEXT := "GO!"
 const TITLE_TEXT := "LOW POLY CART"
-const HINTS_TEXT := "W/S drive · A/D steer · G regenerate world"
+## §7's hint line, verbatim — it names the objective, which is why the amended
+## document spells it out rather than leaving the wording to the port.
+const HINTS_TEXT := "W/S drive · A/D steer · G restart · follow the gates"
+## The gate counter's own format, §7's "GATE n/N in the timer label style".
+const GATE_FORMAT := "GATE %d/%d"
 
 var _countdown: Label = null
 var _loading: Label = null
@@ -31,9 +36,12 @@ var _time_label: Label = null
 var _time_value: Label = null
 var _best_label: Label = null
 var _best_value: Label = null
+var _gate_label: Label = null
+var _medal: Label = null
 var _title: Label = null
 var _hints: Label = null
 var _speedo: Control = null
+var _chevron: Control = null
 var _styled := false
 var _last_tick := 0
 
@@ -54,15 +62,23 @@ func _ready() -> void:
 	_time_value = _make_label("TimeValue", Control.PRESET_TOP_RIGHT)
 	_best_label = _make_label("BestLabel", Control.PRESET_TOP_RIGHT)
 	_best_value = _make_label("BestValue", Control.PRESET_TOP_RIGHT)
+	_gate_label = _make_label("GateCounter", Control.PRESET_TOP_RIGHT)
+	_medal = _make_label("Medal", Control.PRESET_TOP_RIGHT)
 	_title = _make_label("Title", Control.PRESET_TOP_LEFT)
 	_hints = _make_label("Hints", Control.PRESET_TOP_LEFT)
 	_speedo = SpeedoView.new()
 	_speedo.name = "Speedo"
 	add_child(_speedo)
+	_chevron = GateChevronView.new()
+	_chevron.name = "GateChevron"
+	add_child(_chevron)
 
 
 ## Called by the composition root once per rendered frame, after the kart view.
-func draw_from(sim: RefCounted, art: RefCounted) -> void:
+## `camera` is the live chase camera, read only for the off-screen gate
+## chevron's projection; optional so a headless suite can bind the overlay to a
+## bare simulation as it always could.
+func draw_from(sim: RefCounted, art: RefCounted, camera: Camera3D = null) -> void:
 	if sim == null or art == null or _countdown == null:
 		return
 	if not _styled:
@@ -73,6 +89,10 @@ func draw_from(sim: RefCounted, art: RefCounted) -> void:
 
 	var race: RefCounted = sim.race
 	_draw_readouts(sim, art, race, ticks_elapsed)
+	if race.state == RaceState.RACING:
+		_chevron.draw_from(sim, camera)
+	else:
+		_chevron.visible = false
 	_loading.visible = race.state == RaceState.LOADING
 	if race.state == RaceState.LOADING:
 		# The error replaces the indicator; the underlying cause is already in
@@ -103,9 +123,12 @@ func draw_from(sim: RefCounted, art: RefCounted) -> void:
 ## from the lap module's counters; the dial from the core's ratio and readout.
 func _draw_readouts(sim: RefCounted, art: RefCounted, race: RefCounted, ticks_elapsed: int) -> void:
 	var racing: bool = race.state == RaceState.RACING
-	for element: Control in [_time_label, _time_value, _best_label, _best_value, _speedo]:
+	for element: Control in [
+		_time_label, _time_value, _best_label, _best_value, _gate_label, _speedo
+	]:
 		element.visible = racing
 	if not racing:
+		_medal.visible = false
 		return
 	var lap: RefCounted = sim.lap
 	_time_value.text = "%.2f" % lap.display_seconds()
@@ -114,6 +137,22 @@ func _draw_readouts(sim: RefCounted, art: RefCounted, race: RefCounted, ticks_el
 	_best_value.label_settings.font_color = art.colour(
 		"bestFlashColour" if flash else "bestTextColour"
 	)
+	# GATE n/N: the cursor against the gate count, both the core's. A threaded
+	# course holds at N — the cursor runs one past the final gate, and "GATE 7/6"
+	# would be arithmetic the HUD invented.
+	var circuit: RefCounted = sim.circuit
+	_gate_label.visible = racing and circuit.has_gates()
+	if circuit.has_gates():
+		_gate_label.text = (
+			GATE_FORMAT % [mini(circuit.cursor, circuit.gate_count()), circuit.gate_count()]
+		)
+	# The medal joins the HELD readout, for exactly the hold window, in its own
+	# colour — the core decided which medal at bank time; this only names it.
+	var medal: String = lap.banked_medal
+	_medal.visible = lap.hold_ticks > 0 and medal != ""
+	if _medal.visible:
+		_medal.text = medal.to_upper()
+		_medal.label_settings.font_color = art.colour("medal%sColour" % medal.capitalize())
 	_speedo.draw_from(sim, ticks_elapsed)
 
 
@@ -155,6 +194,12 @@ func _style(art: RefCounted) -> void:
 		[_best_label, "BEST", label_px, art.colour("countdownTextColour"), 64.0],
 		[_best_value, "--.--", value_px, art.colour("bestTextColour"), 80.0],
 	]
+	# The gate counter is IN the timer block (§7 puts it there), in the timer
+	# LABEL style, under BEST. The medal sits beside the held TIME value, left of
+	# it, at the value's own size — the readout it joins.
+	block.append(
+		[_gate_label, GATE_FORMAT % [1, 1], label_px, art.colour("countdownTextColour"), 112.0]
+	)
 	for row: Array in block:
 		var label: Label = row[0]
 		label.text = row[1]
@@ -174,6 +219,17 @@ func _style(art: RefCounted) -> void:
 		label.offset_bottom = row[4] + float(row[2]) + 8.0
 	_time_label.modulate.a = art.num("timerLabelOpacity")
 	_best_label.modulate.a = art.num("timerLabelOpacity")
+	_gate_label.modulate.a = art.num("timerLabelOpacity")
+
+	_medal.label_settings.font = _mono
+	_medal.label_settings.font_size = value_px
+	_medal.label_settings.shadow_color = Color(0, 0, 0)
+	_medal.label_settings.shadow_offset = Vector2(2, 2)
+	_medal.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_medal.offset_left = -340.0
+	_medal.offset_right = -176.0
+	_medal.offset_top = 32.0
+	_medal.offset_bottom = 32.0 + float(value_px) + 8.0
 
 	_title.text = TITLE_TEXT
 	_title.label_settings.font = _sans
@@ -193,6 +249,7 @@ func _style(art: RefCounted) -> void:
 	_hints.modulate.a = art.num("hintOpacity")
 	_hints.visible = true
 
+	_chevron.configure(art)
 	_speedo.configure(art)
 	_speedo.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_speedo.offset_left = -_speedo.custom_minimum_size.x - 16.0

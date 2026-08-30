@@ -6,27 +6,41 @@
 #   godot --headless -s tests/lap_gate_test.gd
 #
 # EXPECTED VALUES COME FROM THE DESIGN DOCUMENT: the band Z ∈ (4, 6), |X| < 5;
-# minLapTime 5 s; lapRestartDelay 0.5 s; bestFlashDuration 1 s; the threshold
-# 0.01 wu of stage-5 +Z displacement. The two traps its own paragraph names —
-# the push-out and driving-forward-heading-south — get their own tests.
+# lapRestartDelay 0.5 s; bestFlashDuration 1 s; the threshold 0.01 wu of
+# stage-5 +Z displacement. The two traps its own paragraph names — the push-out
+# and driving-forward-heading-south — get their own tests.
+#
+# THERE IS NO MINIMUM LAP TIME any more: the ordered gates are the farming
+# defence, and `minLapTime` went with add-circuit-world-and-presentation. The
+# rejection cases below therefore run on a simulation with NO circuit armed, on
+# purpose — with no threading condition in play, the only thing that can refuse
+# a crossing is the condition each case is about. The threaded half is here too:
+# the scripted drive now threads the SHIPPED circuit's six gates on its way to
+# the line, which is what keeps tools/lap_capture.gd, tools/refresh_probe.gd and
+# main.gd's LPC_SMOKE banking the same lap on the same tick as before.
 extends SceneTree
 
 const RVTest := preload("res://tests/harness.gd")
+const LayoutIO := preload("res://scripts/world/layout_io.gd")
 const Sim := preload("res://scripts/core/sim.gd")
 const InputState := preload("res://scripts/core/input_state.gd")
 const TuningLoader := preload("res://scripts/tuning_loader.gd")
 const Collision := preload("res://scripts/core/collision.gd")
 const Normalise := preload("res://scripts/core/normalise.gd")
 
-const MIN_LAP_TICKS := 300  # minLapTime 5 s, quoted
+## Long enough that two banked laps are unmistakably different times. NOT a
+## minimum — none exists.
+const CLOCK_RUN_TICKS := 300
 const HOLD_TICKS := 30  # lapRestartDelay 0.5 s
 const FLASH_TICKS := 60  # bestFlashDuration 1 s
 
 ## The scripted lap tools/lap_capture.gd replays for M4's visual proof: north
-## through the band (too soon — rejected), a left u-turn (drifting east of the
-## band's X window), south past the band outside that window, a second left
-## u-turn curling back west to the line, then north through the band under
-## power with the clock long past minLapTime.
+## through the band (unthreaded — nothing banks), a left u-turn (drifting east
+## of the band's X window), south past the band outside that window, a second
+## left u-turn curling back west to the line, then north through the band under
+## power with every gate of the shipped circuit passed in order. The shipped
+## circuit's gates were AUTHORED ON THIS TRAJECTORY (tools/author_first_light.gd)
+## precisely so this table still banks, at the same tick, unmodified.
 ## [forward, left, right, ticks]
 const LAP_PHASES: Array = [
 	[true, false, false, 340],
@@ -49,9 +63,9 @@ func _sim() -> RefCounted:
 	return s
 
 
-## Run the clock past minLapTime with the kart parked somewhere harmless.
-func _mature_clock(s: RefCounted) -> void:
-	for _i in range(MIN_LAP_TICKS + 1):
+## Run the clock on with the kart parked somewhere harmless.
+func _run_the_clock(s: RefCounted) -> void:
+	for _i in range(CLOCK_RUN_TICKS + 1):
 		s.step()
 
 
@@ -65,7 +79,7 @@ func _drive_ticks(s: RefCounted, forward: bool, left: bool, right: bool, ticks: 
 
 func _init() -> void:
 	_test_scripted_lap_banks()
-	_test_too_soon_is_rejected()
+	_test_an_unthreaded_crossing_is_rejected()
 	_test_wrong_way_is_rejected()
 	_test_outside_the_band_is_rejected()
 	_test_push_out_cannot_bank()
@@ -78,31 +92,64 @@ func _init() -> void:
 # @covers Lap Detection and Best-Time Tracking / Completing a valid lap
 func _test_scripted_lap_banks() -> void:
 	var s := _sim()
+	var circuit: RefCounted = LayoutIO.read_circuit(LayoutIO.SHIPPED_CIRCUIT_PATH)
+	_check(circuit != null and circuit.has_gates(), "setup: the shipped circuit's course loaded")
+	s.arm_circuit(circuit)
+	var threaded_at := -1
 	for phase: Array in LAP_PHASES:
 		if s.lap.banked_seconds >= 0.0:
 			break
-		_drive_ticks(s, phase[0], phase[1], phase[2], int(phase[3]))
-	_check(s.lap.banked_seconds > 0.0, "the scripted drive banks a lap")
+		s.input.forward = phase[0]
+		s.input.left = phase[1]
+		s.input.right = phase[2]
+		for _i in range(int(phase[3])):
+			s.step()
+			if threaded_at < 0 and s.circuit.is_threaded():
+				threaded_at = s.ticks
+			if s.lap.banked_this_tick:
+				break
 	_check(
-		s.lap.banked_seconds >= 5.0,
-		"and not before minLapTime (banked %.2f s)" % s.lap.banked_seconds
+		s.lap.banked_seconds > 0.0, "the scripted drive banks a lap (%.2f s)" % s.lap.banked_seconds
+	)
+	_check(
+		threaded_at > 0 and threaded_at < s.ticks,
+		"having threaded all %d gates first, at tick %d" % [circuit.gate_count(), threaded_at]
 	)
 	_check(s.lap.best_seconds == s.lap.banked_seconds, "the first lap is the session best")
+	_check(s.circuit.cursor == 1, "and banking returned the cursor to gate 1")
 
 
 # @covers Lap Detection and Best-Time Tracking / Rejecting a crossing
-func _test_too_soon_is_rejected() -> void:
+func _test_an_unthreaded_crossing_is_rejected() -> void:
 	var s := _sim()
-	# Straight north from the start: the kart crosses the band well inside the
-	# first five seconds and must not bank.
-	_drive_ticks(s, true, false, false, MIN_LAP_TICKS - 1)
+	s.arm_circuit(LayoutIO.read_circuit(LayoutIO.SHIPPED_CIRCUIT_PATH))
+	# Straight north from the start: the kart crosses the band having passed no
+	# gate at all, and must not bank — however long the clock has run.
+	_drive_ticks(s, true, false, false, 60)
 	_check(s.pos_z > 6.0, "the kart has driven through the band (z=%.1f)" % s.pos_z)
-	_check(s.lap.banked_seconds < 0.0, "too soon: no lap is banked before minLapTime")
+	_check(s.circuit.cursor == 1, "with the cursor still naming gate 1")
+	_check(s.lap.banked_seconds < 0.0, "an unthreaded crossing banks nothing")
+	# And again with a long clock behind it, so nothing about the refusal is
+	# about being early: the retired minimum is not quietly still in there.
+	_run_the_clock(s)
+	s.pos_x = 0.0
+	s.pos_z = -3.0
+	s.yaw = 0.0
+	s.velocity = 0.0
+	_drive_ticks(s, true, false, false, 90)
+	_check(s.pos_z > 6.0, "the kart crossed the band a second time (z=%.1f)" % s.pos_z)
+	_check(
+		s.lap.banked_seconds < 0.0 and s.lap.clock_seconds() > 5.0,
+		(
+			"still nothing, %.2f s into the attempt — the line alone is never enough"
+			% s.lap.clock_seconds()
+		)
+	)
 
 
 func _test_wrong_way_is_rejected() -> void:
 	var s := _sim()
-	_mature_clock(s)
+	_run_the_clock(s)
 	# Facing south, north of the band, driving forward under power: the scalar
 	# velocity is positive, stage 5's +Z displacement is negative.
 	s.yaw = PI
@@ -115,7 +162,7 @@ func _test_wrong_way_is_rejected() -> void:
 
 func _test_outside_the_band_is_rejected() -> void:
 	var s := _sim()
-	_mature_clock(s)
+	_run_the_clock(s)
 	s.pos_z = 2.0
 	s.pos_x = 6.0  # |X| >= 5: around the band, not through it
 	_drive_ticks(s, true, false, false, 60)
@@ -125,7 +172,7 @@ func _test_outside_the_band_is_rejected() -> void:
 
 func _test_push_out_cannot_bank() -> void:
 	var s := _sim()
-	_mature_clock(s)
+	_run_the_clock(s)
 	# The document's own trap: a kart motionless in the band against a prop on
 	# its south side is shoved +0.3 wu north every tick — thirty times the
 	# threshold — while stage 5 displaces it nothing. A synthetic kart box, so
@@ -206,8 +253,8 @@ func _test_slower_lap_keeps_the_best() -> void:
 	var best: float = s.lap.best_seconds
 	for _i in range(FLASH_TICKS + 2):
 		s.step()
-	# Second lap, necessarily slower: the clock must mature past minLapTime
-	# again, and we let it run well past the first lap's time before crossing.
+	# Second lap, necessarily slower: the clock runs well past the first lap's
+	# time before the kart crosses again.
 	_recross(s, int(best * 60.0) + 240)
 	_check(s.lap.banked_seconds > best, "the second lap was slower (%.2f)" % s.lap.banked_seconds)
 	_check(s.lap.best_seconds == best, "the best readout is unchanged")
@@ -221,7 +268,7 @@ func _bank_a_lap(s: RefCounted) -> void:
 	s.pos_z = -3.0
 	s.pos_x = 0.0
 	s.yaw = 0.0
-	_mature_clock(s)
+	_run_the_clock(s)
 	s.input.forward = true
 	for _i in range(120):
 		s.step()

@@ -38,6 +38,7 @@ func _init() -> void:
 	_test_the_view_never_writes_back()
 	_test_the_game_looks_through_the_specified_camera()
 	await _test_the_frame_orders_physics_then_camera_then_minimap()
+	await _test_restart_circuit_is_instant_and_total()
 	await _test_the_readouts_derive_from_the_lap_counters()
 	await _test_the_running_game_collides_and_jolts()
 	await _test_a_failed_load_halts_the_real_boot()
@@ -113,6 +114,80 @@ func _test_the_frame_orders_physics_then_camera_then_minimap() -> void:
 		0.5,
 		"the minimap is re-centred on the post-physics position"
 	)
+
+
+## RESTART CIRCUIT, through the REAL input path — the `G` the player presses.
+##
+## Two awaited physics frames after a synthetic press, never one: the press is
+## observed on the next _physics_process, and the effects it asks for land on
+## that tick, so a single frame reads the world half a tick early.
+##
+## What the document asks for, all of it: the authored world rebuilt (not a
+## fresh scatter — the scatter is the authoring path now, and no player binding
+## reaches it), the kart at the start pose, the cursor at gate 1, the clock from
+## 0.00, the per-circuit best kept, and the race state never leaving RACING.
+# @covers Procedural World Generation / Restarting the circuit
+func _test_restart_circuit_is_instant_and_total() -> void:
+	var sim: RefCounted = _root.sim
+	var field: Node3D = _root.props
+	var seed_before: int = _root.field_seed
+	var authored: Array = []
+	var instances: Array = []
+	for i in range(field.records.size()):
+		var record: RefCounted = field.records[i]
+		authored.append([record.asset, record.x, record.z])
+		instances.append(field.get_child(i).get_instance_id())
+
+	# Mid-lap, at speed, with three gates behind and a best on the board.
+	sim.lap.best_seconds = 12.0
+	sim.lap.bests[sim.lap.best_key] = 12.0
+	sim.circuit.cursor = 4
+	for _i in range(60):
+		Input.action_press("accelerate")
+		await physics_frame
+	Input.action_release("accelerate")
+	_check(sim.pos_z > 1.0 and sim.velocity > 0.0, "setup: the kart is away (z=%.2f)" % sim.pos_z)
+	_check(sim.lap.clock_seconds() > 0.5, "setup: with a lap clock running")
+
+	Input.action_press("regenerate_world")
+	await physics_frame
+	await physics_frame
+	Input.action_release("regenerate_world")
+
+	_check(
+		sim.pos_x == 0.0 and sim.pos_z == 0.0 and sim.yaw == 0.0 and sim.velocity == 0.0,
+		"the kart is back at the start pose"
+	)
+	_check(sim.circuit.cursor == 1, "the cursor is back at gate 1")
+	_check(
+		sim.lap.clock_seconds() < 0.05 and sim.lap.banked_seconds < 0.0,
+		"the lap clock restarted from 0.00 (%.2f s)" % sim.lap.clock_seconds()
+	)
+	_check(sim.lap.best_seconds == 12.0, "the session best for this circuit is kept")
+	_check(sim.race.is_racing(), "and the race state never left RACING — no fresh countdown")
+	_check(_root.field_seed == seed_before, "NO fresh scatter: the seed did not advance")
+
+	# The world is the AUTHORED arrangement again — rebuilt, not merely left
+	# alone: every prop node is a new instance at the same authored place.
+	var same: bool = field.records.size() == authored.size()
+	var rebuilt := true
+	for i in range(mini(field.records.size(), authored.size())):
+		var record: RefCounted = field.records[i]
+		if (
+			record.asset != authored[i][0]
+			or absf(record.x - float(authored[i][1])) > 0.001
+			or absf(record.z - float(authored[i][2])) > 0.001
+		):
+			same = false
+		if field.get_child(i).get_instance_id() == instances[i]:
+			rebuilt = false
+	_check(same, "the authored arrangement is back, prop for prop")
+	_check(rebuilt, "and every prop was released and rebuilt, not left in place")
+	_check(
+		sim.props.size() == field.prop_count(), "with the simulation re-wired to the rebuilt field"
+	)
+	sim.lap.best_seconds = -1.0
+	sim.lap.bests.clear()
 
 
 ## The GO! overlay through the running scene: green through the goLinger

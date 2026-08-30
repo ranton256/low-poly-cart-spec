@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 ; The game's entry scene: the world, the composition root that drives the
 ; simulation, the kart, and the chase camera the design document specifies.
@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://scripts/world/prop_field.gd" id="5_props"]
 [ext_resource type="Script" path="res://scripts/view/overlay_view.gd" id="6_overlay"]
 [ext_resource type="Script" path="res://scripts/view/minimap_view.gd" id="7_minimap"]
+[ext_resource type="Script" path="res://scripts/view/gate_view.gd" id="8_gates"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("2_main")
@@ -27,6 +28,9 @@ script = ExtResource("3_kart")
 
 [node name="PropField" type="Node3D" parent="."]
 script = ExtResource("5_props")
+
+[node name="Gates" type="Node3D" parent="."]
+script = ExtResource("8_gates")
 
 [node name="ChaseCamera" type="Camera3D" parent="."]
 script = ExtResource("4_camera")

@@ -59,7 +59,6 @@ var speedo_max: float = 0.0
 # --- race timing ---
 var countdown_step: float = 0.0
 var go_linger: float = 0.0
-var min_lap_time: float = 0.0
 var lap_crossing_threshold: float = 0.0
 var lap_restart_delay: float = 0.0
 var best_flash_duration: float = 0.0
@@ -124,10 +123,6 @@ func apply_table(table: Dictionary) -> void:
 	var timing: Dictionary = table.get("timing", {})
 	countdown_step = float(timing.get("countdownStep", 0.0))
 	go_linger = float(timing.get("goLinger", 0.0))
-	# minLapTime was RETIRED from the GDD by amend-gdd-for-checkpoint-circuit;
-	# it lives in port_decisions as the interim farming defence until the M9
-	# gates replace it, and the M9 change deletes this read.
-	min_lap_time = float((table.get("port_decisions", {}) as Dictionary).get("minLapTime", 0.0))
 	lap_crossing_threshold = float(timing.get("lapCrossingThreshold", 0.0))
 	lap_restart_delay = float(timing.get("lapRestartDelay", 0.0))
 	best_flash_duration = float(timing.get("bestFlashDuration", 0.0))
@@ -204,7 +199,6 @@ func missing_fields() -> PackedStringArray:
 		"speedo_max",
 		"countdown_step",
 		"go_linger",
-		"min_lap_time",
 		"lap_crossing_threshold",
 		"lap_restart_delay",
 		"best_flash_duration",

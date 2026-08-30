@@ -290,6 +290,17 @@ func arm_circuit(loaded: RefCounted) -> void:
 	lap.select_circuit(circuit.key())
 
 
+## Restart Circuit (Procedural World Generation / Restarting the circuit): a
+## fresh attempt on the same circuit — the start pose, the cursor back at gate
+## 1, and the lap clock from 0.00. The circuit's identity, its session best, and
+## the race state are untouched: the restart is instant and never re-enters the
+## countdown. Rebuilding the props is the caller's half (scripts/main.gd).
+func restart_circuit() -> void:
+	reset_kart()
+	circuit.rewind()
+	lap.restart_attempt()
+
+
 ## Reset Kart (Runtime Tuning and Player Actions): the start pose and
 ## NOTHING else — the lap clock, banked time, session best, race state, the
 ## CIRCUIT PROGRESS CURSOR, and the world are untouched. Also the document's

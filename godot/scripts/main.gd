@@ -28,16 +28,22 @@ const Scatter := preload("res://scripts/core/scatter.gd")
 const RaceState := preload("res://scripts/core/race_state.gd")
 const LayoutIO := preload("res://scripts/world/layout_io.gd")
 
-## Actions declared in project.godot's InputMap, mapped to the core's held-state
-## fields. The design document's control table also binds Reset Kart and Save
-## Layout, whose EFFECTS arrive in M7 — they are bound here and deliberately do
-## nothing, which the register entry for "Mapping the control scheme" records.
-## The seed this session's field is generated from.
+## The seed the AUTHORING scatter starts from — tools and suites only. The game
+## itself boots the shipped circuit (below) and never scatters, so this is the
+## seed content was authored from rather than the seed the player plays:
+## tools/author_first_light.gd restates it, and the same field is what
+## regenerate_world() produces for the tools and suites that still want one.
 ##
-## Fixed rather than drawn from the clock: a field nobody can reproduce is a field
-## nobody can report a bug about. Regenerate World advances it, so the player gets
-## a new arrangement while every one of them stays nameable.
+## Fixed rather than drawn from the clock: a field nobody can reproduce is a
+## field nobody can report a bug about.
 const STARTING_SEED := 20260829
+
+## The boot world's file, overridable for suites — the LPC_LAYOUT_FILE
+## tradition, but a SEPARATE variable from it on purpose: LPC_LAYOUT_FILE
+## redirects Save/Load Layout, and several suites point it at a scratch file
+## before the scene is even instantiated. Sharing one variable would make those
+## suites boot into whatever that scratch file last held.
+const CIRCUIT_FILE_ENV := "LPC_CIRCUIT_FILE"
 
 ## The camera shake's seed. A SEPARATE stream and a different value from
 ## STARTING_SEED: the shudder must not depend on how many props were scattered,
@@ -49,6 +55,10 @@ const SHAKE_SEED := 704221
 ## stated in its own world frame, looking toward the origin.
 const INSPECT_POSITION := Vector3(0, 5, -10)
 
+## Actions declared in project.godot's InputMap, mapped to the core's held-state
+## fields. The other bound actions — Reset Kart, Save/Load Layout, and the
+## `regenerate` action the design document renamed to Restart Circuit — are read
+## edge-triggered in _read_input().
 const DRIVE_ACTIONS := {
 	"accelerate": "forward",
 	"reverse": "reverse",
@@ -79,9 +89,15 @@ var input: RefCounted = null
 var camera: RefCounted = null
 
 ## The scattered field. The generator lives in the core; this holds what it
-## produced, in the order it produced it.
+## produced, in the order it produced it. The AUTHORING path only — the game
+## boots the circuit below.
 var scatter: RefCounted = null
 var field_seed: int = STARTING_SEED
+
+## The circuit this session is playing, as it was loaded: the props in file
+## order beside the gates. Held because Restart Circuit rebuilds THIS
+## arrangement — "the same authored arrangement, not a fresh scatter".
+var loaded_circuit: RefCounted = null
 
 var _art: RefCounted = null
 
@@ -116,6 +132,10 @@ var _jolts: int = 0
 
 ## The minimap inset. Optional like the other views.
 @onready var minimap: SubViewportContainer = get_node_or_null("Minimap") as SubViewportContainer
+
+## The gate furniture. Optional like the other views — a headless suite drives
+## the root with none of them attached.
+@onready var gates: Node3D = get_node_or_null("Gates") as Node3D
 
 
 ## The render-scale cap (Limiting render resolution on high-density displays).
@@ -159,11 +179,14 @@ func _ready() -> void:
 	# Bootstrap verdict (godot/race-state): success hands off to the countdown
 	# automatically; failure is a terminal LOADING with a visible message —
 	# never a countdown into a broken world. The underlying error has already
-	# been logged by the loader that hit it.
-	if _generate_field(field_seed):
+	# been logged by the loader that hit it. The world built here is the SHIPPED
+	# CIRCUIT (Session Bootstrap, as amended), not a seeded scatter.
+	if _build_circuit_world():
 		sim.race.mark_world_ready()
 	else:
-		sim.race.fail_load("Could not load the game's models — see the log")
+		sim.race.fail_load("Could not load the circuit — see the log")
+	if gates != null and _art != null:
+		gates.configure(_art, self)
 	if minimap != null and _art != null:
 		# Markers join the world this node roots; the chase camera must not
 		# see their layer (godot/minimap — masked, never moved or toggled).
@@ -234,8 +257,12 @@ func _process(_delta: float) -> void:
 			# through the whole countdown (checklist item 9, found by the M8
 			# grazing-angle capture).
 			chase_camera.current = true
+	if gates != null:
+		gates.draw_from(sim)
 	if overlay != null:
-		overlay.draw_from(sim, _art)
+		# The camera is handed in for the off-screen gate chevron, which is the
+		# projection of a world point — the overlay reads it, never moves it.
+		overlay.draw_from(sim, _art, chase_camera)
 	if minimap != null:
 		minimap.draw_from(sim)
 
@@ -306,15 +333,56 @@ func apply_tuning_file() -> bool:
 	return true
 
 
-## Scatter a field and hand it to the view.
+## The boot world: the shipped circuit, through the ordinary layout import.
+##
+## Returns whether the world is ready to race in. A headless root with no
+## PropField has nothing to build and succeeds; models that cannot be loaded, a
+## missing file, a malformed one, and a GATELESS one all fail, and the caller
+## turns that into the terminal LOADING error.
+func _build_circuit_world() -> bool:
+	if props == null:
+		return true
+	if props.authored_boxes().is_empty() and not props.load_assets():
+		push_error("main: could not load the prop models; the field is empty")
+		return false
+	var path: String = circuit_path()
+	var loaded: RefCounted = LayoutIO.import_layout(path, props.authored_boxes())
+	if not loaded.ok:
+		push_error("main: the shipped circuit at %s did not load" % path)
+		return false
+	loaded_circuit = loaded
+	build_field(loaded.placements)
+	sim.arm_circuit(loaded.circuit)
+	print(
+		(
+			"world: circuit %s — %d props, %d gates from %s"
+			% [
+				loaded.circuit.circuit_name,
+				loaded.placements.size(),
+				loaded.circuit.gate_count(),
+				path
+			]
+		)
+	)
+	return true
+
+
+## Where the boot world is read from: the committed circuit, or the override a
+## suite sets to boot a different — or a deliberately broken — file.
+static func circuit_path() -> String:
+	var override := OS.get_environment(CIRCUIT_FILE_ENV)
+	return override if override != "" else LayoutIO.SHIPPED_CIRCUIT_PATH
+
+
+## Scatter a fresh field and hand it to the view — THE AUTHORING PATH, and no
+## longer bound to any player action (godot/world-scatter, as amended). Circuits
+## are authored from a scatter, so the tools and the suites still need it; the
+## player's `G` is Restart Circuit below.
 ##
 ## The design document's regeneration scenario requires the kart's position,
 ## heading, velocity and the running clock be left untouched — which is why
 ## nothing here touches the simulation. Regenerating is a world operation, not a
 ## reset.
-## Returns whether the world is ready to race in. A headless root with no
-## PropField has nothing to load and succeeds; a field whose models cannot be
-## loaded fails, and the caller turns that into the terminal LOADING error.
 func _generate_field(seed_value: int) -> bool:
 	if props == null:
 		return true
@@ -324,6 +392,20 @@ func _generate_field(seed_value: int) -> bool:
 	build_field(scatter.generate(seed_value, props.authored_boxes()))
 	print("world: seed %d — %s" % [seed_value, scatter.shortfall_report()])
 	return true
+
+
+## Restart Circuit — the `regenerate` binding's new behaviour (Procedural World
+## Generation / Restarting the circuit). The world half is here: every prop is
+## released and the LOADED arrangement rebuilt, never a fresh scatter. The
+## attempt half is the core's, in one call, so the two cannot drift apart.
+##
+## Instant and total for the attempt, and nothing else: the race state never
+## leaves RACING, there is no fresh countdown, and the session's per-circuit
+## best is untouched.
+func restart_circuit() -> void:
+	if loaded_circuit != null:
+		build_field(loaded_circuit.placements)
+	sim.restart_circuit()
 
 
 ## Instantiate a field and hand it to the simulation, in registration order.
@@ -364,16 +446,17 @@ func load_layout() -> bool:
 	var loaded: RefCounted = LayoutIO.import_layout(LayoutIO.layout_path(), props.authored_boxes())
 	if not loaded.ok:
 		return false
+	loaded_circuit = loaded
 	build_field(loaded.placements)
-	if loaded.circuit != null:
-		sim.arm_circuit(loaded.circuit)
+	sim.arm_circuit(loaded.circuit)
 	print("layout: restored %d props from %s" % [loaded.placements.size(), LayoutIO.layout_path()])
 	return true
 
 
-## Regenerate World. The design document gives this action no required binding and
-## leaves the exposure to the port; project.godot binds it and check_settings.py
-## pins it.
+## The authoring scatter, one seed on. NOT bound to a player action since the
+## GDD's Restart Circuit rename — kept for the tools and suites that author and
+## check the scatter rules (godot/world-scatter's "regenerated through the
+## authoring path" scenarios).
 func regenerate_world() -> void:
 	field_seed += 1
 	_generate_field(field_seed)
@@ -382,9 +465,11 @@ func regenerate_world() -> void:
 func _read_input() -> void:
 	for action in DRIVE_ACTIONS:
 		input.set(DRIVE_ACTIONS[action], Input.is_action_pressed(action))
-	# Edge-triggered, not held: one press is one new world.
-	if Input.is_action_just_pressed("regenerate_world"):
-		regenerate_world()
+	# Edge-triggered, not held: one press is one fresh attempt. The action keeps
+	# its name and its `G` binding — the GDD renamed the ACTION, not the port's
+	# InputMap entry, which check_settings.py pins by exact text.
+	if Input.is_action_just_pressed("regenerate_world") and sim.race.is_racing():
+		restart_circuit()
 	if Input.is_action_just_pressed("reset_kart") and sim.race.is_racing():
 		sim.reset_kart()
 	if Input.is_action_just_pressed("save_layout"):

@@ -97,6 +97,10 @@ run_suite tests/tick_test.gd
 run_suite tests/race_state_test.gd
 run_suite tests/lap_gate_test.gd
 run_suite tests/circuit_test.gd
+# The shipped circuit as committed CONTENT, and the gates as the player sees
+# them: the file's own guarantees, and the presentation that reads the cursor.
+run_suite tests/circuit_content_test.gd
+run_suite tests/gate_view_test.gd
 run_suite tests/hud_test.gd
 run_suite tests/minimap_test.gd
 

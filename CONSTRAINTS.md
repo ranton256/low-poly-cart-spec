@@ -206,7 +206,7 @@ call.
 | | Status |
 |---|---|
 | **G1** — Every `### Scenario:` in the GDD is claimed exactly once: by a named test (`# @covers`), by the visual register with a stated reason, or by a deferral naming the milestone that owns it | ✅ `check_spec_coverage.py` |
-| **G2** — Each of the 14 Acceptance Checklist items is one named conformance test carrying its stated tolerance as a literal | ✅ `tests/conformance_test.gd` (M8); the refresh-rate half of item 14 by `tools/refresh_probe.gd`, run recorded |
+| **G2** — Each of the 15 Acceptance Checklist items is one named conformance test carrying its stated tolerance as a literal | ✅ `tests/conformance_test.gd` (M9: `_item_01` boots into the shipped circuit, `_item_02` reaches the random scales through the authoring scatter, `_item_10` banks a threaded lap with no minimum, `_item_15` is the circuit end to end); the refresh-rate half of item 14 by `tools/refresh_probe.gd`, run recorded |
 
 ```
    every scenario in the design document — the gate counts them on every run
@@ -443,9 +443,9 @@ Deterministic acceptance conditions — pass/fail with no judgment.
 | V4 | No physics-body symbol from §4 appears anywhere under `godot/` | ✅ `check_boundaries.py` + the commit hook on staged content |
 | V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py` |
 | V6 | **G1** — every GDD scenario claimed exactly once; a claim on a scenario the document lacks also fails | ✅ `check_spec_coverage.py` |
-| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ⚠️ `tests/conformance_test.gd`: `_item_01`…`_item_14` green, but `amend-gdd-for-checkpoint-circuit` amended items 1 and 10 and added item 15 — the M9 implementation owes `_item_15` and the re-pointed 1/10 cases; until then G2 covers the pre-amendment checklist |
+| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ✅ `tests/conformance_test.gd`: `_item_01`…`_item_15` green against the AMENDED checklist — `add-circuit-world-and-presentation` re-pointed items 1, 2 and 10 and added item 15, and the suite counts its own cases |
 | V8 | Pinned project settings match §6, and every model has a valid committed import preset | ✅ `check_settings.py` |
-| V9 | Gallery diffs within recorded thresholds on all three criteria | ✅ `tools/gallery.sh` + `gallery_compare.py`, five states, floor and limits recorded in `gallery_config.json`; verified by mutation (a painted band fails on all three criteria) |
+| V9 | Gallery diffs within recorded thresholds on all three criteria | ✅ `tools/gallery.sh` + `gallery_compare.py`, seven states (`gate_next` added at M9), floor and limits recorded in `gallery_config.json`; verified by mutation (a painted band fails on all three criteria) |
 | V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py` |
 | V11 | Every `CONSTRAINTS §N Title` reference names the section it points at | ✅ `check_section_refs.py` — bare `docs/CONSTRAINTS.md §N` forms are invisible to it; stale prose stays review's job |
 | V12 | `openspec validate <change> --strict` passes | ✅ |
@@ -576,8 +576,8 @@ Added by this project:
 | Scenario coverage G1 (V6) | `tools/check_spec_coverage.py` parses the GDD | M1 |
 | GDScript lint and format | `gdtoolkit` — `gdlint`, `gdformat --check` | M0 |
 | Whitespace, EOF newline, large files | the hand-rolled `godot/tools/pre-commit` | ✅ M0 |
-| Visual gate (V9) | `tools/gallery.sh` + `gallery_compare.py` — windowed, five deterministic states vs committed baselines | ✅ M6 |
-| Acceptance conformance G2 (V7) | `tests/conformance_test.gd`, 14 named cases | M8 |
+| Visual gate (V9) | `tools/gallery.sh` + `gallery_compare.py` — windowed, seven deterministic states vs committed baselines | ✅ M6 |
+| Acceptance conformance G2 (V7) | `tests/conformance_test.gd`, 15 named cases | M8 |
 | Commit-time gate | `godot/tools/pre-commit`, installed by `tools/install-hooks.sh`; checks **staged blobs**, bash-3.2-portable | ✅ M0 |
 | Asset sync and import | `godot/tools/sync_assets.sh` + `tests/assets_test.gd` — content-hash sync, poisoned-preset refusal, load assertion | ✅ M0 |
 | Tuning transcription | `godot/tools/check_tuning_transcription.py` | ✅ M0 |

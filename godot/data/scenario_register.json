@@ -1,63 +1,23 @@
 {
- "_meta": {
-  "purpose": "Design-document scenarios that no test claims, and why.",
-  "kinds": {
-   "visual": "Cannot be verified headlessly. Needs a stated reason and the committed capture that covers it, or the milestone that will produce one.",
-   "deferred": "Not yet due. Needs the milestone that owns it."
+  "_meta": {
+    "purpose": "Design-document scenarios that no test claims, and why.",
+    "kinds": {
+      "visual": "Cannot be verified headlessly. Needs a stated reason and the committed capture that covers it, or the milestone that will produce one.",
+      "deferred": "Not yet due. Needs the milestone that owns it."
+    },
+    "the_other_kind": "A scenario VERIFIED by a test is not listed here. Its claim lives beside the test, as a '# @covers <Feature> / <Scenario>' line, so it moves with the code it describes.",
+    "matching": "Feature and scenario text are quoted from the design document VERBATIM. check_spec_coverage.py requires a bijection, so rewording a heading in the document breaks every claim on it — deliberately. A fuzzy match would absorb the rename silently, which is the failure the gate exists to prevent.",
+    "honesty": "The gate can check that every scenario is claimed and that a deferral names a milestone. It CANNOT check that a deferred scenario really belongs to the milestone named, nor that a verified claim's test really tests that scenario. Those are review's job — see design D4 of add-determinism-and-coverage-harness."
   },
-  "the_other_kind": "A scenario VERIFIED by a test is not listed here. Its claim lives beside the test, as a '# @covers <Feature> / <Scenario>' line, so it moves with the code it describes.",
-  "matching": "Feature and scenario text are quoted from the design document VERBATIM. check_spec_coverage.py requires a bijection, so rewording a heading in the document breaks every claim on it \u2014 deliberately. A fuzzy match would absorb the rename silently, which is the failure the gate exists to prevent.",
-  "honesty": "The gate can check that every scenario is claimed and that a deferral names a milestone. It CANNOT check that a deferred scenario really belongs to the milestone named, nor that a verified claim's test really tests that scenario. Those are review's job \u2014 see design D4 of add-determinism-and-coverage-harness."
- },
- "entries": [
-  {
-   "feature": "World Boundary Containment",
-   "scenario": "Keeping the boundary invisible",
-   "kind": "visual",
-   "reason": "Requires seeing that grass is still visible beyond the kart and that no wall or ground edge is drawn. Nothing about that is measurable from state.",
-   "milestone": "M6",
-   "capture": "docs/progress/2026-08-29-m6-boundary-skirt.png",
-   "note": "Met by A11's settlement (add-render-pipeline-and-web-budget): a ground skirt in the Ground's own albedo spans past fogEnd, so from the pinned boundary the chase camera sees grass dissolving into fog with no drawn edge \u2014 the capture shows it, and world_test asserts the geometry that guarantees it (nearest skirt edge beyond fogEnd from anywhere drivable). The specified 200x200 Ground, the +/-90 boundary, and 50-150 fog are untouched. Earlier notes and the elevated-oblique capture remain in git history."
-  },
-  {
-   "feature": "Procedural World Generation",
-   "scenario": "Restarting the circuit",
-   "kind": "deferred",
-   "reason": "add-checkpoint-circuit implementation: G's semantics change from fresh scatter to rebuild-from-circuit; the standing prop_field_test proves the scatter machinery (now the authoring path) but not the restart. Its old claim was retired with the renamed scenario.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
-  },
-  {
-   "feature": "Checkpoint Circuit",
-   "scenario": "Medal targets",
-   "kind": "deferred",
-   "reason": "Target comparison and the medal flash in the hold window.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
-  },
-  {
-   "feature": "Checkpoint Circuit",
-   "scenario": "What a gate looks like",
-   "kind": "deferred",
-   "reason": "Generated pylons/stripe/chevron, state colours on the sim clock, non-colliding; partly visual - expect a gallery state plus geometry assertions.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
-  },
-  {
-   "feature": "Checkpoint Circuit",
-   "scenario": "Finding the next gate",
-   "kind": "deferred",
-   "reason": "GATE n/N line, edge chevron, minimap markers with the mask guarantee.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). Owed by the M9 implementation changes."
-  },
-  {
-   "feature": "Track Layout Persistence",
-   "scenario": "A layout is a circuit",
-   "kind": "deferred",
-   "reason": "Layout v2: the circuit object's round-trip is now tested (add-checkpoint-circuit-core \u2014 tests/layout_test.gd stages a v2 file, proves cycle-zero byte identity with the circuit written back, and proves a malformed circuit refuses the whole file). The claim stays DEFERRED because the scenario's other half \u2014 refusing a file WITHOUT a circuit, version 1 included, with a named error \u2014 is deliberately not implemented yet: the game must stay playable until the boot ships a circuit.",
-   "milestone": "M9",
-   "note": "Entered the universe when amend-gdd-for-checkpoint-circuit was applied (owner-approved 2026-08-30). The refusal half is owed by add-circuit-world-and-presentation, which ships the boot circuit that makes it safe."
-  }
- ]
+  "entries": [
+    {
+      "feature": "World Boundary Containment",
+      "scenario": "Keeping the boundary invisible",
+      "kind": "visual",
+      "reason": "Requires seeing that grass is still visible beyond the kart and that no wall or ground edge is drawn. Nothing about that is measurable from state.",
+      "milestone": "M6",
+      "capture": "docs/progress/2026-08-29-m6-boundary-skirt.png",
+      "note": "Met by A11's settlement (add-render-pipeline-and-web-budget): a ground skirt in the Ground's own albedo spans past fogEnd, so from the pinned boundary the chase camera sees grass dissolving into fog with no drawn edge — the capture shows it, and world_test asserts the geometry that guarantees it (nearest skirt edge beyond fogEnd from anywhere drivable). The specified 200x200 Ground, the +/-90 boundary, and 50-150 fog are untouched. Earlier notes and the elevated-oblique capture remain in git history."
+    }
+  ]
 }

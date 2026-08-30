@@ -53,6 +53,33 @@ class Gate:
 	func forward_z() -> float:
 		return cos(yaw)
 
+	## The MOUTH: the opening a kart drives through, as four world XZ corners —
+	## `width` wide laterally, and `depth` deep on EACH side of the segment, so
+	## it covers the pass slab and the approach that reaches it.
+	##
+	## Nothing in the tick reads this. It exists because the design document
+	## makes the layout file "the guarantee that no prop blocks a gate mouth"
+	## (Track Layout Persistence / A layout is a circuit), and a guarantee with
+	## no shape cannot be checked — tests/circuit_content_test.gd checks the
+	## shipped file against it, and tools/author_first_light.gd curates by it.
+	## Vector2 (32-bit) rather than the core's usual scalars: a shape for an
+	## overlap test with metres of margin, never a value the tick accumulates.
+	func mouth_corners(depth: float) -> PackedVector2Array:
+		var forward := Vector2(forward_x(), forward_z())
+		# The lateral axis: gate-forward turned a quarter turn, as in passes().
+		var lateral := Vector2(forward.y, -forward.x)
+		var centre := Vector2(x, z)
+		var half: Vector2 = lateral * (width / 2.0)
+		var reach: Vector2 = forward * depth
+		return PackedVector2Array(
+			[
+				centre - half - reach,
+				centre + half - reach,
+				centre + half + reach,
+				centre - half + reach
+			]
+		)
+
 
 # --- injected ---
 var tuning: RefCounted = null
@@ -136,6 +163,51 @@ func passes(gate: Gate, pos_x: float, pos_z: float, step5_dx: float, step5_dz: f
 	# And stage 5's displacement, projected on gate-forward. THE observable.
 	var along: float = step5_dx * forward_x + step5_dz * forward_z
 	return along > tuning.gate_crossing_threshold
+
+
+## Whether a prop's world box blocks a gate's mouth, on the ground plane.
+##
+## The other half of the guarantee mouth_corners() gives a shape to, and it
+## lives here so the tool that CURATES a circuit's props and the test that
+## re-checks the committed file cannot disagree about what "blocked" means.
+##
+## Separating axes, four of them: the world axes the prop's box is aligned to,
+## and the mouth's own two. That is exact for two rectangles — no sampling, so
+## a prop cannot slip between probe points.
+static func mouth_blocked(mouth: PackedVector2Array, box: AABB) -> bool:
+	var corners := PackedVector2Array(
+		[
+			Vector2(box.position.x, box.position.z),
+			Vector2(box.position.x + box.size.x, box.position.z),
+			Vector2(box.position.x + box.size.x, box.position.z + box.size.z),
+			Vector2(box.position.x, box.position.z + box.size.z),
+		]
+	)
+	var axes := PackedVector2Array(
+		[
+			Vector2(1.0, 0.0),
+			Vector2(0.0, 1.0),
+			(mouth[1] - mouth[0]).normalized(),
+			(mouth[3] - mouth[0]).normalized(),
+		]
+	)
+	for axis: Vector2 in axes:
+		var a: Vector2 = _extent_along(mouth, axis)
+		var b: Vector2 = _extent_along(corners, axis)
+		if a.y < b.x or b.y < a.x:
+			return false
+	return true
+
+
+## A polygon's extent along an axis, as (min, max).
+static func _extent_along(points: PackedVector2Array, axis: Vector2) -> Vector2:
+	var low: float = INF
+	var high: float = -INF
+	for point: Vector2 in points:
+		var value: float = point.dot(axis)
+		low = minf(low, value)
+		high = maxf(high, value)
+	return Vector2(low, high)
 
 
 ## The best target met, or "" for none — "at or under", not "under". A circuit

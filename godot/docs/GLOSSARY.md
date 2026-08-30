@@ -28,7 +28,10 @@ something in the design document, *and* something in this codebase.
 | **tick** | One fixed 1/60 s simulation step. Never a rendered frame — at 144 fps most frames advance no tick, and at 30 fps one frame advances two |
 | **prop** | A scattered obstacle: a mesh in the view plus an AABB record in the simulation. Never a physics body |
 | **the field** | The scattered play area, ±`scatterExtent`. Distinct from the *drivable* area, ±`drivableExtent`, which is larger and empty at its edge |
-| **lap** | A banked time: a northbound crossing of the start band at least `minLapTime` after the clock started. There is no circuit and no checkpoint |
+| **lap** | A banked time: a northbound crossing of the start band with every gate of the loaded circuit passed in order. There is no minimum lap time — the ordered gates are the farming defence, and `minLapTime` was retired with them |
+| **gate** | A numbered checkpoint of the circuit: a directed segment on the ground with a centre, a yaw and a width, drawn as two pylons, a stripe, a chevron and a numeral. Passed, not collided with — the kart drives through it |
+| **the circuit** | The ordered course a layout carries: a name, its gates, and optional medal targets. The game always plays one; `data/circuits/first-light.json` is the shipped circuit and the world the game boots into |
+| **the cursor** | Which gate the circuit is waiting for, 1..N+1. Only the gate it names can advance it; passing any other changes nothing |
 | **the band** | The white start/finish quad at Z = +5. The only track furniture in the game, and the timing gate |
 | **the grid** | The wireframe reference overlay on the ground. Part of the intended look, **not** developer instrumentation, and it ships |
 | **speed** | Ambiguous on its own — say *velocity* (wu/tick, signed, what the simulation carries) or *the dial* (the cosmetic 0–120 readout, which tops out at 115 and is not calibrated) |
