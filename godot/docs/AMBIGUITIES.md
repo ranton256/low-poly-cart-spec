@@ -373,8 +373,9 @@ offers).
 **The port resolves: tick-timed.** The two readings are not close. The M8
 Critic demanded the frame-quantised reading be tried, and it was measured:
 the same edge schedule applied on 1-, 2-, and 4-tick frame boundaries — an
-edge shifted by at most one tick per batching — ends **8.83 wu** apart and
-0.0667 s apart on the lap clock, because a steering edge one tick late turns
+edge shifted by at most one tick per batching — ends **8.83 wu** apart
+(2-vs-4-tick pair; the 1-vs-4 pair measures **11.53 wu**, per the Critic's
+independent reproduction) and 0.0667 s apart on the lap clock, because a steering edge one tick late turns
 the kart ~2.6 degrees and a minute of driving multiplies that into world
 units. No implementation whose steering matches the specified turn rate could
 hold 0.5 wu under that reading, so the tolerance is only a meaningful test

@@ -486,7 +486,20 @@ smoke, as registered.
 **Goal.** All fourteen acceptance items pass as named tests, on four platforms,
 and the ambiguity register is published.
 
-**Status (pre-review).** Both changes archived
+**✅ COMPLETE.** Critic verdict, first pass: "[REJECTED] — G2's item-12 case
+passes a z-mirrored world and item-14a's batching check is vacuous by
+construction" — the fifth consecutive weaker-property catch, this time inside
+the suite built to end the species. Six findings; all remediated in ed84698,
+including the one that turned into new knowledge: implementing the Critic's
+own suggested remedy for 14a MEASURED 8.83–11.53 wu of divergence under
+frame-quantised input, disproving that reading of the checklist and becoming
+ambiguity A14 (resolved: "replayed" means tick-timed). Re-review: the Critic
+repeated both new mutations (both red), reproduced the A14 measurement
+independently to four significant figures, and closed with "[APPROVED] — All
+six findings are verifiably remediated at ed84698 … M8 is complete and the
+deferred v1.0.0 tag may be cut."
+
+Both changes archived
 (`add-acceptance-conformance-suite`, `add-export-and-release-pipeline`).
 G2 live and green; 14b measured (0.0000 wu / 0.0000 s gaps at 30/60/144 fps);
 G1 at 64/64; the register complete with A12 settled by GDD amendment; four
