@@ -45,6 +45,12 @@ var _scenes: Dictionary = {}
 ## first generation; the boxes are what scatter needs and the scenes are what
 ## this node instantiates from.
 func load_assets() -> bool:
+	# LPC_FAIL_LOADS: the test seam (LPC_SAVE_FILE tradition) — report failure
+	# exactly as a missing model would, so a suite can boot the real scene into
+	# the terminal LOADING error without touching any asset (godot/hud).
+	if OS.get_environment("LPC_FAIL_LOADS") != "":
+		push_error("prop field: LPC_FAIL_LOADS is set — simulating a failed model load")
+		return false
 	for asset in Scatter.ASSET_ORDER:
 		var packed: PackedScene = load("res://assets/%s.glb" % asset)
 		if packed == null:

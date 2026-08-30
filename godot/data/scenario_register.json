@@ -59,12 +59,6 @@
       "milestone": "M5"
     },
     {
-      "feature": "Heads-Up Display",
-      "scenario": "Driving the speedometer needle",
-      "kind": "deferred",
-      "milestone": "M5"
-    },
-    {
       "feature": "Runtime Tuning and Player Actions",
       "scenario": "Resetting the kart",
       "kind": "deferred",

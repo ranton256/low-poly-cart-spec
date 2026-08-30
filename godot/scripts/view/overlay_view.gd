@@ -1,39 +1,60 @@
-# The start-sequence overlay: the loading indicator, its error replacement,
-# and the countdown — READY, 3, 2, 1, GO!.
+# The screen-space HUD: the start-sequence overlay (loading indicator, its
+# error replacement, the countdown), the §7 timer block, the title and control
+# hints, and the speedometer.
 #
-# A PURE CONSUMER (godot/race-state): everything shown here is derived each
-# frame from the simulation snapshot and the data layer. The only state this
-# node owns is its two labels. Glyph colours and the font size come from
-# data/tuning.json — the GO! green is the design document's own hex string and
-# V23 keeps it out of scripts; `goLinger` is read from the core tuning like
-# every other constant.
+# A PURE CONSUMER (godot/race-state, godot/lap-timing, godot/hud): everything
+# shown is derived each frame from the simulation snapshot and the data layer.
+# The only state this node owns is its labels and the speedometer's eased
+# needle — which advances on the simulation clock, fed the tick delta below.
+# Colours and px values come from data/tuning.json (V23 keeps the document's
+# hex strings out of scripts); px are literal at the 1280×720 design
+# resolution (ambiguity A1), scaled by the project's canvas_items stretch.
 #
-# The design document sizes the face at ~120 px with no design resolution
-# named — ambiguity A1, settled in M5 with the rest of the HUD. The value
-# lives in data now so M5's settlement is a data edit.
+# Faces per §7 via SystemFont — the repo ships no font asset; a system
+# monospace/sans request is the lightest conforming choice. No HUD element
+# intercepts pointer input.
 extends CanvasLayer
 
 const RaceState := preload("res://scripts/core/race_state.gd")
 const Sim := preload("res://scripts/core/sim.gd")
+const SpeedoView := preload("res://scripts/view/speedo_view.gd")
 
 const COUNTDOWN_GLYPHS: Array[String] = ["READY", "3", "2", "1"]
 const LOADING_TEXT := "Loading assets..."
 const GO_TEXT := "GO!"
+const TITLE_TEXT := "LOW POLY CART"
+const HINTS_TEXT := "W/S drive · A/D steer · G regenerate world"
 
 var _countdown: Label = null
 var _loading: Label = null
-var _time: Label = null
-var _best: Label = null
+var _time_label: Label = null
+var _time_value: Label = null
+var _best_label: Label = null
+var _best_value: Label = null
+var _title: Label = null
+var _hints: Label = null
+var _speedo: Control = null
 var _styled := false
+var _last_tick := 0
+
+var _mono := SystemFont.new()
+var _sans := SystemFont.new()
 
 
 func _ready() -> void:
-	_countdown = _make_label("Countdown")
-	_loading = _make_label("Loading")
-	_time = _make_label("Time", Control.PRESET_TOP_LEFT)
-	_best = _make_label("Best", Control.PRESET_TOP_LEFT)
-	_time.position = Vector2(16, 16)
-	_best.position = Vector2(16, 56)
+	_mono.font_names = PackedStringArray(["Menlo", "Consolas", "DejaVu Sans Mono", "monospace"])
+	_sans.font_names = PackedStringArray(["Helvetica Neue", "Arial", "sans-serif"])
+	_countdown = _make_label("Countdown", Control.PRESET_FULL_RECT)
+	_loading = _make_label("Loading", Control.PRESET_FULL_RECT)
+	_time_label = _make_label("TimeLabel", Control.PRESET_TOP_RIGHT)
+	_time_value = _make_label("TimeValue", Control.PRESET_TOP_RIGHT)
+	_best_label = _make_label("BestLabel", Control.PRESET_TOP_RIGHT)
+	_best_value = _make_label("BestValue", Control.PRESET_TOP_RIGHT)
+	_title = _make_label("Title", Control.PRESET_TOP_LEFT)
+	_hints = _make_label("Hints", Control.PRESET_TOP_LEFT)
+	_speedo = SpeedoView.new()
+	_speedo.name = "Speedo"
+	add_child(_speedo)
 
 
 ## Called by the composition root once per rendered frame, after the kart view.
@@ -43,9 +64,11 @@ func draw_from(sim: RefCounted, art: RefCounted) -> void:
 	if not _styled:
 		_style(art)
 		_styled = true
+	var ticks_elapsed: int = maxi(sim.ticks - _last_tick, 0)
+	_last_tick = sim.ticks
 
 	var race: RefCounted = sim.race
-	_draw_readouts(sim, art, race)
+	_draw_readouts(sim, art, race, ticks_elapsed)
 	_loading.visible = race.state == RaceState.LOADING
 	if race.state == RaceState.LOADING:
 		# The error replaces the indicator; the underlying cause is already in
@@ -72,27 +95,25 @@ func draw_from(sim: RefCounted, art: RefCounted) -> void:
 		_countdown.label_settings.font_color = art.colour("countdownTextColour")
 
 
-## The TIME and BEST readouts (Heads-Up Display): two decimal places, the
-## banked time during the hold, the unset placeholder, yellow base with the
-## green flash while the best-flash countdown runs. Derived entirely from the
-## lap module's counters — this node owns no timing state (godot/lap-timing).
-func _draw_readouts(sim: RefCounted, art: RefCounted, race: RefCounted) -> void:
+## The §7 timer block and the speedometer, racing only. TIME and BEST derive
+## from the lap module's counters; the dial from the core's ratio and readout.
+func _draw_readouts(sim: RefCounted, art: RefCounted, race: RefCounted, ticks_elapsed: int) -> void:
 	var racing: bool = race.state == RaceState.RACING
-	_time.visible = racing
-	_best.visible = racing
+	for element: Control in [_time_label, _time_value, _best_label, _best_value, _speedo]:
+		element.visible = racing
 	if not racing:
 		return
 	var lap: RefCounted = sim.lap
-	_time.text = "TIME %.2f" % lap.display_seconds()
-	if lap.best_seconds < 0.0:
-		_best.text = "BEST --.--"
-	else:
-		_best.text = "BEST %.2f" % lap.best_seconds
+	_time_value.text = "%.2f" % lap.display_seconds()
+	_best_value.text = "--.--" if lap.best_seconds < 0.0 else "%.2f" % lap.best_seconds
 	var flash: bool = lap.best_flash_ticks > 0
-	_best.label_settings.font_color = art.colour("bestFlashColour" if flash else "bestTextColour")
+	_best_value.label_settings.font_color = art.colour(
+		"bestFlashColour" if flash else "bestTextColour"
+	)
+	_speedo.draw_from(sim, ticks_elapsed)
 
 
-func _make_label(label_name: String, preset: int = Control.PRESET_FULL_RECT) -> Label:
+func _make_label(label_name: String, preset: int) -> Label:
 	var label := Label.new()
 	label.name = label_name
 	label.set_anchors_preset(preset)
@@ -100,19 +121,69 @@ func _make_label(label_name: String, preset: int = Control.PRESET_FULL_RECT) -> 
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.label_settings = LabelSettings.new()
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.visible = false
 	add_child(label)
 	return label
 
 
 ## Styling waits for the art table, which the root loads after this node's
-## _ready. Font size and colours are data; the shadow's black is a Color
-## constant, not a specified hex string.
+## _ready. §7's geometry at the 1280×720 design resolution: the timer block's
+## right edge insets 16 px; the title block sits 16 px from the top-left; the
+## speedometer's dial insets 16 px from the bottom-right. The shadow's black
+## is a Color constant, not a specified hex string.
 func _style(art: RefCounted) -> void:
-	for label: Label in [_countdown, _loading, _time, _best]:
+	for label: Label in [_countdown, _loading]:
 		var settings: LabelSettings = label.label_settings
-		settings.font_size = int(art.num("countdownFontPx")) if label == _countdown else 32
+		settings.font = _mono if label == _loading else _sans
+		settings.font_size = (
+			int(art.num("countdownFontPx")) if label == _countdown else int(art.num("loadingPx"))
+		)
 		settings.font_color = art.colour("countdownTextColour")
 		settings.shadow_color = Color(0, 0, 0)
 		settings.shadow_offset = Vector2(4, 4) if label == _countdown else Vector2(2, 2)
-	_best.label_settings.font_color = art.colour("bestTextColour")
+
+	var label_px: int = int(art.num("timerLabelPx"))
+	var value_px: int = int(art.num("timerValuePx"))
+	var block: Array = [
+		[_time_label, "TIME", label_px, art.colour("countdownTextColour"), 16.0],
+		[_time_value, "", value_px, art.colour("timeValueColour"), 32.0],
+		[_best_label, "BEST", label_px, art.colour("countdownTextColour"), 64.0],
+		[_best_value, "--.--", value_px, art.colour("bestTextColour"), 80.0],
+	]
+	for row: Array in block:
+		var label: Label = row[0]
+		label.text = row[1]
+		label.label_settings.font = _mono
+		label.label_settings.font_size = row[2]
+		label.label_settings.font_color = row[3]
+		label.label_settings.shadow_color = Color(0, 0, 0)
+		label.label_settings.shadow_offset = Vector2(2, 2)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		# Layout, not spec: a right-aligned column inset 16 px from the edge.
+		label.position = Vector2(-164.0, row[4])
+		label.size.x = 148.0
+	_time_label.modulate.a = 0.7
+	_best_label.modulate.a = 0.7
+
+	_title.text = TITLE_TEXT
+	_title.label_settings.font = _sans
+	_title.label_settings.font_size = int(art.num("titlePx"))
+	_title.label_settings.font_color = art.colour("titleColour")
+	_title.label_settings.shadow_color = Color(0, 0, 0)
+	_title.label_settings.shadow_offset = Vector2(2, 2)
+	_title.position = Vector2(16, 16)
+	_title.visible = true
+	_hints.text = HINTS_TEXT
+	_hints.label_settings.font = _sans
+	_hints.label_settings.font_size = int(art.num("hintPx"))
+	_hints.label_settings.font_color = art.colour("hintColour")
+	_hints.label_settings.shadow_color = Color(0, 0, 0)
+	_hints.label_settings.shadow_offset = Vector2(2, 2)
+	_hints.position = Vector2(16, 44)
+	_hints.modulate.a = art.num("hintOpacity")
+	_hints.visible = true
+
+	_speedo.configure(art)
+	_speedo.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_speedo.position = Vector2(-_speedo.size.x - 16.0, -_speedo.size.y - 16.0)

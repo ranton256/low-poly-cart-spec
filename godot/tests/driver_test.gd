@@ -14,6 +14,7 @@ extends SceneTree
 const RVTest := preload("res://tests/harness.gd")
 const RaceState := preload("res://scripts/core/race_state.gd")
 const ArtTuning := preload("res://scripts/art_tuning.gd")
+const MainScene := preload("res://scenes/main.tscn")
 
 var _root: Node3D = null
 
@@ -24,7 +25,7 @@ func _check(cond: bool, msg: String) -> void:
 
 func _init() -> void:
 	await process_frame
-	_root = (load("res://scenes/main.tscn") as PackedScene).instantiate() as Node3D
+	_root = MainScene.instantiate() as Node3D
 	get_root().add_child(_root)
 	await process_frame
 
@@ -32,11 +33,13 @@ func _init() -> void:
 	# From here the suite studies the racing pipeline; the countdown itself is
 	# race_state_test's subject (race-state seam).
 	_root.sim.race.start_racing_immediately()
+	await _test_go_lingers_green_then_resets()
 	await _test_stepping_tracks_the_fixed_rate_callback()
 	_test_the_view_never_writes_back()
 	_test_the_game_looks_through_the_specified_camera()
 	await _test_the_readouts_derive_from_the_lap_counters()
 	await _test_the_running_game_collides_and_jolts()
+	await _test_a_failed_load_halts_the_real_boot()
 
 	get_root().remove_child(_root)
 	_root.free()
@@ -70,6 +73,65 @@ func _test_boots_into_the_countdown_and_suspends() -> void:
 			cam.global_position.distance_to(Vector3(0, 5, -10)) < 0.01,
 			"the camera holds the fixed inspection pose behind and above the kart"
 		)
+		var toward_origin := (Vector3.ZERO - cam.global_position).normalized()
+		_check((-cam.global_basis.z).angle_to(toward_origin) < 0.01, "looking toward the origin")
+	var countdown: Label = _root.overlay.get_node("Countdown") as Label
+	_check(countdown.visible, "the countdown overlay is on screen during STARTING")
+	_check(
+		countdown.text in ["READY", "3", "2", "1"],
+		"showing a countdown glyph (%s)" % countdown.text
+	)
+	var art: RefCounted = ArtTuning.load_art()
+	_check(
+		countdown.label_settings.font_color.is_equal_approx(art.colour("countdownTextColour")),
+		"in white — the preceding frames are never green"
+	)
+
+
+## The GO! overlay through the running scene: green through the goLinger
+## window, then hidden with its colour reset to white for the next use.
+func _test_go_lingers_green_then_resets() -> void:
+	var countdown: Label = _root.overlay.get_node("Countdown") as Label
+	var art: RefCounted = ArtTuning.load_art()
+	await process_frame
+	_check(countdown.visible and countdown.text == "GO!", "GO! shows on the handover")
+	_check(
+		countdown.label_settings.font_color.is_equal_approx(art.colour("countdownGoColour")),
+		"in the specified green"
+	)
+	for _i in range(35):  # goLinger is 30 ticks
+		await physics_frame
+	await process_frame
+	_check(not countdown.visible, "after goLinger the overlay hides")
+	_check(
+		countdown.label_settings.font_color.is_equal_approx(art.colour("countdownTextColour")),
+		"and resets its colour to white for the next use"
+	)
+
+
+## The broken-model boot through the REAL driver, via the LPC_FAIL_LOADS seam:
+## terminal LOADING and the visible error. The logged-cause clause is carried
+## by prop_field's push_error before every false return — it prints in this
+## suite's own stderr when the seam trips.
+func _test_a_failed_load_halts_the_real_boot() -> void:
+	OS.set_environment("LPC_FAIL_LOADS", "1")
+	var broken: Node3D = MainScene.instantiate() as Node3D
+	get_root().add_child(broken)
+	await process_frame
+	await process_frame
+	_check(broken.sim.race.state == RaceState.LOADING, "the failed boot stays in LOADING")
+	_check(broken.sim.race.error_message != "", "with the error recorded for the view")
+	var loading: Label = broken.overlay.get_node("Loading") as Label
+	_check(
+		loading.visible and loading.text == broken.sim.race.error_message,
+		"and the loading indicator replaced by the visible error"
+	)
+	for _i in range(30):
+		await physics_frame
+	_check(broken.sim.race.state == RaceState.LOADING, "terminally — no countdown follows")
+	OS.set_environment("LPC_FAIL_LOADS", "")
+	get_root().remove_child(broken)
+	broken.free()
 
 
 ## THE CHANGE'S HEADLINE DELIVERABLE, AND NOTHING GUARDED IT.
@@ -195,19 +257,17 @@ func _test_the_readouts_derive_from_the_lap_counters() -> void:
 	if overlay == null:
 		return
 	var art: RefCounted = ArtTuning.load_art()
-	var time_label: Label = overlay.get_node("Time") as Label
-	var best_label: Label = overlay.get_node("Best") as Label
+	var time_label: Label = overlay.get_node("TimeValue") as Label
+	var best_label: Label = overlay.get_node("BestValue") as Label
 	await process_frame
 	await process_frame
 	_check(time_label.visible and best_label.visible, "TIME and BEST show while racing")
-	_check(
-		best_label.text == "BEST --.--", "an unset best shows the placeholder, %s" % best_label.text
-	)
+	_check(best_label.text == "--.--", "an unset best shows the placeholder, %s" % best_label.text)
 
 	# Two decimal places, from the running clock.
-	var shown: float = float(time_label.text.trim_prefix("TIME "))
+	var shown: float = float(time_label.text)
 	_check(
-		time_label.text.match("TIME *.??") and absf(shown - _root.sim.lap.display_seconds()) < 0.2,
+		time_label.text.match("*.??") and absf(shown - _root.sim.lap.display_seconds()) < 0.2,
 		"TIME shows the lap clock to two decimals (%s)" % time_label.text
 	)
 
@@ -219,10 +279,9 @@ func _test_the_readouts_derive_from_the_lap_counters() -> void:
 	lap.hold_ticks = 240
 	await process_frame
 	_check(
-		time_label.text == "TIME 12.34",
-		"during the hold TIME is the banked time (%s)" % time_label.text
+		time_label.text == "12.34", "during the hold TIME is the banked time (%s)" % time_label.text
 	)
-	_check(best_label.text == "BEST 12.34", "and BEST shows the banked best (%s)" % best_label.text)
+	_check(best_label.text == "12.34", "and BEST shows the banked best (%s)" % best_label.text)
 	_check(
 		best_label.label_settings.font_color.is_equal_approx(art.colour("bestFlashColour")),
 		"a fresh best flashes in the data layer's green"

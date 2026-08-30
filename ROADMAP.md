@@ -481,16 +481,6 @@ their full histories are in git at `streamline-process`'s parent commit.)
   threshold instead of the guessed 12 frames / 20%. *(was att 17)*
 - Extend `check_static_typing.py` to member variables; V19 stays ⚠️ until
   then. *(was att 18)*
-- **M5** — Give `PropField` a load seam (an env override in the
-  `LPC_SAVE_FILE` tradition) so `driver_test.gd` can prove the broken-model
-  boot halts in LOADING through the real driver — including the
-  "written to the developer log" clause — not only at the race-state level.
-  *(deferred by add-race-state-and-countdown; M4 Critic finding 3)*
-- **M5** — Countdown-overlay label assertions in `driver_test.gd`, in the
-  TIME/BEST pattern: GO! green while preceding frames are white, the goLinger
-  hide-and-reset-to-white, and the inspection camera's look-toward-origin.
-  The behaviour is verified (Critic probe + the GO! capture); the standing
-  suite should hold it. *(M4 Critic findings 1 and 4)*
 - **M8** — A discriminating test for the lap gate's place in the tick order:
   a gate moved before stage 7 currently fails nothing, because the
   stage-5-displacement observable makes the ordering nearly moot.

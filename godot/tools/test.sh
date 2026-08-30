@@ -84,6 +84,7 @@ run_suite tests/smoke_test.gd
 run_suite tests/tick_test.gd
 run_suite tests/race_state_test.gd
 run_suite tests/lap_gate_test.gd
+run_suite tests/hud_test.gd
 run_suite tests/boundary_test.gd
 run_suite tests/determinism_test.gd
 

@@ -23,6 +23,20 @@ the specification, which is the summary; this file is the detail.
 
 ## Resolved
 
+### A1 — HUD px values had no design resolution
+
+**The specification says**, throughout §7, sizes in pixels — a 200×200 minimap,
+a 160×90 speedometer, a ~120 px countdown face — and never names the resolution
+those pixels are measured against.
+
+**The port resolves** (add-heads-up-display): px values are literal at the
+project's **1280×720** viewport (`window/size/viewport_width/height`), which is
+therefore the design resolution. The project's `canvas_items` stretch with
+`expand` aspect scales the whole canvas for other window sizes, so every element
+keeps its proportions and anchors without any per-element arithmetic. All §7
+sizes and colours live in `data/tuning.json`'s `unnamed_in_spec` group and are
+asserted at these literal values by `tests/hud_test.gd`.
+
 ### A4 — The countdown clock while the simulation is suspended
 
 **The specification says** the game states are LOADING, STARTING and RACING, that
@@ -260,7 +274,6 @@ camera is stepped again per frame and when it is not stepped at all.
 
 | # | Ambiguity | Settled by |
 |---|---|---|
-| A1 | HUD element sizes are given in px (200×200 minimap, 160×90 speedometer, ~120 px countdown) with no design resolution named anywhere | M5 |
 | A2 | "A layout file … delivered to the player" — the delivery mechanism is unspecified, and it differs between desktop and web | M7 |
 | A3 | Whether prop registration order survives a layout reload. It is unstated, and it changes collision outcomes, because collision resolves the first intersecting prop in registration order | M7 |
 | A11 | The ground is specified as a finite 200 wu plane, the drivable extent as ±90, and fog as beginning at 50 wu. From the boundary the ground's edge is 10 wu away — far inside fog's start — so it renders as a hard line, while acceptance item 7 asks for grass beyond the boundary and no drawn edge | M6 |

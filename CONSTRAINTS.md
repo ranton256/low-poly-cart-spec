@@ -252,7 +252,7 @@ carries the reasoning:
 
 | # | Ambiguity | Port's decision |
 |---|---|---|
-| A1 | HUD sizes are in px with no design resolution named | ❓ settled in M5 |
+| A1 | HUD sizes are in px with no design resolution named | Resolved in M5: px are literal at the 1280×720 design viewport; `canvas_items` stretch scales other sizes |
 | A2 | Layout file delivery mechanism unspecified; differs desktop/web | ❓ settled in M7 |
 | A3 | Prop registration order after a layout reload — unstated, but it changes collision outcomes | ❓ settled in M7 |
 | A4 | The countdown must advance while "the physics update is skipped entirely" | Resolved: `Sim.step()` runs every tick in every state; the kart pipeline is gated on RACING |

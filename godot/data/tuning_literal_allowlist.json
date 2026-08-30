@@ -46,6 +46,16 @@
       "file": "godot/scripts/core/lap_gate.gd",
       "value": 60,
       "reason": "TICKS_PER_SECOND, mirrored for the same circular-preload reason as race_state.gd's entry above — the fixed 60 ticks per second, colliding with the same lighting.shadowVolumeExtent."
+    },
+    {
+      "file": "godot/scripts/view/speedo_view.gd",
+      "value": 90,
+      "reason": "The needle sweep formula's quarter-turn — the design document's own '(speed ratio × 180°) − 90°', normative arithmetic in the Driving-the-speedometer-needle scenario, not a tunable. The collision is with fovMax, drivableExtent, and speedoDialHeightPx, which share the magnitude."
+    },
+    {
+      "file": "godot/scripts/core/rng.gd",
+      "value": 14,
+      "reason": "A bit shift in mulberry32, like the 15 above — part of the algorithm's definition. The collision arrived when add-heads-up-display put hintPx (14) in the data: adding a tuning row made a gate fail in a file the change never touched, the same lesson the sim.gd 60 entry records."
     }
   ]
 }
