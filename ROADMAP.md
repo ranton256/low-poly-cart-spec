@@ -329,7 +329,7 @@ review's should-fix findings are Backlog lines tagged M5 below.
 
 ---
 
-## M5 — The instruments
+## M5 — The instruments ✅ COMPLETE
 
 **Goal.** The player can read their speed, their time, and where they are.
 
@@ -356,7 +356,21 @@ review's should-fix findings are Backlog lines tagged M5 below.
 - ✅ **Visual proof:** a full-frame capture with every HUD element live at speed
 
 **Changes:** `add-heads-up-display` and `add-minimap-viewport`, both archived.
-Critic pass pending before the milestone is called complete.
+
+**Completed 2026-08-29.** Critic pass (fresh reviewer, CONSTRAINTS §12 Review):
+**[REJECTED] twice, then [APPROVED]** — and the two rejections are the pass
+earning its keep. It caught the speedometer's readout and unit label rendered
+off screen (the committed proof showed the dial with no text while the suite
+asserted the labels' contents), then caught the fix half-landed (min-width
+labels parked at the dial's left edge, passing a containment-only assertion).
+Both times the remedy included pinning the property that actually failed: the
+hud suite now asserts child labels centred about the dial's midline. Its
+review also surfaced a tautological assertion, an unpinned A1 foundation (the
+design viewport now sits in check_settings.py's pins, mutation-verified), the
+countdown's missing heavy weight, and a §7 self-tension recorded in the
+register as a disclosed deviation. Final state verified by the reviewer's own
+rect probe, its own eyes on the capture, and the full gate: 20 suites, 11
+pins, 57 scenarios verified, only M7's four deferrals remaining.
 
 ---
 
