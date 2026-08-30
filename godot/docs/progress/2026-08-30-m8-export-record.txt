@@ -1,0 +1,28 @@
+§14 phases 1–3, run 2026-08-30
+Built from commit: 208d7f114e27644a9876dad37d50ecf4482f28ee (clean tree)
+
+Phase 1 — export_all.sh:
+  build/web/index.wasm        36M  sha256 99962b29677e42f3ba0258bd90fdc52ad90295954c4473e816ad02cfe5ff1d4f
+  build/web/index.pck         10M  sha256 363015546c980c726eba2c4151e377254261d06f15c189c29cb205ea987fa5d7
+  build/macos/LowPolyCart.app 187M (bundle; hash changes at signing)
+  build/linux/lowpolycart.x86_64 68M sha256 9e86efcd7578fa79af615c277dc6d6405609a099f5a317c3d17d76892133bb06
+  build/linux/lowpolycart.pck 10M  sha256 2dbbb4f8b6521e69d21c381db65fe2649e3027b7730f8e12ccc6d4fd6a199451
+  build/windows/lowpolycart.exe 100M sha256 12cd0efcc91b692adf7afddc7068e9bacebc2af5c9b68610deb3c37df4011fff
+  build/windows/lowpolycart.pck 10M  sha256 2dbbb4f8b6521e69d21c381db65fe2649e3027b7730f8e12ccc6d4fd6a199451
+  Web payload gzip-9: wasm 8.94 + pck 10.03 + js 0.07 = 19.05 MB (budget 25)
+
+Phase 2 — smoke (LPC_SMOKE=1):
+  macOS (signed artifact): banked 15.05 s lap at tick 1142, exit 0
+    capture docs/progress/2026-08-30-m8-smoke-macos.png
+  Web (served, COLD cache — 48.3 MB transferred, verified by transferSize):
+    engine start 0.62 s, countdown within the following second (bound ≤ 5 s)
+    capture docs/progress/2026-08-30-m8-smoke-web.png
+  Windows, Linux: NOT smoke-tested here (no OS to run them) — see
+    docs/release/1.0.0.md for the owed one-liner.
+
+Phase 3 — sign (macOS):
+  Developer ID Application: Richard Anton (2U8TFZTUT5), hardened runtime,
+  secure timestamp; codesign --verify --deep --strict: valid, satisfies DR.
+  Notarization NOT run (no credentials on this machine); spctl reports
+  "rejected (Unnotarized Developer ID)" as expected. Steps for the
+  credential holder are in docs/release/1.0.0.md.
