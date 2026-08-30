@@ -39,11 +39,16 @@ func _init() -> void:
 
 	# Re-pressed every tick, for the same reason drive_capture.gd does it: the
 	# unfocused window clears held input each frame, correctly.
+	# Phases advance to exact SIM ticks (not loop iterations — boot frame
+	# variance shifted the bank tick run to run and the gallery's floor
+	# showed it), so the bank lands on the same tick every run.
 	var banked := false
+	var phase_start: int = root.sim.ticks
 	for phase: Array in LapSuite.LAP_PHASES:
 		if banked:
 			break
-		for _i in range(int(phase[3])):
+		var phase_end: int = phase_start + int(phase[3])
+		while root.sim.ticks < phase_end:
 			for action_index in range(PHASE_ACTIONS.size()):
 				if phase[action_index]:
 					Input.action_press(PHASE_ACTIONS[action_index])
@@ -51,6 +56,7 @@ func _init() -> void:
 			if root.sim.lap.banked_this_tick:
 				banked = true
 				break
+		phase_start = phase_end
 		for action in PHASE_ACTIONS:
 			Input.action_release(action)
 
@@ -59,9 +65,13 @@ func _init() -> void:
 		quit(1)
 		return
 
-	# Into the hold window: TIME holds the banked time, BEST flashes green.
-	for _i in range(CAPTURE_HOLD_TICKS):
+	# Into the hold window at an EXACT point: hold_ticks counts down from
+	# lapRestartDelay's 30, so waiting for a fixed remainder pins the frame.
+	while root.sim.lap.hold_ticks > 30 - CAPTURE_HOLD_TICKS:
 		await physics_frame
+	# Freeze at the exact hold tick — the settle frames must not let the
+	# hold window tick further (same lesson as drive_capture's pause).
+	paused = true
 	for _i in range(SETTLE_FRAMES):
 		await process_frame
 

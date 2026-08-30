@@ -41,7 +41,11 @@ func _init() -> void:
 	# of this tool drove 560 ticks and reported the kart stopped at z=56.064.
 	# Re-pressing re-establishes the hold after each clear, so the capture drives
 	# through the real input path rather than around it.
-	for _i in range(ticks):
+	# Driven to an exact SIMULATION tick, not a count of loop iterations —
+	# boot consumes a variable frame or two, and counting iterations landed
+	# the capture at different sim ticks run to run (the gallery's noise
+	# floor showed 2.0 mean on this state; sim-aligned it is ~0).
+	while root.sim.ticks < ticks:
 		for action in hold:
 			if InputMap.has_action(action):
 				Input.action_press(action)
@@ -49,6 +53,12 @@ func _init() -> void:
 	for action in hold:
 		if InputMap.has_action(action):
 			Input.action_release(action)
+	# FREEZE the tree before settling: the settle frames otherwise let the
+	# simulation coast a run-varying number of ticks after the target — the
+	# gallery's noise floor caught the whole scene shifted between two runs
+	# of an identical command. Paused, the renderer still presents frames.
+	paused = true
+
 	# Let the frame settle, then grab ONLY after the renderer has presented a
 	# frame (frame_post_draw) — the render target otherwise lags the scene,
 	# and this tool has returned frames hundreds of ticks stale (M5 Critic
@@ -88,7 +98,7 @@ func _init() -> void:
 			"drive_capture: %s — %d ticks holding [%s]; kart at x=%.3f z=%.3f yaw=%.3f v=%.5f, %d steps"
 			% [
 				out_path,
-				ticks,
+				root.sim.ticks,
 				", ".join(hold),
 				root.sim.pos_x,
 				root.sim.pos_z,

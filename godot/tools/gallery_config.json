@@ -26,19 +26,27 @@
     "Reference numbers from the project this kit came from: noise measured",
     "0.0436 / 0.335% / 0.026%; limits set to 0.50 / 1.00% / 0.10%."
   ],
-
   "current": "gallery",
   "baseline": "tests/baselines",
   "sheet": "gallery/_diff_sheet.png",
-
   "limits": {
-    "mean": 0.50,
-    "changed_pct": 1.00,
-    "strong_pct": 0.10
+    "mean": 0.5,
+    "changed_pct": 1.0,
+    "strong_pct": 0.1
   },
-
   "overrides": {
     "_format": "state name -> partial limits, with the reason recorded here",
     "_warning": "A state that cannot be reproduced is a harness bug worth fixing, not a threshold worth raising."
-  }
+  },
+  "_calibration": [
+    "Measured 2026-08-29 by capturing the set twice (tools/gallery.sh",
+    "--capture-only into two directories) and diffing:",
+    "  boot_ready / boundary_skirt / countdown_go: 0.0000 / 0.000% / 0.000%",
+    "  hud_at_speed: 0.0172 / 0.131% / 0.018%   lap_banked: 0.0053 / 0.032% / 0.004%",
+    "Limits stay at the kit's 0.50 / 1.00% / 0.10% - roughly 25x the worst",
+    "floor. Getting the floor here took three harness fixes, all recorded in",
+    "add-visual-conformance-gate: sim-tick-aligned driving (not loop",
+    "iterations), the same for the lap phases, and pausing the tree before the",
+    "settle frames so the sim cannot coast a run-varying tail."
+  ]
 }

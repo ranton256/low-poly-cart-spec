@@ -347,9 +347,12 @@ is facing:
 break what each gate guards and confirm the right gate fails with the right
 message — a `check()` turned no-op leaves everything green and verifies nothing.
 
-**Image diffs use three criteria, never a mean alone** 📋 M6 — mean, percentage
+**Image diffs use three criteria, never a mean alone** ✅ M6 — mean, percentage
 of pixels changed, and percentage changed strongly; a local band obvious to a
-reviewer can average under a whole-frame threshold.
+reviewer can average under a whole-frame threshold. Calibration lives in
+`gallery_config.json` beside the limits; getting the floor to ~zero took three
+harness fixes (sim-tick-aligned driving, sim-aligned lap phases, pausing the
+tree before the settle frames), recorded in add-visual-conformance-gate.
 
 **Thresholds are measured, never guessed** 📐. Capture twice unchanged, diff;
 that is the noise floor. Set the limit a small multiple above it and record the
@@ -365,8 +368,8 @@ measurement beside the number.
 
 | | Budget | Status |
 |---|---|---|
-| Frame budget while racing | 16.7 ms (60 fps) on the reference machine | 📋 M6 |
-| Simulation step cost | The full 8-step tick over 54 props inside one 60 Hz slice at 144 fps, i.e. ≤ 2.3 ms for 2–3 steps | 📋 M6 |
+| Frame budget while racing | 16.7 ms (60 fps) on the reference machine | ✅ measured 1.34 ms avg over 240 racing frames, windowed (M6) |
+| Simulation step cost | The full 8-step tick over 54 props inside one 60 Hz slice at 144 fps, i.e. ≤ 2.3 ms for 2–3 steps | ✅ measured 0.0087 ms/step over 60 000 steps with 54 registered props (M6) |
 | Input to visible response | One simulation tick. Never gated on a render frame | 📐 |
 
 ### Web target — the binding constraint
@@ -439,7 +442,7 @@ Deterministic acceptance conditions — pass/fail with no judgment.
 | V6 | **G1** — every GDD scenario claimed exactly once; a claim on a scenario the document lacks also fails | ✅ `check_spec_coverage.py` |
 | V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | 📋 M8 |
 | V8 | Pinned project settings match §6, and every model has a valid committed import preset | ✅ `check_settings.py` |
-| V9 | Gallery diffs within recorded thresholds on all three criteria | 📋 M6 |
+| V9 | Gallery diffs within recorded thresholds on all three criteria | ✅ `tools/gallery.sh` + `gallery_compare.py`, five states, floor and limits recorded in `gallery_config.json`; verified by mutation (a painted band fails on all three criteria) |
 | V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py` |
 | V11 | Every `CONSTRAINTS §N Title` reference names the section it points at | ✅ `check_section_refs.py` — bare `docs/CONSTRAINTS.md §N` forms are invisible to it; stale prose stays review's job |
 | V12 | `openspec validate <change> --strict` passes | ✅ |
@@ -570,7 +573,7 @@ Added by this project:
 | Scenario coverage G1 (V6) | `tools/check_spec_coverage.py` parses the GDD | M1 |
 | GDScript lint and format | `gdtoolkit` — `gdlint`, `gdformat --check` | M0 |
 | Whitespace, EOF newline, large files | the hand-rolled `godot/tools/pre-commit` | ✅ M0 |
-| Visual gate (V9) | `tools/gallery.sh` + `gallery_compare.py` — windowed | M6 |
+| Visual gate (V9) | `tools/gallery.sh` + `gallery_compare.py` — windowed, five deterministic states vs committed baselines | ✅ M6 |
 | Acceptance conformance G2 (V7) | `tests/conformance_test.gd`, 14 named cases | M8 |
 | Commit-time gate | `godot/tools/pre-commit`, installed by `tools/install-hooks.sh`; checks **staged blobs**, bash-3.2-portable | ✅ M0 |
 | Asset sync and import | `godot/tools/sync_assets.sh` + `tests/assets_test.gd` — content-hash sync, poisoned-preset refusal, load assertion | ✅ M0 |
