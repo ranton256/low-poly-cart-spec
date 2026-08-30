@@ -14,6 +14,9 @@ extends SceneTree
 const RVTest := preload("res://tests/harness.gd")
 const ArtTuning := preload("res://scripts/art_tuning.gd")
 const SpeedoView := preload("res://scripts/view/speedo_view.gd")
+const Sim := preload("res://scripts/core/sim.gd")
+const InputState := preload("res://scripts/core/input_state.gd")
+const TuningLoader := preload("res://scripts/tuning_loader.gd")
 
 var _root: Node3D = null
 var _art: RefCounted = null
@@ -31,6 +34,7 @@ func _init() -> void:
 	get_root().add_child(_root)
 	await process_frame
 	_root.sim.race.start_racing_immediately()
+	_test_loading_state_presents_the_indicator()
 	await _test_timer_block_is_top_right_to_spec()
 	await _test_speedometer_reads_the_core_at_steady_state()
 	_test_title_and_hints_present()
@@ -68,6 +72,31 @@ func _test_needle_easing_is_deterministic_and_settles() -> void:
 	RVTest.close(a.needle_angle_deg(), -90.0, 0.5, "at rest it points left: −90°")
 	a.free()
 	b.free()
+
+
+## The LOADING presentation, against a fresh un-booted simulation: the healthy
+## boot builds the world inside one frame, so this state is only observable by
+## binding the overlay to a sim still in LOADING.
+# The claim text must match the document verbatim and does not fit the limit.
+# gdlint: disable=max-line-length
+# @covers
+#   Session Bootstrap and Asset Normalisation / Presenting a loading state while assets stream in
+func _test_loading_state_presents_the_indicator() -> void:
+	# gdlint: enable=max-line-length
+	var sim: RefCounted = Sim.new()
+	sim.tuning = TuningLoader.load_tuning()
+	sim.input = InputState.new()
+	var overlay: CanvasLayer = _root.overlay
+	overlay.draw_from(sim, _art)
+	var loading: Label = overlay.get_node("Loading") as Label
+	var countdown: Label = overlay.get_node("Countdown") as Label
+	var time_value: Label = overlay.get_node("TimeValue") as Label
+	_check(
+		loading.visible and loading.text == "Loading assets...",
+		"the centred indicator reads Loading assets..."
+	)
+	_check(not countdown.visible, "no countdown is available in LOADING")
+	_check(not time_value.visible, "and no timer activity")
 
 
 # @covers Heads-Up Display / Driving the speedometer needle

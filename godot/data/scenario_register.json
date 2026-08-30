@@ -11,13 +11,6 @@
   },
   "entries": [
     {
-      "feature": "Session Bootstrap and Asset Normalisation",
-      "scenario": "Presenting a loading state while assets stream in",
-      "kind": "visual",
-      "reason": "The loading indicator's presence and text are on-screen facts; the state machine half is covered separately.",
-      "milestone": "M5"
-    },
-    {
       "feature": "World Boundary Containment",
       "scenario": "Keeping the boundary invisible",
       "kind": "visual",
@@ -26,37 +19,6 @@
       "capture": "docs/progress/2026-08-29-m2-camera-boundary.png",
       "note": "Captured through the camera the design document specifies, with the kart driven into the boundary and rebounding — z=89.997, v=-0.00165, reported by the capture tool. The scenario is still UNMET: the document requires that no edge of the ground be visible, and its own numbers (+/-100 wu plane, +/-90 drivable extent, fog from 50 wu) put the edge five times nearer than fog reaches. From this viewpoint the grass-to-sky transition reads as a plain horizon with no wall, fence or discontinuity, which is the most favourable evidence so far — and still M6's decision on the whole look rather than one frame. Ambiguity A11, att 15. An earlier note said the kart-height capture 'waits for the chase camera'; it has shipped, and this is it. docs/progress/2026-08-29-m2-boundary.png remains as the elevated oblique view, where the same geometry reads as an edge.",
       "unmet": true
-    },
-    {
-      "feature": "Minimap",
-      "scenario": "Rendering the minimap inset",
-      "kind": "deferred",
-      "milestone": "M5"
-    },
-    {
-      "feature": "Minimap",
-      "scenario": "Framing the minimap view",
-      "kind": "deferred",
-      "milestone": "M5"
-    },
-    {
-      "feature": "Minimap",
-      "scenario": "Keeping the minimap orientation fixed",
-      "kind": "deferred",
-      "milestone": "M5"
-    },
-    {
-      "feature": "Minimap",
-      "scenario": "Marking the kart on the minimap",
-      "kind": "deferred",
-      "milestone": "M5"
-    },
-    {
-      "feature": "Minimap",
-      "scenario": "Hiding minimap markers from the main view",
-      "kind": "visual",
-      "reason": "Whether a marker is absent from the MAIN view is a property of what was rendered, not of any value the simulation holds.",
-      "milestone": "M5"
     },
     {
       "feature": "Runtime Tuning and Player Actions",
@@ -81,13 +43,6 @@
       "scenario": "Round-tripping a layout without drift",
       "kind": "deferred",
       "milestone": "M7"
-    },
-    {
-      "feature": "Frame Loop and Render Pipeline",
-      "scenario": "Ordering the work within a frame",
-      "kind": "deferred",
-      "milestone": "M5",
-      "note": "The scenario requires the camera, the minimap re-centre AND the HUD update to be ordered after post-physics, and closes on the kart's position, the speedometer and the minimap marker agreeing within a frame. Neither a minimap nor a HUD exists before M5, which owns that clause almost verbatim. M2 can verify at most the physics-then-camera half."
     },
     {
       "feature": "Frame Loop and Render Pipeline",

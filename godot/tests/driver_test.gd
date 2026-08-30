@@ -37,6 +37,7 @@ func _init() -> void:
 	await _test_stepping_tracks_the_fixed_rate_callback()
 	_test_the_view_never_writes_back()
 	_test_the_game_looks_through_the_specified_camera()
+	await _test_the_frame_orders_physics_then_camera_then_minimap()
 	await _test_the_readouts_derive_from_the_lap_counters()
 	await _test_the_running_game_collides_and_jolts()
 	await _test_a_failed_load_halts_the_real_boot()
@@ -85,6 +86,32 @@ func _test_boots_into_the_countdown_and_suspends() -> void:
 	_check(
 		countdown.label_settings.font_color.is_equal_approx(art.colour("countdownTextColour")),
 		"in white — the preceding frames are never green"
+	)
+
+
+## The frame's ordering, observed from outside: physics first, then the
+## camera from the kart's post-physics transform, then the minimap re-centred
+## on the post-physics position. The camera-advances-with-the-step half is the
+## stepping test above; this reads the two consumers against the stepped state.
+# @covers Frame Loop and Render Pipeline / Ordering the work within a frame
+func _test_the_frame_orders_physics_then_camera_then_minimap() -> void:
+	for _i in range(20):
+		Input.action_press("accelerate")
+		await physics_frame
+	Input.action_release("accelerate")
+	await process_frame
+	RVTest.close(
+		_root.camera.aim_x,
+		_root.sim.pos_x + _root.sim.forward_x() * _root.sim.tuning.aim_ahead,
+		0.5,
+		"the chase camera aims from the POST-physics transform"
+	)
+	var minimap_cam: Camera3D = _root.get_node("Minimap/Viewport/Camera") as Camera3D
+	RVTest.close(
+		minimap_cam.global_position.z,
+		_root.sim.pos_z,
+		0.5,
+		"the minimap is re-centred on the post-physics position"
 	)
 
 

@@ -91,6 +91,9 @@ var _jolts: int = 0
 ## The start-sequence overlay. Optional like the other views.
 @onready var overlay: CanvasLayer = get_node_or_null("Overlay") as CanvasLayer
 
+## The minimap inset. Optional like the other views.
+@onready var minimap: SubViewportContainer = get_node_or_null("Minimap") as SubViewportContainer
+
 
 func _ready() -> void:
 	var tuning: RefCounted = TuningLoader.load_tuning()
@@ -125,6 +128,12 @@ func _ready() -> void:
 		sim.race.mark_world_ready()
 	else:
 		sim.race.fail_load("Could not load the game's models — see the log")
+	if minimap != null and _art != null:
+		# Markers join the world this node roots; the chase camera must not
+		# see their layer (godot/minimap — masked, never moved or toggled).
+		minimap.configure(_art, self)
+		if chase_camera != null:
+			chase_camera.cull_mask &= ~(1 << 1)
 
 
 ## Exactly one step. Never a loop: the loop is Godot's, and duplicating it here is
@@ -181,6 +190,8 @@ func _process(_delta: float) -> void:
 			chase_camera.look_at_from_position(INSPECT_POSITION, Vector3.ZERO)
 	if overlay != null:
 		overlay.draw_from(sim, _art)
+	if minimap != null:
+		minimap.draw_from(sim)
 
 
 func steps() -> int:

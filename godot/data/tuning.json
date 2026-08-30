@@ -108,7 +108,10 @@
     "speedoUnitPx": 10,
     "speedoReadoutPx": 18,
     "needleEaseSeconds": 0.1,
-    "hintOpacity": 0.8
+    "hintOpacity": 0.8,
+    "minimapDiscRadiusWu": 2.4,
+    "minimapDiscColour": "#FF0000",
+    "minimapArrowColour": "#FFFF00"
   },
   "asset_target_heights": {
     "_note": "From the design document's §3 Asset normalisation contract table, not its four Tuning Constants tables. Every instance of an asset is scaled so its height is this value before any random variation.",
@@ -157,7 +160,11 @@
     "_note": "Values this port chose because the design document could not state them in Godot's terms. Each is recorded in godot/docs/AMBIGUITIES.md with its evidence. NOT transcribed from the document, and deliberately not checked against it. lightScale settles A9: the value minimising the ground's deviation from its specified albedo, found by tools/find_light_scale.py. At it the grass renders [56, 141, 65] against the specified [61, 140, 64] — deviation 0.0309 against a computed tolerance of 0.0401, with the scale 5% and 10% either side deviating more. It multiplies all three intensities together, so the document's ratios are preserved by construction.",
     "shadowMaxDistance": 120,
     "shadowNormalBias": 0.1,
-    "lightScale": 0.2809
+    "lightScale": 0.2809,
+    "minimapArrowLengthWu": 3.0,
+    "minimapArrowWidthWu": 2.0,
+    "minimapMarkerAltitudeWu": 1.0,
+    "minimapDiscHeightWu": 0.1
   },
   "prop_counts": {
     "_note": "From the design document's Procedural World Generation feature, the 'Scattering the standard prop population' scenario table — a SIXTH source, after the four Tuning Constants tables and the section 3 target heights. Keys are '<asset>Count' and NOT the bare asset name: the document names the asset in one column and the count in another, and a bare 'tree' would collide with asset_target_heights.tree. That collision is not cosmetic — check_tuning_transcription.py requires each constant to appear exactly once across all groups, and scripts/art_tuning.gd looks values up FLAT across groups on the strength of that guarantee. The gate caught the collision on the first attempt. The same table's Clearance radius column is already carried as world.startClearance (8) and world.cottageClearance (20). Order is the document's table order, which is also the registration order collision resolves by.",
