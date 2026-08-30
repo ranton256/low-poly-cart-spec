@@ -72,7 +72,7 @@ documents that describe it.
 - Every verification criterion in
   [CONSTRAINTS §10 Verification criteria](CONSTRAINTS.md) is ✅ or has a tracked
   Backlog line
-- **Visual proof:** an empty Godot window at the pinned renderer, plus the
+- ✅ **Visual proof:** an empty Godot window at the pinned renderer, plus the
   renderer spike's shadow comparison — both committed in `godot/docs/progress/`
 
 > **The boundary greps are the highest-value item here and the cheapest.** Land
@@ -288,35 +288,44 @@ tree feels like hitting a tree.
 
 ---
 
-## M4 — The race
+## M4 — The race ✅ COMPLETE
 
 **Goal.** The game boots on its own into a countdown, hands over control on the
 GO! frame, and banks lap times.
 
 **Done when**
-- The game boots to a countdown with **no user interaction and no configuration**
+- ✅ The game boots to a countdown with **no user interaction and no configuration**
   and hands over control **4.0 s ± 0.1 s** later, on the GO! frame
   (**acceptance 1**)
-- Exactly three states — LOADING, STARTING, RACING — with transitions taken once
+- ✅ Exactly three states — LOADING, STARTING, RACING — with transitions taken once
   each and no path out of RACING
-- The countdown advances READY → 3 → 2 → 1 → GO! on the **simulation clock**
+- ✅ The countdown advances READY → 3 → 2 → 1 → GO! on the **simulation clock**
   (60 ticks per step), while the kart pipeline stays gated on RACING
-- The GO! overlay lingers `goLinger` after control is released, then hides and
+- ✅ The GO! overlay lingers `goLinger` after control is released, then hides and
   resets to white
-- Inputs held through GO! take effect on the first racing tick
-- Crossing the band northbound after 5 s banks a lap, freezes `TIME` on it for
+- ✅ Inputs held through GO! take effect on the first racing tick
+- ✅ Crossing the band northbound after 5 s banks a lap, freezes `TIME` on it for
   0.5 s, flashes a new best in green for 1.0 s, then restarts the clock. Crossing
   it southbound under power banks nothing (**acceptance 10**)
-- The lap gate runs **last** in the tick and observes only; a push-out can never
+- ✅ The lap gate runs **last** in the tick and observes only; a push-out can never
   satisfy it
-- A failed asset load leaves the game in LOADING with a visible error, never a
-  countdown into a broken world
+- ⚠️ A failed asset load leaves the game in LOADING with a visible error, never a
+  countdown into a broken world — implemented and tested at the race-state level;
+  the driver-level broken-model injection is a disclosed deviation (Backlog: the
+  PropField load seam), the same ⚠️ treatment M2 and M3 used
 - **Visual proof:** the countdown at GO!, and `TIME` frozen on a banked lap with
   a green best
 
-**Likely changes**
-- `add-game-state-and-countdown` — the three states, the countdown clock, bootstrap and failure
-- `add-lap-gate-and-timing` — the gate, the 5 s minimum, best-time tracking and flash
+**Changes:** `add-race-state-and-countdown` and `add-lap-gate-and-timing`,
+both archived.
+
+**Completed 2026-08-29.** Critic pass (fresh reviewer, CONSTRAINTS §12 Review):
+**[APPROVED]**, zero blocking findings — gate green across 18 suites, every M4
+scenario claim judged against its test, tolerances asserted tighter than the
+acceptance slack (GO! at tick 240 exactly), the crossing-test traps each
+tested, the harness mutation check on record, both mandated captures verified
+against what they claim. Human playtest the same day: smooth, no issues. The
+review's should-fix findings are Backlog lines tagged M5 below.
 
 ---
 
@@ -462,7 +471,9 @@ their full histories are in git at `streamline-process`'s parent commit.)
   project-level or re-import decision, not 21 generated files. *(was att 5)*
 - **M7** — Reset Kart action: R returns the kart to X=0 Z=0 facing +Z with
   zero velocity, timer and world untouched. The start pose and the binding
-  exist; the runtime action does not. *(was att 10)*
+  exist; the runtime action does not. Its change must also assert best-time
+  persistence *through the reset* — the persistence scenario's claim today
+  covers only regeneration. *(was att 10; M4 Critic finding 2)*
 - **M5/M6** — Fold the capture input re-press pattern (unfocused windows clear
   held input) into a shared helper before more driving captures are written.
   *(was att 16)*
@@ -470,10 +481,20 @@ their full histories are in git at `streamline-process`'s parent commit.)
   threshold instead of the guessed 12 frames / 20%. *(was att 17)*
 - Extend `check_static_typing.py` to member variables; V19 stays ⚠️ until
   then. *(was att 18)*
-- Give `PropField` a load seam (an env override in the `LPC_SAVE_FILE`
-  tradition) so `driver_test.gd` can prove the broken-model boot halts in
-  LOADING through the real driver, not only at the race-state level.
-  *(deferred by add-race-state-and-countdown)*
+- **M5** — Give `PropField` a load seam (an env override in the
+  `LPC_SAVE_FILE` tradition) so `driver_test.gd` can prove the broken-model
+  boot halts in LOADING through the real driver — including the
+  "written to the developer log" clause — not only at the race-state level.
+  *(deferred by add-race-state-and-countdown; M4 Critic finding 3)*
+- **M5** — Countdown-overlay label assertions in `driver_test.gd`, in the
+  TIME/BEST pattern: GO! green while preceding frames are white, the goLinger
+  hide-and-reset-to-white, and the inspection camera's look-toward-origin.
+  The behaviour is verified (Critic probe + the GO! capture); the standing
+  suite should hold it. *(M4 Critic findings 1 and 4)*
+- **M8** — A discriminating test for the lap gate's place in the tick order:
+  a gate moved before stage 7 currently fails nothing, because the
+  stage-5-displacement observable makes the ordering nearly moot.
+  *(M4 Critic finding 5)*
 - **GDD proposal** — A12: the two-prop pin's "cannot drive out" is not
   producible by the specified response; raise the wording fix against the
   design document. *(was att 20)*
