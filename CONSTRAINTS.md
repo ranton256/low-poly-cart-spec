@@ -55,7 +55,7 @@ Settled choices. Changing one requires a proposal that names what broke.
 |---|---|---|
 | **Engine** | Godot **4.6.1**, recorded in `godot/.godot-version` — the single source of truth. `config/features` carries only the `4.6` series | ✅ `check_engine_version.py` |
 | **Language** | **GDScript only.** No C#, no GDExtension, no native modules — the web target forces one language, so the one simulation that must produce identical numbers everywhere has one implementation | 📐 |
-| **Renderer** | **Compatibility (WebGL 2 / GLES3)**, on every target — one renderer, one baseline set, one look. Spiked in M0: passes all five shadow criteria at the specified 2048² map, provided `shadow_normal_bias` is lowered from Godot's 2.0 default (A8); light intensities need the A9 scale factor. Evidence: `godot/docs/progress/2026-08-28-renderer-spike.md`. The web target itself is untested until M8's export smoke | ✅ pin gated by `check_settings.py` |
+| **Renderer** | **Compatibility (WebGL 2 / GLES3)**, on every target — one renderer, one baseline set, one look. Spiked in M0: passes all five shadow criteria at the specified 2048² map, provided `shadow_normal_bias` is lowered from Godot's 2.0 default (A8); light intensities need the A9 scale factor. Evidence: `godot/docs/progress/2026-08-28-renderer-spike.md`. The web target was smoke-tested at M8 on a cold cache (0.62 s to engine start, capture recorded) | ✅ pin gated by `check_settings.py` |
 | **Addons** | **None.** No third-party Godot addons in the shipped project | 📐 |
 | **Physics engine** | **Not used.** No `PhysicsBody3D`, no `Area3D`, no collision shapes, no `move_and_slide` — see §4 *Architectural boundaries* | ✅ `check_boundaries.py`, every text file under `godot/` |
 | **Python environment** | **`.venv` always. Never system Python.** Pinned by `godot/requirements.txt`; `test.sh` refuses to run without it | ✅ all three refusal paths verified |
@@ -266,6 +266,7 @@ carries the reasoning:
 | A11 | The GDD requires no ground edge be visible, and specifies numbers that make it visible from the boundary | Resolved in M6: a ground skirt in the same albedo past fog's end — every stated number untouched; capture + geometry test |
 | A12 | The two-prop pin was stated as permanent, but the specified radial push ejects the kart in 15–125 ticks | ✅ resolved M8 — the GDD amended by proposal: the pin is transient, the response untouched |
 | A13 | §2's 1024 downsample blessing states a floor only for the kart; whether props may ship below 1024 was unstated | Resolved in M6: props 512 / kart 1024 / Basis, forced by the 25 MB budget, gated by the baselines and the stamp check |
+| A14 | Item 14's "replayed at 30/60/144 fps" does not say whether inputs are tick-timed or frame-quantised; measured 8.83 wu apart | ✅ resolved M8 — tick-timed (the only reading the 0.5 wu tolerance can test); refresh_probe + conformance item 14 |
 
 ---
 
@@ -626,8 +627,9 @@ annotated tags match it.
 **macOS signing is a hazard, not a formality** — anything bundled beside the
 binary must be signed with the same certificate under the hardened runtime, and
 it fails only on a *clean* machine. Validate on one that has never seen the
-certificate. **The web build is smoke-tested on a cold cache** — the 39 MB
-payload is the whole risk and it is invisible on the second load.
+certificate. **The web build is smoke-tested on a cold cache** — the ~48 MB
+transferred payload (19.05 MB gzip-9) is the whole risk and it is invisible
+on the second load.
 
 ---
 

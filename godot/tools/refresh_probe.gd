@@ -8,10 +8,16 @@
 # WINDOWED — the point is real rendering at real frame caps (vsync disabled,
 # Engine.max_fps per pass) while physics holds its fixed 60 Hz. The input
 # script is the lap suite's own phase table, replayed cyclically to the
-# 3600th racing tick; presses land on frame boundaries, so a 30 fps pass
-# batches two ticks behind each press and a 144 fps pass none — exactly the
-# jitter the tolerance exists to bound. The headless half (three batchings,
-# byte-agreement) is conformance_test item 14.
+# 3600th racing tick. The drive loop awaits physics_frame, which fires once
+# per PHYSICS TICK at every render rate, so the input sequence is identical
+# tick-for-tick across the three passes — deliberately (ambiguity A14):
+# "replayed" must mean the same tick-timed sequence, because quantising the
+# edges to frame boundaries instead diverges a measured 8.83 wu across
+# 1/2/4-tick batchings, a bound no port could meet. What the three passes
+# therefore prove is the item's substance — the fixed-tick loop is fully
+# decoupled from the render rate the drawn-frame counts verify — and the
+# tolerance absorbs whatever float or scheduling wiggle real rendering adds
+# (measured: none). conformance_test item 14 pins this run's record.
 extends SceneTree
 
 const LapSuite := preload("res://tests/lap_gate_test.gd")

@@ -508,13 +508,23 @@ camera, minimap disc visible over the kart. The tag follows the verdict.
 - `godot/docs/AMBIGUITIES.md` is complete: every place the spec did not decide
   something, with what the port decided and why. **This is the deliverable the
   repository exists to produce**, not a postscript
-- All four targets exported from one commit, each smoke-tested on its own OS —
-  boots to countdown, drives, banks a lap, exits clean — with the web build
-  tested on a **cold** cache
-- macOS build signed, notarised, stapled, and validated on a machine that has
-  never seen the certificate
+- All four targets exported from one commit; the artifact smokes ITSELF
+  (`LPC_SMOKE`: boots to countdown, drives, banks a lap, exits clean).
+  **Amended at M8 review** (§12 drift rule; Critic finding 4): this
+  single-Mac repository executes the smoke on the two OSes it has — macOS
+  natively and Web in a served browser on a **cold** cache — and ships the
+  Windows/Linux one-liner as a documented obligation on whoever first holds
+  those OSes (`docs/release/1.0.0.md`), disclosed in the release record
+  rather than claimed
+- macOS build signed under the hardened runtime and verified. **Amended at
+  M8 review** (same rule): notarise + staple + clean-machine validation are
+  the credential holder's steps, documented command-for-command in the
+  release notes — this machine holds no Apple ID credentials and, having
+  signed, can never be the clean machine
 - Annotated tag matching `config/version`, release notes
-- **Visual proof:** a capture from each exported target
+- **Visual proof:** a capture from each smoked target (macOS + web here;
+  Windows/Linux captures arrive with their owed smoke, by the same
+  amendment)
 
 **Likely changes**
 - `add-acceptance-conformance-suite` — the fourteen named cases, 14b, the ambiguity register

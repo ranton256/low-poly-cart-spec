@@ -24,6 +24,15 @@ const ITEMS := 14
 const GO_TICK := 240  # item 1: 4.0 s at 60 Hz; ± 0.1 s is ± 6 ticks
 const TIMING_TOL := 0.05  # items 4: the checklist's ± 0.05 s
 const KART_BOX := AABB(Vector3(-1.1, 0.0, -1.18), Vector3(2.2, 1.2, 2.36))
+const RECORDED_14B := "res://docs/progress/2026-08-30-refresh-probe.txt"
+## tests/lap_gate_test.gd's LAP_PHASES, cycled — the drive item 14 replays.
+const LAP_SCRIPT: Array = [
+	[true, false, false, 340],
+	[true, true, false, 79],
+	[true, false, false, 350],
+	[true, true, false, 79],
+	[true, false, false, 200],
+]
 
 var _root: Node3D = null
 var _ran: int = 0
@@ -53,7 +62,7 @@ func _init() -> void:
 	await _item_11_focus_release()
 	_item_12_layout_round_trip()
 	_item_13_live_tuning_next_tick()
-	_item_14_frame_rate_independence_headless_half()
+	_item_14_frame_rate_independence()
 	_ordering_discriminator()
 
 	_check(_ran == ITEMS, "all %d checklist items ran as named cases (%d)" % [ITEMS, _ran])
@@ -380,21 +389,34 @@ func _item_11_focus_release() -> void:
 
 
 ## "Saving and reloading a layout reproduces the identical world, repeatably."
+## The FULL recorded transform per prop — asset, x, z, yaw, and the
+## normalised box — because "identical" quantified over half the fields is
+## the weaker-property trap (the M8 Critic proved a z-mirrored world passed
+## the first draft of this case). Byte-level cycles stay in layout_test.
 func _item_12_layout_round_trip() -> void:
 	_ran += 1
 	var field: Node3D = _root.props
 	var before: Array = []
 	for record in field.records:
-		before.append([record.asset, record.x, record.z])
+		before.append([record.asset, record.x, record.z, record.yaw, record.normalised.box])
 	_check(_root.save_layout(), "item 12: save succeeds")
 	_root.regenerate_world()
 	_check(_root.load_layout(), "item 12: load succeeds")
 	var same: bool = field.records.size() == before.size()
 	for i in range(before.size()):
 		var record: RefCounted = field.records[i]
-		if record.asset != before[i][0] or absf(record.x - before[i][1]) > 0.001:
+		var box: AABB = before[i][4]
+		if (
+			record.asset != before[i][0]
+			or absf(record.x - before[i][1]) > 0.001
+			or absf(record.z - before[i][2]) > 0.001
+			or absf(record.yaw - before[i][3]) > 0.001
+			or not record.normalised.box.is_equal_approx(box)
+		):
 			same = false
-	_check(same, "item 12: the identical world, repeatably (byte-cycles in layout_test)")
+	_check(
+		same, "item 12: the identical world — every field of every record (bytes in layout_test)"
+	)
 
 
 ## "Changing accel, friction, turnRate, or maxSpeed at runtime alters
@@ -416,25 +438,64 @@ func _item_13_live_tuning_next_tick() -> void:
 
 
 ## "A scripted 60-second input sequence replayed at 30, 60, and 144 frames
-## per second ends with the kart within 0.5 wu … within 0.05 s …" — the
-## headless half: three tick-batchings agree exactly (14a). The refresh-rate
-## half runs windowed in tools/refresh_probe.gd (14b), its run recorded.
-func _item_14_frame_rate_independence_headless_half() -> void:
+## per second ends with the kart within 0.5 wu … within 0.05 s …"
+##
+## The item's carrier is tools/refresh_probe.gd — the real game, really
+## rendering at three verified frame caps, replaying the same tick-timed
+## sequence. "Replayed" MUST mean the same tick-timed inputs (ambiguity
+## A14): quantising the input EDGES to frame boundaries instead diverges a
+## measured 8.83 wu across 1/2/4-tick batchings — steering edges shifted one
+## tick compound through a minute — so no port could hold 0.5 wu under that
+## reading. This case holds the item's literals against the probe's RECORDED
+## run, and re-proves headlessly that the sequence itself banks and replays
+## byte-stably — a sim regression fails here before anyone reruns the probe.
+func _item_14_frame_rate_independence() -> void:
 	_ran += 1
 	var finals: Array = []
-	for batch: int in [1, 2, 4]:
+	for _run in range(2):
 		var s := _sim()
-		var tick := 0
-		while tick < 3600:
-			for _b in range(batch):
-				s.input.forward = (tick % 7) != 0
-				s.input.left = (tick % 11) < 4
-				s.step()
-				tick += 1
-		finals.append(s.stats_line())
+		var phase_index := 0
+		var phase_start := 0
+		for tick in range(3600):
+			var phase: Array = LAP_SCRIPT[phase_index % LAP_SCRIPT.size()]
+			if tick >= phase_start + int(phase[3]):
+				phase_start += int(phase[3])
+				phase_index += 1
+				phase = LAP_SCRIPT[phase_index % LAP_SCRIPT.size()]
+			s.input.forward = phase[0]
+			s.input.left = phase[1]
+			s.input.right = phase[2]
+			s.step()
+		finals.append([s.stats_line(), s.lap.best_seconds])
 	_check(
-		finals[0] == finals[1] and finals[1] == finals[2],
-		"item 14 (headless half): three batchings agree byte-for-byte over 60 s"
+		float(finals[0][1]) > 0.0 and finals[0][0] == finals[1][0],
+		"item 14: the 60 s script banks a lap and replays byte-stably headless"
+	)
+
+	var record := FileAccess.get_file_as_string(RECORDED_14B)
+	var pairs := 0
+	var within := true
+	for line in record.split("\n"):
+		if " vs " not in line or "position gap" not in line:
+			continue
+		pairs += 1
+		var gap_wu := float(line.get_slice("position gap ", 1).get_slice(" wu", 0))
+		var gap_s := float(line.get_slice("lap gap ", 1).get_slice(" s", 0))
+		if gap_wu > 0.5 or gap_s > 0.05 or not line.ends_with("ok"):
+			within = false
+	_check(
+		pairs == 3 and within,
+		(
+			(
+				"item 14: the recorded 30/60/144 fps run holds 0.5 wu and 0.05 s "
+				+ "across all %d rate pairs (rerun: godot -s tools/refresh_probe.gd)"
+			)
+			% pairs
+		)
+	)
+	_check(
+		record.count("best lap 15.05") == 3,
+		"item 14: and the recorded run really banked its lap at all three rates"
 	)
 
 

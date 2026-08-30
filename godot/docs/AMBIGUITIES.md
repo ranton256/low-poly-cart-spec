@@ -8,7 +8,8 @@ much two independent implementations of one specification agree on, and where th
 specification was quietly ambiguous. This register is the answer to the second
 half, and it is published with the port.
 
-Recording rules — CONSTRAINTS §12 Review criterion R6, and V15:
+Recording rules — CONSTRAINTS §12 Review's archive checklist (register
+current before archive) and §10's V15:
 
 - Every ambiguity resolved *in code* is entered here **before** the change that
   resolved it is archived.
@@ -357,10 +358,42 @@ geometry asserted by `world_test.gd`.
 *Recorded during `add-world-presentation-layer` (M2). Resolved in M6.*
 
 
+### A14 — What "replayed at 30, 60, and 144 fps" quantifies over (RESOLVED at M8)
+
+**The specification says** (Acceptance Checklist, item 14): "A scripted
+60-second input sequence replayed at 30, 60, and 144 frames per second ends
+with the kart within 0.5 wu of the same position and within 0.05 s of the same
+lap time."
+
+**It does not say** whether the replayed inputs are timed on the simulation
+clock (the same tick receives the same input at every rate) or arrive as a
+player's would (edges quantised to whatever frame boundary the render rate
+offers).
+
+**The port resolves: tick-timed.** The two readings are not close. The M8
+Critic demanded the frame-quantised reading be tried, and it was measured:
+the same edge schedule applied on 1-, 2-, and 4-tick frame boundaries — an
+edge shifted by at most one tick per batching — ends **8.83 wu** apart and
+0.0667 s apart on the lap clock, because a steering edge one tick late turns
+the kart ~2.6 degrees and a minute of driving multiplies that into world
+units. No implementation whose steering matches the specified turn rate could
+hold 0.5 wu under that reading, so the tolerance is only a meaningful test
+under the other one: the same tick-timed sequence, replayed while the
+renderer runs at three different verified rates. That is what
+`tools/refresh_probe.gd` does (input applied per physics tick; drawn-frame
+counts prove the rates), and its recorded run — 0.0000 wu / 0.0000 s across
+all three rate pairs, a 15.05 s lap banked in each — is pinned by
+`conformance_test.gd` item 14, which also re-proves headlessly that the
+script banks and replays byte-stably.
+
+*Recorded in the M8 remediation of `add-acceptance-conformance-suite`.
+Resolved.*
+
 ## Open
 
-None. A12 — the register's last open entry — was settled at M8 by amending the
-design document itself; its full history stays below.
+None. A12, the last open entry, was settled at M8 by amending the design
+document itself (history below); A14 was raised and resolved in the same
+milestone's remediation pass.
 
 ### A13 — Props below the blessed 1024 (RESOLVED)
 
