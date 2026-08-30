@@ -385,8 +385,8 @@ hostile on the web.
 | Prop textures | Downsampled to **512** — the GDD blesses 1024 for "the texture set" and states a floor only *for the kart*; props carry none and are seen at gameplay distances | ✅ `stamp_texture_imports.py --check` in the standing suite |
 | Kart textures | **1024 floor** — an earlier row here read "2048² retained", a misreading of the GDD's "do not go below that [1024] for the kart"; the qualifier is the kart's floor, not a retention rule | ✅ same stamp check |
 | Texture compression | Basis Universal on import (transcodes on load), stamped by `tools/stamp_texture_imports.py` — the project-level decision the old att-5 row asked for | ✅ `--check` in the suite |
-| Total web payload, measured | **20.5 MB gzip-9** against the 25 MB budget (wasm 9.4 + pck 11) — from 89.2 MB before the stamp | ✅ measured in add-render-pipeline-and-web-budget |
-| Cold load → countdown, web, warm cache | ≤ 5 s | 📋 M8's web smoke (needs a served browser session; the payload number above carries forward) |
+| Total web payload, measured | **19.05 MB gzip-9** against the 25 MB budget (wasm 8.94 + pck 10.03 + js 0.07) — re-measured at M8 after the macOS target required `import_etc2_astc`; was 20.5 before, 89.2 before the stamp | ✅ measured in add-export-and-release-pipeline |
+| Cold load → countdown, web, warm cache | ≤ 5 s | ✅ measured 0.62 s to engine start on a COLD cache (48.3 MB actually transferred, verified by resource transferSize), countdown inside the following second — locally served on the reference machine, so network transfer is excluded; the gzip payload row bounds that part |
 
 ### Design targets — measured on the reference machine
 

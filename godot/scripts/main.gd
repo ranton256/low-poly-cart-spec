@@ -56,6 +56,21 @@ const DRIVE_ACTIONS := {
 	"steer_right": "right",
 }
 
+## The LPC_SMOKE drive (§14 phase 2) mirrors tests/lap_gate_test.gd's
+## LAP_PHASES — the suite proves that table banks; the smoke must not import
+## test code into the shipped binary, so the table is restated here with its
+## source named.
+const SMOKE_PHASES: Array = [
+	[true, false, false, 340],
+	[true, true, false, 79],
+	[true, false, false, 350],
+	[true, true, false, 79],
+	[true, false, false, 200],
+]
+const SMOKE_ACTIONS: Array = ["accelerate", "steer_left", "steer_right"]
+const SMOKE_BOOT_DEADLINE_TICKS := 600
+const SMOKE_BANK_DEADLINE_TICKS := 2000
+
 var sim: RefCounted = null
 var input: RefCounted = null
 
@@ -155,6 +170,8 @@ func _ready() -> void:
 		minimap.configure(_art, self)
 		if chase_camera != null:
 			chase_camera.cull_mask &= ~(1 << 1)
+	if OS.get_environment("LPC_SMOKE") == "1":
+		_run_smoke()
 
 
 ## Exactly one step. Never a loop: the loop is Godot's, and duplicating it here is
@@ -380,3 +397,67 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		if input != null:
 			input.clear()
+
+
+## §14 phase 2, executable: LPC_SMOKE=1 makes the SHIPPED artifact prove
+## "boots to countdown, drives, banks a lap, exits clean" by itself — boot
+## unaided, control on GO, the lap drive through the real input path, exit 0
+## only on a banked lap. LPC_SMOKE_SHOT names a PNG to write just after the
+## bank, so every smoked target leaves a capture. Unset, none of this exists.
+##
+## The drive mirrors tests/lap_gate_test.gd's LAP_PHASES — the suite proves
+## that table banks; the smoke must not import test code into the shipped
+## binary, so the table is restated here with its source named.
+func _run_smoke() -> void:
+	var waited := 0
+	while not sim.race.is_racing():
+		await get_tree().physics_frame
+		waited += 1
+		if waited > SMOKE_BOOT_DEADLINE_TICKS:
+			_smoke_fail("never reached RACING within %d ticks" % SMOKE_BOOT_DEADLINE_TICKS)
+			return
+	print("smoke: countdown handed over control at tick %d" % sim.ticks)
+
+	var start: int = sim.ticks
+	var phase_index := 0
+	var phase_start: int = start
+	while not sim.lap.banked_this_tick:
+		if sim.ticks - start > SMOKE_BANK_DEADLINE_TICKS:
+			_smoke_fail("drove %d ticks without banking a lap" % (sim.ticks - start))
+			return
+		var phase: Array = SMOKE_PHASES[phase_index % SMOKE_PHASES.size()]
+		if sim.ticks >= phase_start + int(phase[3]):
+			phase_start += int(phase[3])
+			phase_index += 1
+			phase = SMOKE_PHASES[phase_index % SMOKE_PHASES.size()]
+		for i in range(SMOKE_ACTIONS.size()):
+			if phase[i]:
+				Input.action_press(SMOKE_ACTIONS[i])
+			else:
+				Input.action_release(SMOKE_ACTIONS[i])
+		await get_tree().physics_frame
+	for action: String in SMOKE_ACTIONS:
+		Input.action_release(action)
+	print(
+		(
+			"smoke: banked a %.2f s lap at tick %d; drives, banks, and the clock ran"
+			% [sim.lap.banked_seconds, sim.ticks]
+		)
+	)
+
+	var shot: String = OS.get_environment("LPC_SMOKE_SHOT")
+	if shot != "":
+		RenderingServer.force_draw()
+		await RenderingServer.frame_post_draw
+		var image: Image = get_viewport().get_texture().get_image()
+		if image == null or image.save_png(shot) != OK:
+			_smoke_fail("could not write the smoke capture to %s" % shot)
+			return
+		print("smoke: capture written to %s" % shot)
+	print("smoke: clean exit")
+	get_tree().quit(0)
+
+
+func _smoke_fail(reason: String) -> void:
+	printerr("smoke: FAILED — %s" % reason)
+	get_tree().quit(1)
