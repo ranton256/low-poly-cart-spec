@@ -13,6 +13,7 @@ extends SceneTree
 const RVTest := preload("res://tests/harness.gd")
 const MainScene := preload("res://scenes/main.tscn")
 const LayoutIO := preload("res://scripts/world/layout_io.gd")
+const Collision := preload("res://scripts/core/collision.gd")
 
 const TEST_PATH := "user://layout_test.json"
 const SECOND_PATH := "user://layout_test_2.json"
@@ -39,6 +40,7 @@ func _init() -> void:
 	_test_malformed_file_is_refused_whole()
 	await _test_reset_kart_is_surgical()
 	_test_live_tuning_applies_next_tick()
+	await _test_the_watch_detects_a_change_on_the_sim_clock()
 
 	OS.set_environment("LPC_LAYOUT_FILE", "")
 	get_root().remove_child(_root)
@@ -148,22 +150,25 @@ func _test_restore_rebuilds_exactly_in_file_order() -> void:
 
 # @covers Track Layout Persistence / Round-tripping a layout without drift
 func _test_repeated_cycles_are_byte_identical() -> void:
-	# The scenario's property is CONVERGENCE: "repeated export/import cycles
-	# produce identical layouts rather than progressively shrinking or growing
-	# props". The first re-export may differ from scatter's own file by float
-	# dust (the variation path grounds through different arithmetic — observed
-	# at 6e-8 on one component, far inside the stated tolerance and asserted
-	# so above); from then on, cycles must be BYTE-identical — any scale
-	# compounding would grow without bound instead.
+	# The delta spec's property, held from CYCLE ZERO: five-decimal export
+	# quantization collapses the reconstruction dust (~6e-8 between scatter's
+	# grounding and the §3 re-derivation), so the first export, the re-export,
+	# and every later cycle are the same bytes. The first draft only converged
+	# from cycle one — the M7 Critic disproved the spec with a one-line probe.
 	OS.set_environment("LPC_LAYOUT_FILE", SECOND_PATH)
 	_check(_root.save_layout(), "second export succeeds")
 	_check(_root.load_layout(), "second import succeeds")
 	OS.set_environment("LPC_LAYOUT_FILE", THIRD_PATH)
 	_check(_root.save_layout(), "third export succeeds")
 	OS.set_environment("LPC_LAYOUT_FILE", TEST_PATH)
+	var a := FileAccess.get_file_as_string(TEST_PATH)
 	var b := FileAccess.get_file_as_string(SECOND_PATH)
 	var c := FileAccess.get_file_as_string(THIRD_PATH)
-	_check(b == c and b != "", "cycle N and cycle N+1 are BYTE-identical — no compounding")
+	_check(
+		a == b and a != "",
+		"export → import → export is BYTE-identical from CYCLE ZERO — the delta spec's property"
+	)
+	_check(b == c, "and every later cycle agrees")
 	# And the headline number: scales across the two files are equal, so props
 	# neither shrink nor grow.
 	var pb: Dictionary = JSON.parse_string(b)
@@ -224,12 +229,31 @@ func _test_reset_kart_is_surgical() -> void:
 	sim.lap.best_seconds = -1.0
 	sim.lap.banked_seconds = -1.0
 
-	# The pin's specified escape: hold the kart against a prop, then reset.
-	var target: RefCounted = sim.props[0]
-	sim.pos_x = target.centre_x() + 0.2
-	sim.pos_z = target.centre_z() + 0.2
-	await physics_frame
-	_check(sim.last_hit != null, "setup: the kart is held against a prop")
+	# The pin's specified escape — against the REAL pin: two props at the
+	# minimum 3 wu separation, the kart centred between them, held with its
+	# velocity zeroed every tick (the M7 Critic's finding 2: the first draft
+	# staged a single prop, a weaker arrangement than the spec's).
+	var saved_props: Array = sim.props
+	var pin_a := Collision.Prop.new()
+	pin_a.asset = "pin_a"
+	pin_a.box = AABB(Vector3(29.0, 0.0, 37.5), Vector3(2.0, 2.0, 2.0))
+	var pin_b := Collision.Prop.new()
+	pin_b.asset = "pin_b"
+	pin_b.box = AABB(Vector3(29.0, 0.0, 40.5), Vector3(2.0, 2.0, 2.0))
+	sim.props = [pin_a, pin_b]
+	sim.pos_x = 30.0
+	sim.pos_z = 40.0
+	sim.velocity = 0.0
+	var held := 0
+	for _i in range(10):
+		await physics_frame
+		if sim.last_hit != null:
+			held += 1
+	_check(held >= 8, "setup: the kart is HELD between the pair, hit after hit (%d/10)" % held)
+	_check(
+		absf(sim.pos_z - 40.0) < 1.5 and sim.velocity == 0.0,
+		"oscillating in place with velocity zeroed — the document's pin"
+	)
 	# Through the REAL binding: R while racing.
 	Input.action_press("reset_kart")
 	await physics_frame
@@ -241,6 +265,30 @@ func _test_reset_kart_is_surgical() -> void:
 	)
 	await physics_frame
 	_check(sim.last_hit == null, "standing on clear ground (startClearance keeps the origin open)")
+	sim.props = saved_props
+
+
+## The mtime watch itself — cadence, change detection, application (the M7
+## Critic's finding 3: only the apply step had coverage). A stale baseline
+## stands in for a real edit, so no repo file is written.
+func _test_the_watch_detects_a_change_on_the_sim_clock() -> void:
+	var sim: RefCounted = _root.sim
+	var file_accel: float = sim.tuning.accel
+	sim.tuning.accel = file_accel * 3.0
+	_root._tuning_mtime = 1  # a baseline no real file reports: the next poll sees change
+	_root._tuning_poll_tick = 0
+	for _i in range(30):
+		await physics_frame
+	_check(
+		sim.tuning.accel == file_accel * 3.0,
+		"inside the one-second cadence the watch has not fired"
+	)
+	for _i in range(40):
+		await physics_frame
+	_check(
+		sim.tuning.accel == file_accel,
+		"at the cadence the change is detected and the table applied — in force next tick"
+	)
 
 
 ## The live tuning surface: re-applying the file lands in the SHARED object

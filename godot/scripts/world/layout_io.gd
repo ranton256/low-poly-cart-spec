@@ -86,7 +86,7 @@ static func import_layout(path: String, boxes: Dictionary) -> Array:
 			push_error("layout: record %d is not an object" % i)
 			return []
 		var fields: Dictionary = record
-		for key in ["asset", "position", "yaw", "scale"]:
+		for key in ["asset", "targetHeight", "position", "yaw", "scale"]:
 			if not fields.has(key):
 				push_error("layout: record %d is missing %s" % [i, key])
 				return []
@@ -116,20 +116,27 @@ static func _placement(
 	placement.scale = scale
 	placement.sequence = sequence
 	placement.offset_x = normalised.box.position.x - authored.position.x * scale
-	placement.offset_y = normalised.box.position.y - authored.position.y * scale
+	# The Y offset IS the node's world Y (build applies it directly), so it
+	# comes from the file VERBATIM — "at exactly the recorded position". The
+	# first draft re-derived it through the grounding arithmetic, whose ~1e-5
+	# dust against scatter's own path broke cycle-zero byte-identity.
+	placement.offset_y = float(position[1])
 	placement.offset_z = normalised.box.position.z - authored.position.z * scale
 	placement.x = float(position[0]) - placement.offset_x
 	placement.z = float(position[2]) - placement.offset_z
 	return placement
 
 
-## Quantize to nine decimal places on export. Re-deriving a value through the
-## §3 arithmetic can move the last ulp (import composes one extra multiply),
-## and JSON prints every digit — so the double-cycle byte-identity the round
-## trip promises needs an idempotent representation. 1e-9 is far inside the
-## document's "floating-point tolerance" and far outside anything physical.
+## Quantize to five decimal places on export — 10 µwu precision, far inside
+## the document's "floating-point tolerance" and far outside anything
+## physical. The width matters: reconstructing a placement re-derives the
+## grounding through §3 arithmetic that can differ from scatter's own by
+## ~1e-7, and JSON prints every digit. At 1e-5 the dust collapses, so the
+## FIRST export and every later one are byte-identical — the delta spec's
+## "two cycles, one layout" holds from cycle zero (M7 Critic finding 1;
+## the first draft quantized at 1e-9 and only converged from cycle one).
 static func _q(value: float) -> float:
-	return float(String.num(value, 9))
+	return float(String.num(value, 5))
 
 
 ## The web half of A2: hand the saved bytes to the browser as a download.
