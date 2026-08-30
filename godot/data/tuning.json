@@ -111,7 +111,8 @@
     "hintOpacity": 0.8,
     "minimapDiscRadiusWu": 2.4,
     "minimapDiscColour": "#FF0000",
-    "minimapArrowColour": "#FFFF00"
+    "minimapArrowColour": "#FFFF00",
+    "timerLabelOpacity": 0.7
   },
   "asset_target_heights": {
     "_note": "From the design document's §3 Asset normalisation contract table, not its four Tuning Constants tables. Every instance of an asset is scaled so its height is this value before any random variation.",

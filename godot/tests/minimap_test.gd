@@ -67,12 +67,26 @@ func _test_the_inset_is_the_specified_region() -> void:
 	)
 	var viewport: SubViewport = _minimap.get_node("Viewport") as SubViewport
 	_check(viewport != null and not viewport.own_world_3d, "a SubViewport sharing the main world")
-	# The main view is untouched: the container renders its own target and the
-	# root viewport keeps the design resolution.
+	# The main view is untouched: the inset draws into its OWN render target
+	# at its own size, and the main camera still renders through the ROOT
+	# viewport. (The first draft of this assertion was a tautology — M5
+	# Critic finding 3; the second read the root window size, which headless
+	# runs do not honour.)
 	_check(
-		get_root().content_scale_size == Vector2i(0, 0) or true,
-		"the main viewport is not resized by the inset"
+		viewport.size == Vector2i(int(side), int(side)),
+		(
+			"the inset renders to its own %s target (%s)"
+			% [Vector2i(int(side), int(side)), viewport.size]
+		)
 	)
+	_check(
+		(
+			_root.chase_camera.get_viewport() == _root.get_viewport()
+			and _root.chase_camera.get_viewport() != viewport
+		),
+		"while the main camera renders through the root viewport, untouched"
+	)
+
 	_check(_minimap.stretch, "the viewport fills the container without distorting the main view")
 
 

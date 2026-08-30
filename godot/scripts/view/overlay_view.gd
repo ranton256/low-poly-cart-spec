@@ -39,11 +39,15 @@ var _last_tick := 0
 
 var _mono := SystemFont.new()
 var _sans := SystemFont.new()
+var _heavy := SystemFont.new()
 
 
 func _ready() -> void:
 	_mono.font_names = PackedStringArray(["Menlo", "Consolas", "DejaVu Sans Mono", "monospace"])
 	_sans.font_names = PackedStringArray(["Helvetica Neue", "Arial", "sans-serif"])
+	# §7's "Heavy black sans face" — weight, not just family (M5 Critic 4).
+	_heavy.font_names = _sans.font_names
+	_heavy.font_weight = 900
 	_countdown = _make_label("Countdown", Control.PRESET_FULL_RECT)
 	_loading = _make_label("Loading", Control.PRESET_FULL_RECT)
 	_time_label = _make_label("TimeLabel", Control.PRESET_TOP_RIGHT)
@@ -135,7 +139,7 @@ func _make_label(label_name: String, preset: int) -> Label:
 func _style(art: RefCounted) -> void:
 	for label: Label in [_countdown, _loading]:
 		var settings: LabelSettings = label.label_settings
-		settings.font = _mono if label == _loading else _sans
+		settings.font = _mono if label == _loading else _heavy
 		settings.font_size = (
 			int(art.num("countdownFontPx")) if label == _countdown else int(art.num("loadingPx"))
 		)
@@ -168,8 +172,8 @@ func _style(art: RefCounted) -> void:
 		label.offset_right = -16.0
 		label.offset_top = row[4]
 		label.offset_bottom = row[4] + float(row[2]) + 8.0
-	_time_label.modulate.a = 0.7
-	_best_label.modulate.a = 0.7
+	_time_label.modulate.a = art.num("timerLabelOpacity")
+	_best_label.modulate.a = art.num("timerLabelOpacity")
 
 	_title.text = TITLE_TEXT
 	_title.label_settings.font = _sans

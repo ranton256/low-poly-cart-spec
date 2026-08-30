@@ -120,6 +120,20 @@ func _test_speedometer_reads_the_core_at_steady_state() -> void:
 	_check(readout.text == "115", "the readout settles at the core's 115 (%s)" % readout.text)
 	var unit: Label = speedo.get_node("Unit") as Label
 	_check(unit.text == "KM/H", "labelled KM/H")
+	for child: Label in [readout, unit]:
+		var inside: bool = (
+			child.position.y >= 0.0
+			and child.position.y + child.size.y <= speedo.size.y + 1.0
+			and child.position.x >= -1.0
+			and child.position.x + child.size.x <= speedo.size.x + 1.0
+		)
+		_check(
+			inside,
+			(
+				"%s lies INSIDE the dial's rect — §7's element is on screen (%s in %s)"
+				% [child.name, child.get_rect(), speedo.size]
+			)
+		)
 	_check(
 		unit.label_settings.font_color.is_equal_approx(_art.colour("speedoUnitColour")),
 		"the unit label wears the data layer's grey"

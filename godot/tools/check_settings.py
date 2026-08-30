@@ -39,6 +39,16 @@ REQUIRED = {
                 "entire renderer spike — see docs/progress/2026-08-28-renderer-spike.md"),
     "lights_and_shadows/directional_shadow/soft_shadow_filter_quality": (
         "3", "the document asks for soft/percentage-closer filtering"),
+    "window/size/viewport_width": (
+        "1280", "ambiguity A1's foundation: HUD px are literal at the 1280x720 "
+                "design viewport (M5 Critic finding 6 — a drive-by resolution "
+                "change would silently invalidate the register entry)"),
+    "window/size/viewport_height": (
+        "720", "the other half of A1's design resolution"),
+    "window/stretch/mode": (
+        '"canvas_items"', "what scales A1's literal px for other window sizes"),
+    "window/stretch/aspect": (
+        '"expand"', "the stretch aspect A1's resolution records"),
 }
 
 MODELS = ("kart", "tree", "rock", "cone", "crate", "tires", "cottage")

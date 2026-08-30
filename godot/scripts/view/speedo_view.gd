@@ -39,15 +39,14 @@ func configure(art: RefCounted) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var unit_px: int = int(art.num("speedoUnitPx"))
 	var readout_px: int = int(art.num("speedoReadoutPx"))
-	# Stacked under the pivot, offsets derived from the faces' own px sizes.
-	_make_label("Unit", "KM/H", art.colour("speedoUnitColour"), unit_px, size.y - unit_px)
+	# Stacked at the pivot end INSIDE the 160×90 rect (the M5 Critic's finding
+	# 1: a first draft parked these below the control, off a screen the dial
+	# is inset 16 px from). Offsets are set after add_child, against the real
+	# parent — the anchors-vs-position trap, third appearance.
 	_make_label(
-		"Readout",
-		"0",
-		art.colour("speedoReadoutColour"),
-		readout_px,
-		size.y - unit_px - readout_px - 2.0
+		"Readout", "0", art.colour("speedoReadoutColour"), readout_px, unit_px + readout_px + 6
 	)
+	_make_label("Unit", "KM/H", art.colour("speedoUnitColour"), unit_px, unit_px)
 
 
 ## Ease toward a target ratio across `ticks` simulation ticks. The caller
@@ -86,7 +85,11 @@ func _draw() -> void:
 	)
 
 
-func _make_label(label_name: String, text: String, colour: Color, px: int, y: float) -> void:
+## `bottom_up` is the label's baseline zone measured up from the dial's
+## bottom edge; offsets land only after the label has its real parent.
+func _make_label(
+	label_name: String, text: String, colour: Color, px: int, bottom_up: float
+) -> void:
 	var label := Label.new()
 	label.name = label_name
 	label.text = text
@@ -95,6 +98,7 @@ func _make_label(label_name: String, text: String, colour: Color, px: int, y: fl
 	label.label_settings.font_size = px
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	label.position.y = y
 	add_child(label)
+	label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	label.offset_top = -bottom_up - 4.0
+	label.offset_bottom = -bottom_up + float(px)
