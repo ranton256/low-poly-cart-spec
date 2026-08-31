@@ -589,6 +589,12 @@ their full histories are in git at `streamline-process`'s parent commit.)
   served browser session at the web smoke; the payload half of §8's table is
   measured (20.5 MB gzip-9 vs 25) by add-render-pipeline-and-web-budget.
   *(disclosed split)*
+- **M10** — `main.gd`'s SMOKE_PHASES is a restated copy of a GENERATED table, so
+  every re-bake of the course churns `tuning_literal_allowlist.json` entries for
+  whichever tick counts happen to collide with a tuning magnitude (two retired
+  and one raised inside `rework-course-and-gate-direction` alone). Consider
+  moving the smoke drive out of `godot/scripts/` — data the tool writes, or a
+  seam that is not a literal table — rather than growing the allowlist.
 
 ---
 

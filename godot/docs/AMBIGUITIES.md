@@ -383,12 +383,80 @@ under the other one: the same tick-timed sequence, replayed while the
 renderer runs at three different verified rates. That is what
 `tools/refresh_probe.gd` does (input applied per physics tick; drawn-frame
 counts prove the rates), and its recorded run — 0.0000 wu / 0.0000 s across
-all three rate pairs, a 15.05 s lap banked in each — is pinned by
+all three rate pairs, one banked lap of the same time in each — is pinned by
 `conformance_test.gd` item 14, which also re-proves headlessly that the
-script banks and replays byte-stably.
+script banks and replays byte-stably. (The lap time itself is regenerated
+content: the drive is baked from the shipped course, so re-authoring the
+course re-runs the probe and re-pins the record. It was 15.05 s at M8 and is
+21.55 s since `rework-course-and-gate-direction`.)
 
 *Recorded in the M8 remediation of `add-acceptance-conformance-suite`.
 Resolved.*
+
+
+### A15 — A directional mechanic drawn with symmetric furniture (RESOLVED at M9)
+
+**The specification says**, under *Defining a gate*, that a gate is a
+**directed** segment: it is passed only when the tick's step-5 displacement
+along **gate-forward** exceeds `gateCrossingThreshold`, and it states outright
+that "a kart heading backwards through one cannot" pass it. Under *What a gate
+looks like* it then lists what a gate is drawn as: two unlit pylons of
+`gatePylonHeight` at the segment's ends, a translucent ground stripe between
+them, an overhead chevron, and the gate's number above that, facing the camera.
+
+**It did not say which way any of that faces** — and every item on the list is
+symmetric about the gate's own plane. Two pylons at the ends of a segment, a
+stripe between them, a chevron over them and a billboarded numeral look
+identical from in front and from behind. The document specified a mechanic with
+a direction and furniture with none, and said nothing about the gap.
+
+**Nothing in the port was wrong, which is why no gate caught it.**
+`gate_view.gd` drew exactly the four pieces listed; `gate_view_test.gd`
+asserted exactly the four pieces listed; `circuit.gd` refused backwards passes
+exactly as specified; the coverage gate counted the scenario claimed. The
+symmetry was invisible to every check because it was invisible to the sentence
+they were all checking against. It took **playing the game**: the owner's first
+playtest of the shipped circuit (2026-08-30) reported that you cannot tell
+which way a gate faces.
+
+**Resolved in the specification first.** GDD commit 869893e added a clause to
+*What a gate looks like*: the pass direction must be readable at a glance from
+either side — the chevron points along gate-forward, the ground stripe is an
+arrow in the same direction, and a gate approached from behind visibly reads as
+the back of a gate rather than an oncoming one.
+
+**The port resolves** (`rework-course-and-gate-direction`, M9), inside the
+existing `port_decisions` values — no new tuning constant was needed:
+
+- the ground stripe becomes an **arrowhead**: its base lies across the mouth on
+  the near side of the segment and its apex reaches `gateDepth / 2` ahead of it
+  along gate-forward, so the mark keeps the footprint the plane had (the gate's
+  width by `gateDepth`) and gains a direction;
+- the overhead chevron keeps the upright V that reads head-on, and its apex now
+  leads `gateChevronDepthWu` **ahead** of the wings as well as below them — a
+  45° arrowhead whose horizontal axis is gate-forward.
+
+**Why the chevron was not simply laid flat.** A horizontal arrow at
+`gatePylonHeight` (6 wu) is the obvious drawing of "points along gate-forward",
+and it was rejected on the geometry: the chase camera sits at `chaseUp` (4 wu)
+and looks slightly up, so at any useful approach distance a flat shape at 6 wu
+is seen within a few degrees of edge-on and its 1.4 wu of depth foreshortens to
+a fifth of a world unit. The tilted arrowhead reads from the approach *and*
+from the side, and its horizontal axis is still exactly gate-forward.
+
+**How it is held.** `gate_view_test.gd` derives each mesh's own forward from
+its vertices **in world space** — the mean of its distinct horizontal corners
+against the midpoint of its widest span, both affine constructions, so the
+answer rotates with the gate rather than with the world axes — and compares it
+to the gate's forward at yaws 0, ±45°, 90° and 2.317 rad. Reading the node's
+rotation instead would only re-assert that the holder carries the gate's yaw
+and would pass on an arrow built backwards. Mutation-verified three ways: the
+old symmetric furniture reports no direction at all and fails by name, arrows
+built backwards fail at all five yaws, and furniture built on a world axis
+fails at every yaw but 0 and 90°.
+
+*Recorded in `rework-course-and-gate-direction` (M9). Raised by the owner's
+first playtest, resolved by GDD amendment 869893e and this port's arrows.*
 
 ## Open
 
