@@ -32,6 +32,8 @@ gate with the next emphasised, under the standing mask guarantee.
 - **THEN** its chevron's and stripe's forward axes equal the gate's forward
   axis — never the reverse, never a fixed world direction
 
+## ADDED Requirements
+
 ### Requirement: The harness drive is baked from the course
 
 The canonical scripted drive SHALL be produced by a deterministic waypoint
