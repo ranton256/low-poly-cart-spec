@@ -23,9 +23,17 @@ const ArtTuning := preload("res://scripts/art_tuning.gd")
 const GateView := preload("res://scripts/view/gate_view.gd")
 const ChevronView := preload("res://scripts/view/gate_chevron_view.gd")
 const OverlayView := preload("res://scripts/view/overlay_view.gd")
+const Circuit := preload("res://scripts/core/circuit.gd")
+const Sim := preload("res://scripts/core/sim.gd")
+const InputState := preload("res://scripts/core/input_state.gd")
+const TuningLoader := preload("res://scripts/tuning_loader.gd")
 
 ## Render layer 2 as a cull-mask bit, as in minimap_test.
 const LAYER_TWO_BIT := 1 << 1
+
+## The yaws the direction assertion sweeps: square on, both diagonals, a quarter
+## turn, and one arbitrary angle no course would happen to contain.
+const YAW_SWEEP: Array = [0.0, PI / 4.0, -PI / 4.0, PI / 2.0, 2.317]
 
 var _root: Node3D = null
 var _art: RefCounted = null
@@ -45,6 +53,7 @@ func _init() -> void:
 	await _settle()
 
 	_test_each_gate_is_drawn_as_the_document_describes()
+	_test_the_arrow_points_the_way_through()
 	_test_gates_are_not_obstacles()
 	await _test_the_colours_are_the_cursor_s_truth()
 	await _test_the_pulse_is_on_the_simulation_clock()
@@ -105,10 +114,20 @@ func _test_each_gate_is_drawn_as_the_document_describes() -> void:
 			0.001,
 			"gate %d's pylons stand the gate's own width apart" % number
 		)
-		# The stripe between them, translucent and on the ground.
+		# The stripe between them, translucent and on the ground. Its base spans
+		# the mouth and its point reaches gateDepth/2 ahead of the segment, so
+		# the footprint is the mouth's own — width by gateDepth.
 		var stripe: MeshInstance3D = gate.get_node("Stripe") as MeshInstance3D
-		var plane := stripe.mesh as PlaneMesh
-		RVTest.close(plane.size.x, source.width, 0.001, "gate %d's stripe spans the mouth" % number)
+		var footprint: AABB = stripe.mesh.get_aabb()
+		RVTest.close(
+			footprint.size.x, source.width, 0.001, "gate %d's stripe spans the mouth" % number
+		)
+		RVTest.close(
+			footprint.size.z,
+			_art.num("gateDepth"),
+			0.001,
+			"gate %d's stripe is gateDepth deep" % number
+		)
 		var material := stripe.material_override as StandardMaterial3D
 		_check(
 			(
@@ -142,6 +161,63 @@ func _test_each_gate_is_drawn_as_the_document_describes() -> void:
 				"gate %d's %s is unlit and casts no shadow" % [number, part.name]
 			)
 	_check(true, "every gate is pylons, stripe, chevron and numeral, generated in code")
+
+
+## "The gate's PASS DIRECTION is readable at a glance from either side: the
+## overhead chevron points along gate-forward, the ground stripe is an arrow in
+## the same direction, and a gate approached from behind visibly reads as the
+## back of a gate rather than an oncoming one."
+##
+## The amendment the owner's first playtest produced (GDD 869893e, ambiguity
+## A15): the mechanic is directional and the furniture was symmetric, so the
+## player could not tell which way a gate faced.
+##
+## THE ASSERTION IS THE ARITHMETIC, at five yaws including two the shipped
+## course does not contain. A chevron built along a fixed world axis passes at
+## yaw 0 and fails at every other; one built backwards fails at all five; a
+## symmetric one — the bug this change exists to fix — reports no direction at
+## all and fails by name. All three were run before this was believed.
+##
+## No `@covers` line: "What a gate looks like" is claimed once, above, by the
+## case that walks the whole scenario. This is the same scenario's direction
+## clause, asserted where it can be asserted properly.
+func _test_the_arrow_points_the_way_through() -> void:
+	var course: RefCounted = Circuit.new()
+	course.circuit_name = "yaw-sweep"
+	var spacing: float = 40.0
+	for index in range(YAW_SWEEP.size()):
+		course.add_gate(float(index) * spacing - spacing, 0.0, YAW_SWEEP[index], 12.0)
+	var s := Sim.new()
+	s.tuning = TuningLoader.load_tuning()
+	s.input = InputState.new()
+	s.arm_circuit(course)
+
+	var view: Node3D = Node3D.new()
+	view.set_script(GateView)
+	var world := Node3D.new()
+	get_root().add_child(world)
+	get_root().add_child(view)
+	view.configure(_art, world)
+	view.draw_from(s)
+
+	for index in range(YAW_SWEEP.size()):
+		var yaw: float = YAW_SWEEP[index]
+		var wanted := Vector3(sin(yaw), 0.0, cos(yaw))
+		var gate: Node3D = view.get_node("GateFurniture/Gate%d" % (index + 1)) as Node3D
+		for part_name: String in ["Chevron", "Stripe"]:
+			var part: MeshInstance3D = gate.get_node(part_name) as MeshInstance3D
+			var forward: Vector3 = _mesh_forward(part)
+			_check(
+				forward.is_equal_approx(wanted),
+				(
+					"gate at yaw %.3f: the %s points along gate-forward %v, not %v"
+					% [yaw, part_name.to_lower(), wanted, forward]
+				)
+			)
+	get_root().remove_child(view)
+	view.free()
+	get_root().remove_child(world)
+	world.free()
 
 
 ## "Gates are NOT collision obstacles: the kart drives through pylons
@@ -485,6 +561,46 @@ func _test_the_medal_joins_the_held_readout() -> void:
 	_check(not medal.visible, "and the medal leaves with the hold window")
 	lap.banked_medal = ""
 	lap.banked_seconds = -1.0
+
+
+## The forward axis a piece of gate furniture actually points along, DERIVED
+## FROM ITS OWN GEOMETRY in world space — never from the node's rotation, which
+## would only re-assert that the holder carries the gate's yaw and would pass on
+## an arrow built backwards.
+##
+## An arrowhead LEANS TOWARD ITS POINT: the mean of its distinct horizontal
+## corners sits ahead of the midpoint of its widest span, and the direction from
+## that midpoint to that mean is where the head points. Both quantities are
+## affine constructions on the corners themselves, so the answer rotates with the
+## gate instead of with the world axes. Distinct corners, because both meshes
+## carry every triangle in both windings and a raw vertex mean would weight a
+## corner by how many triangles happen to touch it.
+func _mesh_forward(node: MeshInstance3D) -> Vector3:
+	var seen: Dictionary = {}
+	var corners: Array = []
+	for vertex: Vector3 in node.mesh.get_faces():
+		var world: Vector3 = node.global_transform * vertex
+		var key: String = "%.3f|%.3f" % [world.x, world.z]
+		if seen.has(key):
+			continue
+		seen[key] = true
+		corners.append(Vector2(world.x, world.z))
+	var mean := Vector2.ZERO
+	for corner: Vector2 in corners:
+		mean += corner / float(corners.size())
+	# The widest span: the two corners farthest apart, which on an arrowhead is
+	# always its base — the edge the point is opposite.
+	var widest := Vector2.ZERO
+	var span: float = -1.0
+	for a: Vector2 in corners:
+		for b: Vector2 in corners:
+			if a.distance_to(b) > span:
+				span = a.distance_to(b)
+				widest = (a + b) / 2.0
+	var offset: Vector2 = mean - widest
+	if offset.length() < 0.001:
+		return Vector3.ZERO  # symmetric: it points nowhere, which is the old bug
+	return Vector3(offset.x, 0.0, offset.y).normalized()
 
 
 ## What a gate's furniture is painted, read off the pylon's own material.

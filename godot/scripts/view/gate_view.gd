@@ -12,6 +12,15 @@
 # never a collision obstacle: nothing here reaches sim.props, so the kart drives
 # through a pylon exactly as it drives through the band.
 #
+# AND IT IS DIRECTIONAL. The mechanic is: a gate passed backwards counts for
+# nothing. The furniture was symmetric anyway, so a player meeting a gate could
+# not tell which way it faced — found by the owner's first playtest, and fixed in
+# the specification itself (GDD "What a gate looks like", commit 869893e;
+# ambiguity A15). Both marks now carry the pass direction: the ground stripe is
+# an arrowhead along gate-forward and the overhead chevron leads along it, so a
+# gate met from behind shows an arrow leaning away from the approach instead of
+# the same shape from either side.
+#
 # TWO LAYERS, the standing mask rule (godot/minimap): the furniture is world
 # geometry on layer 1, so the chase camera sees it; the minimap markers are on
 # layer 2, which the chase camera's mask drops and the minimap camera's keeps.
@@ -122,8 +131,14 @@ func _build(circuit: RefCounted) -> void:
 		_markers.add_child(_marker(circuit.gates[index], index + 1))
 
 
-## One gate: two pylons, the ground stripe between them, the overhead chevron,
+## One gate: two pylons, the ground arrow between them, the overhead chevron,
 ## and the billboard numeral above it.
+##
+## THE HOLDER CARRIES THE YAW and every piece is built in its frame, apex on
+## local +Z. That is what makes the two arrows point along GATE-FORWARD at any
+## yaw rather than along a world axis — tests/gate_view_test.gd derives each
+## mesh's own forward from its vertices in world space and compares it to the
+## gate's, at five yaws.
 func _furniture(gate: RefCounted, number: int) -> Node3D:
 	var height: float = _art.num("gatePylonHeight")
 	var holder := Node3D.new()
@@ -156,28 +171,51 @@ func _pylon(height: float) -> MeshInstance3D:
 ## The ground stripe: the band's own treatment — unlit, translucent, drawn from
 ## both sides, floating the band's height above the grass so it does not fight
 ## the ground plane for depth.
+##
+## AN ARROWHEAD, NOT A BAR (the amendment). Its base lies across the mouth on the
+## near side of the segment and its apex reaches ahead of it along gate-forward:
+## the same footprint the plane had — the gate's width by `gateDepth` — with a
+## direction in it. A bar is symmetric, and a symmetric mark on a directional
+## gate is exactly what the owner's first playtest could not read.
 func _stripe(width: float) -> MeshInstance3D:
-	var mesh := PlaneMesh.new()
-	mesh.size = Vector2(width, _art.num("gateDepth"))
-	var node := _unlit(mesh, "Stripe", _art.num("gateStripeOpacity"))
+	var half: float = width / 2.0
+	var reach: float = _art.num("gateDepth") / 2.0
+	var corners: Array = [
+		Vector3(-half, 0.0, -reach), Vector3(half, 0.0, -reach), Vector3(0.0, 0.0, reach)
+	]
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Both windings, so the arrow reads from above and from below — the same
+	# reason the chevron and the minimap's arrow carry both.
+	for triangle: Array in [[0, 1, 2], [0, 2, 1]]:
+		for corner: int in triangle:
+			surface.add_vertex(corners[corner])
+	var node := _unlit(surface.commit(), "Stripe", _art.num("gateStripeOpacity"))
 	node.position.y = _art.num("startFinishBandHeightY")
 	return node
 
 
-## The overhead chevron: a V of two quads spanning the gate at the pylons' top,
-## pointing DOWN into the opening — upright in the gate's own plane, so it reads
-## head-on from the approach the way the numeral does, rather than edge-on the
-## way a chevron lying flat at 6 wu would.
+## The overhead chevron: a V of two quads spanning the gate at the pylons' top —
+## upright in the gate's own plane, so it reads head-on from the approach the way
+## the numeral does, rather than edge-on the way a chevron lying flat at 6 wu
+## would.
+##
+## AND IT LEADS ALONG GATE-FORWARD (the amendment). The apex now sits `depth`
+## AHEAD of the wings as well as `depth` below them — a 45° arrowhead whose
+## horizontal axis is gate-forward, so from the approach it points away down the
+## course and from the far side it leans back at the viewer: the back of a gate
+## reading as a back. Laying it flat instead would say the same thing to nobody,
+## because the chase camera sits below this height and would see it edge-on.
 func _chevron(height: float) -> MeshInstance3D:
 	var span: float = _art.num("gateChevronSpanWu")
 	var depth: float = _art.num("gateChevronDepthWu")
 	var thickness: float = _art.num("gateChevronThicknessWu")
 	var outer: Array = [
-		Vector3(-span, 0.0, 0.0), Vector3(0.0, -depth, 0.0), Vector3(span, 0.0, 0.0)
+		Vector3(-span, 0.0, 0.0), Vector3(0.0, -depth, depth), Vector3(span, 0.0, 0.0)
 	]
 	var inner: Array = [
 		Vector3(-span, thickness, 0.0),
-		Vector3(0.0, thickness - depth, 0.0),
+		Vector3(0.0, thickness - depth, depth),
 		Vector3(span, thickness, 0.0),
 	]
 	var surface := SurfaceTool.new()
