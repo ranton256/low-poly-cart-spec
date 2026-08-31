@@ -446,7 +446,7 @@ Deterministic acceptance conditions — pass/fail with no judgment.
 | V6 | **G1** — every GDD scenario claimed exactly once; a claim on a scenario the document lacks also fails | ✅ `check_spec_coverage.py` |
 | V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ✅ `tests/conformance_test.gd`: `_item_01`…`_item_15` green against the AMENDED checklist — `add-circuit-world-and-presentation` re-pointed items 1, 2 and 10 and added item 15, and the suite counts its own cases |
 | V8 | Pinned project settings match §6, and every model has a valid committed import preset | ✅ `check_settings.py` |
-| V9 | Gallery diffs within recorded thresholds on all three criteria | ✅ `tools/gallery.sh` + `gallery_compare.py`, seven states (`gate_next` added at M9), floor and limits recorded in `gallery_config.json`; verified by mutation (a painted band fails on all three criteria) |
+| V9 | Gallery diffs within recorded thresholds on all three criteria | ✅ `tools/gallery.sh` + `gallery_compare.py`, nine states (`gate_next` added at M9; `gate_front`/`gate_back` with it, a pair because a gate's readable pass direction is a comparison), floor and limits recorded in `gallery_config.json`; verified by mutation (a painted band fails on all three criteria) |
 | V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py` |
 | V11 | Every `CONSTRAINTS §N Title` reference names the section it points at | ✅ `check_section_refs.py` — bare `docs/CONSTRAINTS.md §N` forms are invisible to it; stale prose stays review's job |
 | V12 | `openspec validate <change> --strict` passes | ✅ |
@@ -577,7 +577,7 @@ Added by this project:
 | Scenario coverage G1 (V6) | `tools/check_spec_coverage.py` parses the GDD | M1 |
 | GDScript lint and format | `gdtoolkit` — `gdlint`, `gdformat --check` | M0 |
 | Whitespace, EOF newline, large files | the hand-rolled `godot/tools/pre-commit` | ✅ M0 |
-| Visual gate (V9) | `tools/gallery.sh` + `gallery_compare.py` — windowed, seven deterministic states vs committed baselines | ✅ M6 |
+| Visual gate (V9) | `tools/gallery.sh` + `gallery_compare.py` — windowed, nine deterministic states vs committed baselines | ✅ M6 |
 | Acceptance conformance G2 (V7) | `tests/conformance_test.gd`, 15 named cases | M8 |
 | Commit-time gate | `godot/tools/pre-commit`, installed by `tools/install-hooks.sh`; checks **staged blobs**, bash-3.2-portable | ✅ M0 |
 | Asset sync and import | `godot/tools/sync_assets.sh` + `tests/assets_test.gd` — content-hash sync, poisoned-preset refusal, load assertion | ✅ M0 |
