@@ -1,14 +1,21 @@
-Re-run 2026-08-30 for add-circuit-world-and-presentation, against the shipped
-circuit as committed: the boot world is data/circuits/first-light.json, so this
-drive threads six gates before it can bank. Same end position and same lap time
-as the pre-circuit run — which is the point: the gates were authored along this
-drive's own trajectory. (Drawn-frame counts wobble by one between runs; they are
-the evidence each pass really rendered at its cap, not a pinned figure.)
+Re-run 2026-08-30 for rework-course-and-gate-direction, against the reworked
+shipped circuit: the boot world is data/circuits/first-light.json and this drive
+now threads SEVEN gates on a touring course before it can bank. The drive itself
+is the table tools/author_first_light.gd baked from that course — it is no longer
+the historical hairpin script, so the end position and the lap time both move,
+and this is the run conformance_test.gd item 14 pins them to.
+
+(Drawn-frame counts wobble by a few between runs; they are the evidence each pass
+really rendered at its cap, not a pinned figure. A first attempt at this re-run
+reported 0 frames for the 30 and 144 fps passes, with identical positions and lap
+times — the window had stopped being drawn behind another one. Re-run with it
+visible, and that is the run recorded here: a pass reporting no frames is not
+evidence of a rate.)
 
 refresh_probe: 60 vs 30 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
 refresh_probe: 60 vs 144 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
 refresh_probe: 30 vs 144 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
-refresh_probe:  60 fps — end (2.8159, 90.0000), best lap 15.0500 s, 3600 frames drawn in 60.0 s
-refresh_probe:  30 fps — end (2.8159, 90.0000), best lap 15.0500 s, 1800 frames drawn in 60.0 s
-refresh_probe: 144 fps — end (2.8159, 90.0000), best lap 15.0500 s, 8641 frames drawn in 60.0 s
+refresh_probe:  60 fps — end (-19.4093, -4.7831), best lap 21.5500 s, 3598 frames drawn in 60.0 s
+refresh_probe:  30 fps — end (-19.4093, -4.7831), best lap 21.5500 s, 1800 frames drawn in 60.0 s
+refresh_probe: 144 fps — end (-19.4093, -4.7831), best lap 21.5500 s, 8634 frames drawn in 60.0 s
 refresh_probe: acceptance 14b holds at 30/60/144 fps

@@ -9,12 +9,14 @@
 # spec names — every gate inside the boundary, no curated prop in a mouth,
 # targets ordered — are asserted here against the bytes that ship.
 #
-# AND THE PROPERTY THAT KEEPS THE HARNESS ALIVE. The gates were authored along
-# the trajectory of tests/lap_gate_test.gd's LAP_PHASES, because five standing
-# proofs rest on that one scripted drive banking a lap and, with a circuit
-# loaded, banking means threading. The bank TICK is pinned below: move a gate
-# off the drive's path and this fails by name, before lap_capture, refresh_probe
-# and LPC_SMOKE fail one at a time and mysteriously.
+# AND THE PROPERTY THAT KEEPS THE HARNESS ALIVE. Five standing proofs rest on
+# one scripted drive banking a lap on this course and, with a circuit loaded,
+# banking means threading. That drive is no longer something the gates were
+# placed along: tools/author_first_light.gd BAKES it from the course, and
+# tests/lap_gate_test.gd's LAP_PHASES is what the tool printed. The pass ticks
+# and the bank TICK are pinned below, so a course edited without re-baking fails
+# here by name, before lap_capture, refresh_probe and LPC_SMOKE fail one at a
+# time and mysteriously.
 extends SceneTree
 
 const RVTest := preload("res://tests/harness.gd")
@@ -26,11 +28,11 @@ const InputState := preload("res://scripts/core/input_state.gd")
 const TuningLoader := preload("res://scripts/tuning_loader.gd")
 const LapSuite := preload("res://tests/lap_gate_test.gd")
 
-## Where the scripted drive banks, in racing ticks. It banked here before the
-## circuit existed and it banks here now: the gates went onto its path, not the
-## other way round.
-const SCRIPTED_BANK_TICK := 902
-const SCRIPTED_BANK_SECONDS := 15.03
+## Where the baked drive banks, in racing ticks, and the gates it passes on the
+## way. Regenerated with the course: tools/author_first_light.gd prints both.
+const SCRIPTED_BANK_TICK := 1292
+const SCRIPTED_BANK_SECONDS := 21.5333
+const SCRIPTED_GATE_TICKS: Array = [139, 298, 544, 735, 931, 1090, 1248]
 
 var _root: Node3D = null
 var _tuning: RefCounted = null
@@ -130,8 +132,8 @@ func _test_the_targets_are_ordered() -> void:
 		bronze > silver and silver > gold and gold > 0.0,
 		"ordered bronze > silver > gold, all positive (%.2f > %.2f > %.2f)" % [bronze, silver, gold]
 	)
-	# Provisional, and honest about it: gold is under the scripted drive's own
-	# lap, so the medal is a driving result rather than a participation prize.
+	# Provisional, and honest about it: gold is under the baked drive's own lap,
+	# so the medal is a driving result rather than a participation prize.
 	_check(
 		gold < SCRIPTED_BANK_SECONDS,
 		(
@@ -170,7 +172,7 @@ func _test_the_boot_world_is_the_shipped_circuit() -> void:
 		circuit.circuit_name == "first-light",
 		"the armed circuit is the file's (%s)" % circuit.circuit_name
 	)
-	_check(circuit.gate_count() == 6, "with its six gates")
+	_check(circuit.gate_count() == 7, "with its seven gates")
 	_check(circuit.cursor == 1, "the cursor starting at gate 1")
 	_check(_root.sim.lap.best_key == "first-light", "and the BEST readout keyed to it")
 
@@ -192,14 +194,15 @@ func _test_the_shipped_file_is_a_fixed_point_of_the_round_trip() -> void:
 	)
 
 
-## THE HARNESS PROPERTY. The scripted drive threads every gate in order and
-## banks on the tick it always banked on.
+## THE HARNESS PROPERTY. The baked drive threads every gate in order, on the
+## ticks it was baked at, and banks on the tick it was baked at.
 func _test_the_scripted_drive_still_threads_and_banks() -> void:
+	var circuit: RefCounted = _circuit()
 	var s := Sim.new()
 	s.tuning = TuningLoader.load_tuning()
 	s.input = InputState.new()
 	s.race.start_racing_immediately()
-	s.arm_circuit(_circuit())
+	s.arm_circuit(circuit)
 	var passes: Array = []
 	var bank_tick := -1
 	for phase: Array in LapSuite.LAP_PHASES:
@@ -213,13 +216,16 @@ func _test_the_scripted_drive_still_threads_and_banks() -> void:
 			if s.lap.banked_this_tick and bank_tick < 0:
 				bank_tick = s.ticks
 	_check(
-		passes.size() == 6,
-		"the scripted drive passes all six gates, in order, at ticks %s" % str(passes)
+		passes == SCRIPTED_GATE_TICKS,
+		(
+			"the baked drive passes all %d gates, in order, on the ticks it was baked at: %s"
+			% [circuit.gate_count(), str(passes)]
+		)
 	)
 	_check(
 		bank_tick == SCRIPTED_BANK_TICK,
 		(
-			"and banks on tick %d, exactly where it banked before the gates existed (got %d)"
+			"and banks on tick %d, exactly where the tool baked it (got %d)"
 			% [SCRIPTED_BANK_TICK, bank_tick]
 		)
 	)

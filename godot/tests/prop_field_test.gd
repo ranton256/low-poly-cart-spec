@@ -12,6 +12,7 @@ extends SceneTree
 
 const RVTest := preload("res://tests/harness.gd")
 const Scatter := preload("res://scripts/core/scatter.gd")
+const LayoutIO := preload("res://scripts/world/layout_io.gd")
 
 var _root: Node3D = null
 
@@ -45,12 +46,27 @@ func _requested_total() -> int:
 	return total
 
 
+## THE BOOT FIELD IS THE SHIPPED CIRCUIT'S, not a scatter, so its population is
+## the committed file's — the requested totals LESS whatever curation dropped
+## from a gate mouth (tools/author_first_light.gd). Asserting the tuning's
+## totals here passed only while the curation happened to drop nothing; the
+## requested totals are a property of a REGENERATED field, checked below.
 func _test_the_field_is_populated() -> void:
 	_check(_root.props != null, "the scene has a prop field")
 	if _root.props == null:
 		return
 	var count: int = _root.props.prop_count()
-	_check(count == _requested_total(), "every requested prop was placed (%d)" % count)
+	var shipped: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(LayoutIO.SHIPPED_CIRCUIT_PATH)
+	)
+	var authored: int = (shipped["props"] as Array).size()
+	_check(
+		count == authored and count <= _requested_total(),
+		(
+			"the boot field is the shipped circuit's own %d props (%d requested by the tuning)"
+			% [authored, _requested_total()]
+		)
+	)
 	# One node per record, so nothing is registered that is not drawn and nothing
 	# drawn that collision will not see.
 	_check(

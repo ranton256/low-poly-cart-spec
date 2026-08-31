@@ -35,12 +35,37 @@ const TIMING_TOL := 0.05  # items 4: the checklist's ± 0.05 s
 const KART_BOX := AABB(Vector3(-1.1, 0.0, -1.18), Vector3(2.2, 1.2, 2.36))
 const RECORDED_14B := "res://docs/progress/2026-08-30-refresh-probe.txt"
 ## tests/lap_gate_test.gd's LAP_PHASES, cycled — the drive item 14 replays.
+## Baked from the shipped circuit by tools/author_first_light.gd, restated here
+## rather than imported for the same reason main.gd restates it: this file is
+## read as the checklist, and the drive it replays must be legible in it.
 const LAP_SCRIPT: Array = [
-	[true, false, false, 340],
-	[true, true, false, 79],
-	[true, false, false, 350],
-	[true, true, false, 79],
-	[true, false, false, 200],
+	[true, false, false, 139],
+	[true, true, false, 29],
+	[true, false, false, 75],
+	[true, true, false, 1],
+	[true, false, false, 54],
+	[true, true, false, 34],
+	[true, false, false, 201],
+	[true, true, false, 1],
+	[true, false, false, 10],
+	[true, true, false, 29],
+	[true, false, false, 46],
+	[true, true, false, 1],
+	[true, false, false, 114],
+	[true, true, false, 10],
+	[true, false, false, 84],
+	[true, true, false, 1],
+	[true, false, false, 101],
+	[true, true, false, 33],
+	[true, false, false, 10],
+	[true, true, false, 1],
+	[true, false, false, 115],
+	[true, true, false, 35],
+	[true, false, false, 105],
+	[true, true, false, 1],
+	[true, false, false, 18],
+	[true, false, true, 15],
+	[true, false, false, 29],
 ]
 
 var _root: Node3D = null
@@ -532,7 +557,7 @@ func _item_14_frame_rate_independence() -> void:
 	for _run in range(2):
 		var s := _sim()
 		# ON THE SHIPPED CIRCUIT, like the probe: the recorded run below is the
-		# real game, which threads six gates before it can bank, and the two
+		# real game, which threads seven gates before it can bank, and the two
 		# halves of this item must describe the same drive.
 		s.arm_circuit(LayoutIO.read_circuit(LayoutIO.SHIPPED_CIRCUIT_PATH))
 		var phase_index := 0
@@ -575,7 +600,7 @@ func _item_14_frame_rate_independence() -> void:
 		)
 	)
 	_check(
-		record.count("best lap 15.05") == 3,
+		record.count("best lap 21.55") == 3,
 		"item 14: and the recorded run really banked its lap at all three rates"
 	)
 
@@ -595,7 +620,7 @@ func _item_15_the_shipped_circuit_is_the_game() -> void:
 	var sim: RefCounted = _root.sim
 	var circuit: RefCounted = sim.circuit
 	_check(
-		circuit.circuit_name == "first-light" and circuit.gate_count() == 6,
+		circuit.circuit_name == "first-light" and circuit.gate_count() == 7,
 		(
 			"item 15: the shipped circuit is loaded — %s, %d gates"
 			% [circuit.circuit_name, circuit.gate_count()]
@@ -636,7 +661,7 @@ func _item_15_the_shipped_circuit_is_the_game() -> void:
 		((markers.get_child(2) as MeshInstance3D).mesh as CylinderMesh).top_radius
 	)
 	_check(
-		on_the_gate and counter.text == "GATE 2/6" and next_radius > idle_radius,
+		on_the_gate and counter.text == "GATE 2/7" and next_radius > idle_radius,
 		(
 			"item 15: the next gate is indicated on the gate, the HUD (%s) and the minimap (%.1f vs %.1f wu)"
 			% [counter.text, next_radius, idle_radius]
@@ -648,7 +673,7 @@ func _item_15_the_shipped_circuit_is_the_game() -> void:
 	# shipped course, with a long clock behind it.
 	var skipper := _sim()
 	skipper.arm_circuit(LayoutIO.read_circuit(LayoutIO.SHIPPED_CIRCUIT_PATH))
-	skipper.circuit.cursor = skipper.circuit.gate_count() - 1  # four of six passed
+	skipper.circuit.cursor = skipper.circuit.gate_count() - 1  # five of seven passed
 	for _i in range(401):
 		skipper.step()
 	skipper.pos_z = -3.0
@@ -658,7 +683,7 @@ func _item_15_the_shipped_circuit_is_the_game() -> void:
 	_check(
 		skipper.lap.banked_seconds < 0.0,
 		(
-			"item 15: a lap that skips one gate of six refuses to bank, %.2f s in"
+			"item 15: a lap that skips one gate of seven refuses to bank, %.2f s in"
 			% skipper.lap.clock_seconds()
 		)
 	)
@@ -675,9 +700,22 @@ func _item_15_the_shipped_circuit_is_the_game() -> void:
 	await physics_frame
 	await physics_frame
 	Input.action_release("regenerate_world")
-	var document: Dictionary = JSON.parse_string(
-		FileAccess.get_file_as_string(LayoutIO.SHIPPED_CIRCUIT_PATH)
-	)
+	# "THE SAME AUTHORED ARRANGEMENT, NOT A FRESH SCATTER" — so the world is
+	# compared against the arrangement this session is playing, prop for prop and
+	# place for place. A count alone cannot tell the two apart: a regenerated
+	# field has the same population as the one it replaced, which is precisely
+	# what Restart Circuit must not do.
+	var authored: Array = _root.loaded_circuit.placements
+	var rebuilt: bool = _root.props.prop_count() == authored.size()
+	for i in range(mini(_root.props.records.size(), authored.size())):
+		var record: RefCounted = _root.props.records[i]
+		var placement: RefCounted = authored[i]
+		if (
+			record.asset != placement.asset
+			or absf(record.x - placement.x) > 0.001
+			or absf(record.z - placement.z) > 0.001
+		):
+			rebuilt = false
 	_check(
 		(
 			sim.pos_x == 0.0
@@ -686,12 +724,12 @@ func _item_15_the_shipped_circuit_is_the_game() -> void:
 			and sim.circuit.cursor == 1
 			and sim.lap.clock_seconds() < 0.05
 			and sim.lap.best_seconds == 11.5
-			and _root.props.prop_count() == (document["props"] as Array).size()
+			and rebuilt
 		),
 		(
 			(
-				"item 15: Restart Circuit rebuilt the authored world (%d props), returned the kart, "
-				+ "and kept the session best"
+				"item 15: Restart Circuit rebuilt the authored world (%d props, each at its own "
+				+ "authored place), returned the kart, and kept the session best"
 			)
 			% _root.props.prop_count()
 		)

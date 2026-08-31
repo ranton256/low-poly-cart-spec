@@ -69,13 +69,36 @@ const DRIVE_ACTIONS := {
 ## The LPC_SMOKE drive (§14 phase 2) mirrors tests/lap_gate_test.gd's
 ## LAP_PHASES — the suite proves that table banks; the smoke must not import
 ## test code into the shipped binary, so the table is restated here with its
-## source named.
+## source named. Neither copy is hand-written: both are baked from the shipped
+## circuit by tools/author_first_light.gd, which prints them together.
 const SMOKE_PHASES: Array = [
-	[true, false, false, 340],
-	[true, true, false, 79],
-	[true, false, false, 350],
-	[true, true, false, 79],
-	[true, false, false, 200],
+	[true, false, false, 139],
+	[true, true, false, 29],
+	[true, false, false, 75],
+	[true, true, false, 1],
+	[true, false, false, 54],
+	[true, true, false, 34],
+	[true, false, false, 201],
+	[true, true, false, 1],
+	[true, false, false, 10],
+	[true, true, false, 29],
+	[true, false, false, 46],
+	[true, true, false, 1],
+	[true, false, false, 114],
+	[true, true, false, 10],
+	[true, false, false, 84],
+	[true, true, false, 1],
+	[true, false, false, 101],
+	[true, true, false, 33],
+	[true, false, false, 10],
+	[true, true, false, 1],
+	[true, false, false, 115],
+	[true, true, false, 35],
+	[true, false, false, 105],
+	[true, true, false, 1],
+	[true, false, false, 18],
+	[true, false, true, 15],
+	[true, false, false, 29],
 ]
 const SMOKE_ACTIONS: Array = ["accelerate", "steer_left", "steer_right"]
 const SMOKE_BOOT_DEADLINE_TICKS := 600
@@ -498,7 +521,8 @@ func _notification(what: int) -> void:
 ##
 ## The drive mirrors tests/lap_gate_test.gd's LAP_PHASES — the suite proves
 ## that table banks; the smoke must not import test code into the shipped
-## binary, so the table is restated here with its source named.
+## binary, so the table is restated above with its source named. Both copies
+## are baked from the shipped circuit by tools/author_first_light.gd.
 func _run_smoke() -> void:
 	var waited := 0
 	while not sim.race.is_racing():

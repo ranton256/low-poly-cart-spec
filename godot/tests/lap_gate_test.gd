@@ -15,9 +15,9 @@
 # rejection cases below therefore run on a simulation with NO circuit armed, on
 # purpose — with no threading condition in play, the only thing that can refuse
 # a crossing is the condition each case is about. The threaded half is here too:
-# the scripted drive now threads the SHIPPED circuit's six gates on its way to
-# the line, which is what keeps tools/lap_capture.gd, tools/refresh_probe.gd and
-# main.gd's LPC_SMOKE banking the same lap on the same tick as before.
+# the scripted drive threads the SHIPPED circuit's seven gates on its way to the
+# line, which is what keeps tools/lap_capture.gd, tools/refresh_probe.gd and
+# main.gd's LPC_SMOKE banking the same lap on the same tick.
 extends SceneTree
 
 const RVTest := preload("res://tests/harness.gd")
@@ -34,20 +34,49 @@ const CLOCK_RUN_TICKS := 300
 const HOLD_TICKS := 30  # lapRestartDelay 0.5 s
 const FLASH_TICKS := 60  # bestFlashDuration 1 s
 
-## The scripted lap tools/lap_capture.gd replays for M4's visual proof: north
-## through the band (unthreaded — nothing banks), a left u-turn (drifting east
-## of the band's X window), south past the band outside that window, a second
-## left u-turn curling back west to the line, then north through the band under
-## power with every gate of the shipped circuit passed in order. The shipped
-## circuit's gates were AUTHORED ON THIS TRAJECTORY (tools/author_first_light.gd)
-## precisely so this table still banks, at the same tick, unmodified.
+## The scripted lap tools/lap_capture.gd replays for M4's visual proof, and the
+## canonical drive of this port: a full tour of the shipped circuit — north up
+## the start straight, right through the north-east, down the east side, across
+## the far south, back through the south-west, and north through the band with
+## all seven gates passed in order.
+##
+## GENERATED, NOT AUTHORED, and that inversion is rework-course-and-gate-
+## direction's whole point. Until the first playtest the gates were placed on
+## THIS table's trajectory, which is why the course was a hairpin. Now the table
+## is BAKED FROM THE COURSE by tools/author_first_light.gd: a deterministic
+## waypoint pilot drives the real simulation gate to gate and its held inputs
+## are run-length encoded into exactly this shape. Do not hand-edit it — move a
+## gate, re-run the tool, and paste what it prints here, into main.gd's
+## SMOKE_PHASES, and into conformance_test.gd's LAP_SCRIPT.
 ## [forward, left, right, ticks]
 const LAP_PHASES: Array = [
-	[true, false, false, 340],
-	[true, true, false, 79],
-	[true, false, false, 350],
-	[true, true, false, 79],
-	[true, false, false, 200],
+	[true, false, false, 139],
+	[true, true, false, 29],
+	[true, false, false, 75],
+	[true, true, false, 1],
+	[true, false, false, 54],
+	[true, true, false, 34],
+	[true, false, false, 201],
+	[true, true, false, 1],
+	[true, false, false, 10],
+	[true, true, false, 29],
+	[true, false, false, 46],
+	[true, true, false, 1],
+	[true, false, false, 114],
+	[true, true, false, 10],
+	[true, false, false, 84],
+	[true, true, false, 1],
+	[true, false, false, 101],
+	[true, true, false, 33],
+	[true, false, false, 10],
+	[true, true, false, 1],
+	[true, false, false, 115],
+	[true, true, false, 35],
+	[true, false, false, 105],
+	[true, true, false, 1],
+	[true, false, false, 18],
+	[true, false, true, 15],
+	[true, false, false, 29],
 ]
 
 
