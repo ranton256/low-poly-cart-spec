@@ -777,6 +777,7 @@ build — it is specified fresh, and Known Deviations does not apply to it.)*
 * **And** gates are **not** collision obstacles: the kart drives through pylons unimpeded, as it does through the band
 * **And** the gate the cursor names is shown in `gateNextColour` with a pulse animated on the **simulation clock**; gates already passed this lap show `gatePassedColour`; gates not yet due show `gateIdleColour`
 * **And** each gate shows its number above the chevron, facing the camera
+* **And** the gate's **pass direction is readable at a glance from either side**: the overhead chevron points along gate-forward, the ground stripe is an arrow in the same direction, and a gate approached from behind visibly reads as the back of a gate rather than an oncoming one *(added after the first playtest: the mechanic is directional, so the furniture must be)*
 
 ### Scenario: Finding the next gate
 
