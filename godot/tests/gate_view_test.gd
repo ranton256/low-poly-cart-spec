@@ -114,9 +114,9 @@ func _test_each_gate_is_drawn_as_the_document_describes() -> void:
 			0.001,
 			"gate %d's pylons stand the gate's own width apart" % number
 		)
-		# The stripe between them, translucent and on the ground. Its base spans
-		# the mouth and its point reaches gateDepth/2 ahead of the segment, so
-		# the footprint is the mouth's own — width by gateDepth.
+		# The stripe between them, translucent and on the ground: its base spans
+		# the mouth gateDepth/2 behind the segment and its point reaches
+		# gateStripeReachWu ahead of it.
 		var stripe: MeshInstance3D = gate.get_node("Stripe") as MeshInstance3D
 		var footprint: AABB = stripe.mesh.get_aabb()
 		RVTest.close(
@@ -124,9 +124,9 @@ func _test_each_gate_is_drawn_as_the_document_describes() -> void:
 		)
 		RVTest.close(
 			footprint.size.z,
-			_art.num("gateDepth"),
+			_art.num("gateDepth") / 2.0 + _art.num("gateStripeReachWu"),
 			0.001,
-			"gate %d's stripe is gateDepth deep" % number
+			"gate %d's stripe reaches gateStripeReachWu ahead of the segment" % number
 		)
 		var material := stripe.material_override as StandardMaterial3D
 		_check(

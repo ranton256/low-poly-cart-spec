@@ -59,18 +59,13 @@
     },
     {
       "file": "godot/scripts/main.gd",
-      "value": 15,
-      "reason": "A PHASE DURATION IN SMOKE_PHASES — 15 ticks of held input in the drive tools/author_first_light.gd bakes from the shipped circuit, restated in main.gd for the LPC_SMOKE seam because the shipped binary must not import test code. A count of simulation ticks, not prop_counts.treeCount, the fifteen trees the scatter places. These entries CHURN: the table is generated, so re-authoring the course re-rolls every duration and the staleness rule will fail the gate until they are re-stated — which is the gate working, and the price of restating a generated table inside godot/scripts/."
-    },
-    {
-      "file": "godot/scripts/main.gd",
-      "value": 18,
-      "reason": "A PHASE DURATION IN SMOKE_PHASES — 18 ticks of held input in the drive tools/author_first_light.gd bakes from the shipped circuit, restated in main.gd for the LPC_SMOKE seam because the shipped binary must not import test code. A count of simulation ticks, not unnamed_in_spec.loadingPx or speedoReadoutPx, two HUD type sizes. These entries CHURN: the table is generated, so re-authoring the course re-rolls every duration and the staleness rule will fail the gate until they are re-stated — which is the gate working, and the price of restating a generated table inside godot/scripts/."
-    },
-    {
-      "file": "godot/scripts/main.gd",
       "value": 75,
       "reason": "A PHASE DURATION IN SMOKE_PHASES — 75 ticks of held input in the drive tools/author_first_light.gd bakes from the shipped circuit, restated in main.gd for the LPC_SMOKE seam because the shipped binary must not import test code. A count of simulation ticks, not camera_and_hud.fovBase, the chase camera's resting field of view. These entries CHURN: the table is generated, so re-authoring the course re-rolls every duration and the staleness rule will fail the gate until they are re-stated — which is the gate working, and the price of restating a generated table inside godot/scripts/."
+    },
+    {
+      "file": "godot/scripts/main.gd",
+      "value": 30,
+      "reason": "A PHASE DURATION IN SMOKE_PHASES — 30 ticks of held input in the drive tools/author_first_light.gd bakes from the shipped circuit, restated in main.gd for the LPC_SMOKE seam because the shipped binary must not import test code. A count of simulation ticks, not lighting.sunPositionX or sunPositionZ, two coordinates of the sun. These entries CHURN: the table is generated, so re-authoring the course re-rolls every duration and the staleness rule fails the gate until they are re-stated — which is the gate working, and the price of restating a generated table inside godot/scripts/. It has already happened once inside this change: moving one gate retired the 15 and 18 entries and raised this one."
     }
   ]
 }

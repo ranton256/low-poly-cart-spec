@@ -60,12 +60,12 @@ const LAP_SCRIPT: Array = [
 	[true, false, false, 10],
 	[true, true, false, 1],
 	[true, false, false, 115],
-	[true, true, false, 35],
-	[true, false, false, 105],
+	[true, true, false, 47],
+	[true, false, false, 13],
 	[true, true, false, 1],
-	[true, false, false, 18],
-	[true, false, true, 15],
-	[true, false, false, 29],
+	[true, false, false, 58],
+	[true, false, true, 30],
+	[true, false, false, 81],
 ]
 
 var _root: Node3D = null
@@ -600,7 +600,7 @@ func _item_14_frame_rate_independence() -> void:
 		)
 	)
 	_check(
-		record.count("best lap 21.55") == 3,
+		record.count("best lap 22.00") == 3,
 		"item 14: and the recorded run really banked its lap at all three rates"
 	)
 

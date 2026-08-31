@@ -170,6 +170,7 @@
     "_gate_presentation_note": "The gate furniture's dimensions. The GDD's Circuit table names the pylon height and the three state colours and says the rest is 'generated geometry in the band's visual family' — these are this port's reading of that sentence, the way the minimap marker sizes are its reading of 'a flat red disc'. Gate positions, yaws and widths are CONTENT and live in each circuit file, never here.",
     "gatePylonRadiusWu": 0.35,
     "gateStripeOpacity": 0.45,
+    "gateStripeReachWu": 5.0,
     "gateChevronSpanWu": 2.4,
     "gateChevronDepthWu": 1.4,
     "gateChevronThicknessWu": 0.5,

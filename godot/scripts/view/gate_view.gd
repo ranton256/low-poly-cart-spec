@@ -172,16 +172,26 @@ func _pylon(height: float) -> MeshInstance3D:
 ## both sides, floating the band's height above the grass so it does not fight
 ## the ground plane for depth.
 ##
-## AN ARROWHEAD, NOT A BAR (the amendment). Its base lies across the mouth on the
-## near side of the segment and its apex reaches ahead of it along gate-forward:
-## the same footprint the plane had — the gate's width by `gateDepth` — with a
-## direction in it. A bar is symmetric, and a symmetric mark on a directional
-## gate is exactly what the owner's first playtest could not read.
+## AN ARROWHEAD, NOT A BAR (the amendment). Its base lies across the mouth
+## `gateDepth`/2 behind the segment — where the bar's own near edge was — and its
+## apex reaches `gateStripeReachWu` ahead of it along gate-forward. A bar is
+## symmetric, and a symmetric mark on a directional gate is exactly what the
+## owner's first playtest could not read.
+##
+## THE REACH IS WHY IT IS LEGIBLE. The chase camera looks along the ground at a
+## few degrees, so a mark only as long as the pass slab is two world units deep
+## foreshortens into the bar it replaced — the first blessing attempt of this
+## change showed exactly that. At `gateStripeReachWu` the head is as long as it
+## is broad and the point is visible from either side; the mark's footprint is
+## then the mouth's width by rather more than its depth, which is a drawing
+## decision and does not touch the mouth the curation and the pass test use.
 func _stripe(width: float) -> MeshInstance3D:
 	var half: float = width / 2.0
-	var reach: float = _art.num("gateDepth") / 2.0
+	var base: float = _art.num("gateDepth") / 2.0
 	var corners: Array = [
-		Vector3(-half, 0.0, -reach), Vector3(half, 0.0, -reach), Vector3(0.0, 0.0, reach)
+		Vector3(-half, 0.0, -base),
+		Vector3(half, 0.0, -base),
+		Vector3(0.0, 0.0, _art.num("gateStripeReachWu")),
 	]
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)

@@ -65,9 +65,15 @@ const CIRCUIT_NAME := "first-light"
 
 ## [x, z, yaw, width]. A TOUR OF THE FIELD, not a corridor: north up the start
 ## straight, right through the north-east, down the east side, across the far
-## south, back through the south-west, and north through the band. Six mouths
-## are 12 wu; the last is 14, so its pylons frame the start line rather than
-## filling it.
+## south, back through the south-west, and north through the band.
+##
+## GATE 7 SITS SOUTH OF THE INSPECTION CAMERA, at z = -16 rather than beside the
+## start line. Spacing is a look as well as a course: the pre-race pose is
+## (0, 5, -10) looking north, and a last gate near the origin puts two six-metre
+## pylons and a ground arrow across the whole pre-race frame — the M9 baseline's
+## own thicket, and worse now that the arrow is a shape rather than a line. From
+## here it is behind the camera before the start and met head-on at the end of
+## the lap, which is where it matters.
 ##
 ## The yaws are the BISECTOR of the bearing in and the bearing out at each
 ## centre — a gate squares up to the line a driver actually takes through it —
@@ -80,8 +86,8 @@ const GATES: Array = [
 	[54.0, 0.0, 3.09336, 12.0],
 	[35.0, -30.0, 3.9596, 12.0],
 	[2.0, -48.0, 4.84322, 12.0],
-	[-19.0, -28.0, 6.17229, 12.0],
-	[-3.0, -4.0, 0.588, 14.0],
+	[-19.0, -28.0, 0.04314, 12.0],
+	[-4.0, -16.0, 0.89606, 12.0],
 ]
 
 ## Where the pilot steers once the course is threaded: the band's own centre

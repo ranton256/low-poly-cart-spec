@@ -30,9 +30,9 @@ const LapSuite := preload("res://tests/lap_gate_test.gd")
 
 ## Where the baked drive banks, in racing ticks, and the gates it passes on the
 ## way. Regenerated with the course: tools/author_first_light.gd prints both.
-const SCRIPTED_BANK_TICK := 1292
-const SCRIPTED_BANK_SECONDS := 21.5333
-const SCRIPTED_GATE_TICKS: Array = [139, 298, 544, 735, 931, 1090, 1248]
+const SCRIPTED_BANK_TICK := 1319
+const SCRIPTED_BANK_SECONDS := 21.9833
+const SCRIPTED_GATE_TICKS: Array = [139, 298, 544, 735, 931, 1090, 1208]
 
 var _root: Node3D = null
 var _tuning: RefCounted = null
