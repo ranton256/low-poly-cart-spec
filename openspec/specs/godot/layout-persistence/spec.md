@@ -64,11 +64,11 @@ A version-2 layout SHALL carry a `circuit` object — `name`, ordered `gates`
 (`bronze`/`silver`/`gold` seconds) — validated completely before anything is
 released, exactly as prop records are; a malformed circuit refuses the whole
 file. Saving SHALL write the loaded circuit back out byte-identically, so
-the existing round-trip guarantees extend to it. (The GDD's refusal of
-*gateless* files is deliberately NOT implemented here: the game must stay
-playable until the boot ships a circuit — that refusal lands with
-`add-circuit-world-and-presentation`, and the deferral stays open until it
-does.)
+the existing round-trip guarantees extend to it. A file without a circuit —
+version 1 included — SHALL be refused on load with a named error; such files
+remain authoring artifacts. (That refusal was deliberately deferred for one
+change while the boot still needed a gateless world; it shipped with
+`add-circuit-world-and-presentation` and is tested in `layout_test.gd`.)
 
 #### Scenario: A circuit round-trips byte-identically
 

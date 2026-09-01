@@ -11,10 +11,11 @@ The simulation SHALL record the +Z displacement stage 5 actually applied
 (`velocity × forward_z()`, before any boundary or collision adjustment) as an
 observable, and the lap gate SHALL test that observable against
 `lapCrossingThreshold` — never the scalar velocity's sign, and never net
-position change across the tick. When a circuit is loaded, a crossing SHALL
-bank only with the progress cursor past the final gate; without one (the
-pre-boot-swap interim), the `minLapTime` guard from `port_decisions` applies
-and dies with `add-circuit-world-and-presentation`.
+position change across the tick. A crossing SHALL bank only with the
+progress cursor past the final gate — the game always plays a circuit, and
+no minimum-lap-time rule exists. (An interim `minLapTime` guard bridged the
+gateless boot between the two M9 implementation changes; it died with
+`add-circuit-world-and-presentation`, as recorded there.)
 
 #### Scenario: A push-out cannot bank a lap
 

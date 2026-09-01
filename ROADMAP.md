@@ -555,8 +555,11 @@ world, `G` restarts it, and a lap time measures driving.
   2026-08-30, applied; 12 edits incl. two consequential ones found at
   application: the collision prop-on-kart scenario and the Game Overview)
 - `add-checkpoint-circuit-core` then `add-circuit-world-and-presentation`
-  (proposed; split on visibility — mechanics land dark, then the world
-  flips) — owing between them:
+  (both archived; split on visibility — mechanics landed dark, then the
+  world flipped), then `rework-course-and-gate-direction` (archived; the
+  first-playtest response: direction-readable gates via GDD amendment
+  869893e, the course spread into a ring, and the harness drive inverted —
+  baked from the course by the authoring tool) — owed between them:
   - the circuit core module (gate test, cursor, per-circuit bests) and the
     amended lap-gate condition
   - layout v2 (circuit object, gateless-file refusal), boot-from-circuit,

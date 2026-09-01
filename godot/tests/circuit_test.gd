@@ -303,11 +303,10 @@ func _test_bests_belong_to_their_circuit() -> void:
 	_check(s.lap.best_seconds == alpha_best, "returning to alpha shows alpha's own best")
 
 
-## The core half of "Medal targets". NO `@covers` claim: that scenario is
-## written about the held TIME readout gaining the medal's name in the medal's
-## colour, and nothing is drawn until add-circuit-world-and-presentation. Its
-## register deferral stays open, and the verdict this asserts is what the
-## display will read.
+## The core half of "Medal targets" — the determination the display reads.
+## The scenario's `@covers` claim lives with the DISPLAY test (the readout is
+## what the scenario is written about, shipped by
+## add-circuit-world-and-presentation); this asserts the verdict beneath it.
 func _test_a_lap_exactly_on_a_target_earns_its_medal() -> void:
 	# The determination itself, at the edge the document names: "at or under".
 	var c := _one_gate(0.0, -2.0, 0.0, 10.0)

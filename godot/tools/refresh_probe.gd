@@ -37,7 +37,24 @@ func _init() -> void:
 
 	var results: Array = []
 	for rate in RATES:
-		results.append(await _run_at(rate))
+		var result: Dictionary = await _run_at(rate)
+		# A pass that drew (almost) no frames measured nothing: an occluded or
+		# undrawn window renders the frame-cap meaningless, and one such run was
+		# nearly recorded as evidence before the operator caught it. Refuse
+		# rather than rely on the reader noticing a zero in the frame column.
+		if int(result.frames) < rate * 10:
+			printerr(
+				(
+					(
+						"refresh_probe: the %d fps pass drew only %d frames — an occluded "
+						+ "or undrawn window is not evidence of a rate. Nothing recorded."
+					)
+					% [rate, int(result.frames)]
+				)
+			)
+			quit(1)
+			return
+		results.append(result)
 
 	var failures := 0
 	for i in range(RATES.size()):

@@ -387,8 +387,8 @@ all three rate pairs, one banked lap of the same time in each — is pinned by
 `conformance_test.gd` item 14, which also re-proves headlessly that the
 script banks and replays byte-stably. (The lap time itself is regenerated
 content: the drive is baked from the shipped course, so re-authoring the
-course re-runs the probe and re-pins the record. It was 15.05 s at M8 and is
-21.55 s since `rework-course-and-gate-direction`.)
+course re-runs the probe and re-pins the record — the recorded run, not this
+paragraph, is where the current lap time lives.)
 
 *Recorded in the M8 remediation of `add-acceptance-conformance-suite`.
 Resolved.*
@@ -425,13 +425,16 @@ either side — the chevron points along gate-forward, the ground stripe is an
 arrow in the same direction, and a gate approached from behind visibly reads as
 the back of a gate rather than an oncoming one.
 
-**The port resolves** (`rework-course-and-gate-direction`, M9), inside the
-existing `port_decisions` values — no new tuning constant was needed:
+**The port resolves** (`rework-course-and-gate-direction`, M9), with one new
+furniture dimension added to `port_decisions` — `gateStripeReachWu` (5.0),
+beside the chevron span already there:
 
-- the ground stripe becomes an **arrowhead**: its base lies across the mouth on
-  the near side of the segment and its apex reaches `gateDepth / 2` ahead of it
-  along gate-forward, so the mark keeps the footprint the plane had (the gate's
-  width by `gateDepth`) and gains a direction;
+- the ground stripe becomes an **arrowhead**: its base lies across the mouth
+  `gateDepth / 2` behind the segment and its apex reaches `gateStripeReachWu`
+  ahead of it along gate-forward — a footprint of the gate's width by roughly
+  6 wu, DELIBERATELY longer than the `gateDepth` pass slab it replaced,
+  because a slab-deep arrow foreshortened back into the bar it was meant to
+  fix (`gate_view.gd` records the same reasoning at the mesh);
 - the overhead chevron keeps the upright V that reads head-on, and its apex now
   leads `gateChevronDepthWu` **ahead** of the wings as well as below them — a
   45° arrowhead whose horizontal axis is gate-forward.

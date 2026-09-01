@@ -683,7 +683,7 @@ func _item_15_the_shipped_circuit_is_the_game() -> void:
 	_check(
 		skipper.lap.banked_seconds < 0.0,
 		(
-			"item 15: a lap that skips one gate of seven refuses to bank, %.2f s in"
+			"item 15: a lap that skips unpassed gates refuses to bank, %.2f s in"
 			% skipper.lap.clock_seconds()
 		)
 	)
