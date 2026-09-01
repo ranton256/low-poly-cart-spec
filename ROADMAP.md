@@ -550,6 +550,22 @@ camera, minimap disc visible over the kart. The tag follows the verdict.
 **Goal.** The game becomes a game: the shipped checkpoint circuit is the
 world, `G` restarts it, and a lap time measures driving.
 
+**✅ COMPLETE.** Two owner playtests shaped it (gate direction made a spec
+requirement by GDD amendment 869893e; the course spread from a hairpin into
+a seven-gate ring with the harness drive inverted — baked from the course).
+Critic verdict, first pass: "[REJECTED] — Every mechanic, gate, and visual
+claim held up under my own hands, but the ambiguity register's A14/A15
+entries and two main-spec requirements misstate what actually shipped" —
+the first review in six with ZERO weaker-property findings; what it caught
+instead was record drift, including a lap-time "correction" that installed
+a number matching nothing. Six findings remediated in 06e42db (the advisory
+taken too: the refresh probe now refuses a 0-frame pass). Re-review
+verified each against code and data and closed "[APPROVED] — … the
+register, main specs, and ROADMAP now state the truth of the tree; the
+milestone is complete." For the archive's record (Critic F5, not edited
+into history): rework tasks.md task 3 says the smoke banked at tick 1532;
+the shipped table banks at 1559 — a stray number from an intermediate bake.
+
 **Changes**
 - `amend-gdd-for-checkpoint-circuit` — the GDD amendment (owner-approved
   2026-08-30, applied; 12 edits incl. two consequential ones found at
