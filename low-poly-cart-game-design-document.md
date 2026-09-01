@@ -50,7 +50,7 @@ The original simulation is a fixed-step integrator with **no delta-time compensa
 
 **A port MUST be frame-rate independent, and MUST achieve it with a fixed 60 Hz accumulator**: accumulate real elapsed time, run the simulation in fixed 1/60 s steps, and interpolate the render between steps. A naive per-frame port will drive at double speed on a 120 Hz display and is non-conformant.
 
-The **Continuous** column in the Tuning Constants table is **informative only** — it characterises the behaviour, it is not a permitted alternative implementation. The two do not agree. The discrete recurrence settles at `accel × friction / (1 − friction)` = 0.192 wu/tick (11.52 wu/s, speedometer **115**); the corresponding continuous system `v' = 28.8 − 2.4493·v` settles at 11.76 wu/s (speedometer **117**). A 2% difference in top speed makes lap times non-comparable between ports, so the fixed step is the contract and the discrete values are the ones that must be reproduced.
+The **Continuous** column in the Tuning Constants table is **informative only** — it characterises the behaviour, it is not a permitted alternative implementation. The two do not agree. The discrete recurrence — with the clamp binding — settles at `maxSpeed × friction` = 0.24 wu/tick (14.4 wu/s, speedometer **115**); the corresponding continuous system `v' = 36.0 − 2.4493·v` settles at 14.7 wu/s (speedometer **117**). A 2% difference in top speed makes lap times non-comparable between ports, so the fixed step is the contract and the discrete values are the ones that must be reproduced.
 
 ---
 
@@ -379,7 +379,7 @@ So that driving feels physical rather than like moving a cursor.
 
 1. **Accelerate.** `v += accel` while forward is held; `v −= accel` while reverse is held. Both held: the two terms cancel.
 2. **Clamp.** `v = clamp(v, −maxSpeed × reverseFactor, +maxSpeed)`.
-3. **Steer.** If `|v| > steerThreshold`: `yaw += turnRate × sign(v)` while left is held, `yaw −= turnRate × sign(v)` while right is held. The `sign(v)` term is what reverses the steering sense in reverse.
+3. **Steer.** If `|v| > steerThreshold`: `yaw += turnRate × ease × sign(v)` while left is held, `yaw −= turnRate × ease × sign(v)` while right is held, where `ease` ramps linearly from 0 to 1 over `steerEaseSeconds` of continuously holding that direction and resets to 0 the tick the direction is released or reversed. The `sign(v)` term is what reverses the steering sense in reverse; the ease is what keeps the onset from being a step function.
 4. **Apply friction.** `v *= friction`.
 5. **Integrate position.** Displace the kart along its own forward axis by `v`.
 6. **Enforce the boundary.** Clamp X and Z to `±drivableExtent`. If **either or both** axes clamped, apply `v *= bounceFactor` exactly **once** for the tick — never once per axis, which would square the factor and leave a corner impact accelerating *into* the corner at +9% speed instead of rebounding.
@@ -425,9 +425,17 @@ Steps 1–4 settle the velocity for the tick; steps 5–7 are position work and 
 
 * **Given** the kart's post-clamp speed magnitude is greater than `steerThreshold`
 * **When** the player holds the left input
-* **Then** the kart's heading rotates by `+turnRate` per tick (**2.4 rad/s**, ≈**137.5°/s**)
+* **Then** the kart's heading rotates by `+turnRate × ease` per tick, where `ease` climbs linearly from 0 to 1 over `steerEaseSeconds` of continuously holding that direction and is 1 thereafter (peak **3.0 rad/s**, ≈**171.9°/s**)
 * **And** holding the right input rotates the heading by the same magnitude in the opposite direction
-* **And** the turn rate is constant regardless of how fast the kart is travelling above the threshold
+* **And** the peak turn rate is constant regardless of how fast the kart is travelling above the threshold
+
+### Scenario: Steering eases in rather than stepping
+
+* **Given** the kart is rolling above `steerThreshold`
+* **When** the player taps a steering direction, releases it, and holds it again
+* **Then** each hold's rotation starts from `ease = 0` and climbs — releasing or reversing the direction resets the ramp on that tick
+* **And** a hold of `steerEaseSeconds` or longer turns at exactly `turnRate` per tick from that point on
+* **And** the ease never gates the threshold rule: below `steerThreshold` there is no steering at all, ramped or otherwise
 
 ### Scenario: Refusing to steer while stationary
 
@@ -957,16 +965,17 @@ The canonical tables.
 
 **These tables are the single source of truth for every number in this document.** Each constant has a `name`; the scenarios above refer to constants by name rather than restating their values, so retuning the game means editing one row here. Values written in bold in a scenario are ones with no constant behind them.
 
-The **Per tick** column is the authored value at the **60 Hz** reference rate and is the value a port must implement. The **Continuous** column is **informative only** — see *Reference tick*.
+The **Per tick** column is the authored value at the **60 Hz** reference rate and is the value a port must implement. *(Retuned ×1.25 across `accel`/`maxSpeed`/`turnRate`/`steerThreshold` by `retune-handling-and-line-clearance` after user feedback — the uniform scale preserves every dial ratio, timing anchor, and the turning radius, so the Acceptance Checklist's numbers are unchanged; only the world gets faster.)* The **Continuous** column is **informative only** — see *Reference tick*.
 
 | `name` | Per tick (60 Hz) | Continuous | Notes |
 |---|---|---|---|
-| `accel` | 0.008 wu/tick added to velocity | 28.8 wu/s² | Same magnitude forward and reverse |
-| `maxSpeed` | 0.2 wu/tick | 12.0 wu/s | Forward clamp, applied *before* friction |
-| `reverseFactor` | 0.5 | same | Reverse clamp is `maxSpeed × reverseFactor` = 0.1 wu/tick |
+| `accel` | 0.010 wu/tick added to velocity | 36.0 wu/s² | Same magnitude forward and reverse |
+| `maxSpeed` | 0.25 wu/tick | 15.0 wu/s | Forward clamp, applied *before* friction |
+| `reverseFactor` | 0.5 | same | Reverse clamp is `maxSpeed × reverseFactor` = 0.125 wu/tick |
 | `friction` | ×0.96 per tick | `v *= exp(−2.4493 · dt)` | Time constant ≈ 0.41 s |
-| `turnRate` | 0.04 rad/tick | 2.4 rad/s (137.5°/s) | Constant above `steerThreshold` |
-| `steerThreshold` | 0.01 wu/tick | 0.6 wu/s | Tested post-clamp, pre-friction |
+| `turnRate` | 0.05 rad/tick | 3.0 rad/s (171.9°/s) | Peak rate above `steerThreshold`; reached through `steerEaseSeconds` |
+| `steerThreshold` | 0.0125 wu/tick | 0.75 wu/s | Tested post-clamp, pre-friction |
+| `steerEaseSeconds` | 0.12 s | same | Steering effectiveness ramps linearly 0 → 1 over this long while a direction is held; resets when it is released or reversed |
 | `bounceFactor` | ×−0.3 on velocity | same | Applied at most once per tick, however many axes clamp |
 | `pushDistance` | 0.3 wu | same | Instantaneous collision displacement |
 | `hitboxContraction` | 0.2 wu per side | same | Applied to the kart only, not props |
@@ -1008,7 +1017,7 @@ Derived, for reference — not independently tunable:
 | `minimapSize` / `minimapInset` | 200 × 200 px, inset 10 px bottom-left |
 | `speedoMax` | 120 — needle is (ratio × 180°) − 90°, readout is floor(ratio × `speedoMax`) |
 
-The speedometer is **cosmetic, not calibrated**. Top speed is 11.5 wu/s ≈ 8.6 m/s ≈ 31 km/h against the 1 wu ≈ 0.75 m anchor, but the dial reads ~115 KM/H. This is deliberate arcade exaggeration — do not "fix" the units.
+The speedometer is **cosmetic, not calibrated**. Top speed is 14.4 wu/s ≈ 10.8 m/s ≈ 39 km/h against the 1 wu ≈ 0.75 m anchor, but the dial reads ~115 KM/H. This is deliberate arcade exaggeration — do not "fix" the units.
 
 ## Timing
 
