@@ -1,0 +1,6 @@
+v1.2.0 distribution — built 2026-09-01 from commit fd9d3e3d8ade9b1a8a3f3158df6e86594e755d68
+
+4c54725eaa79d8d48e8621d901511d51e8d5f3b78ef6d58e79c7ffa03e3dce97  build/dist/LowPolyCart-macos-1.2.0.zip
+98eb52311013b41840b54b7367dd1081c3fb9e641a56e73f67a79bd812225bfe  build/dist/LowPolyCart-windows-1.2.0.zip
+ 81M	build/dist/LowPolyCart-macos-1.2.0.zip
+ 45M	build/dist/LowPolyCart-windows-1.2.0.zip
