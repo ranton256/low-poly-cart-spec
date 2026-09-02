@@ -26,11 +26,15 @@ const COAST_DECAY_TICKS := 12000
 const TIMING_TOLERANCE := 0.05
 
 # Curve tests must finish before the kart reaches the world boundary, or the
-# bounce reverses the velocity they are measuring. At steady speed the kart
-# covers the 90 wu to the limit in ~469 ticks, and the dial reaches its steady
-# value at 156, so 300 is comfortably past steady state and comfortably inside
-# the field. Boundary behaviour is boundary_test.gd's subject, not this file's.
-const SETTLE_TICKS := 300
+# bounce reverses the velocity they are measuring. THIS IS A GUARD BAND, not an
+# expectation: it is derived from the speed, so the ×1.25 retune moved it and
+# nothing it guards. At the retuned steady speed of 0.24 wu/tick the kart covers
+# the 90 wu to the limit in 399 ticks (measured; it was ~469 at 0.192), and the
+# dial still reaches its steady value at tick 156 — so the settle-and-stay run
+# ends at 356 with 43 ticks of road to spare, where 300 would have driven into
+# the fence at 456. Boundary behaviour is boundary_test.gd's subject, not this
+# file's.
+const SETTLE_TICKS := 200
 
 
 func _check(cond: bool, msg: String) -> void:
@@ -56,14 +60,26 @@ func _init() -> void:
 
 
 ## The design document's tuning, built directly — no file, no engine.
+##
+## RETUNED ×1.25 by retune-handling-and-line-clearance, and NOTHING BELOW THE
+## LINE MOVED WITH IT. That is the claim the amendment rests on and this file
+## is where it is falsifiable: the four constants changed, the dial anchors
+## (103, 115) and the three timings (0.94 / 2.60 / 1.21 s) above did not, and
+## this suite still passes. It works because the readout is a RATIO —
+## floor(|v| / maxSpeed × speedoMax) — and the recurrence
+## v ← clamp(v + accel, ∓) × friction is homogeneous of degree one in
+## (accel, maxSpeed) jointly, so scaling both scales the whole trajectory and
+## leaves every ratio, and therefore every tick index, alone. The turning
+## radius v/turnRate survives for the same reason.
 func _tuning() -> RefCounted:
 	var t := Tuning.new()
-	t.accel = 0.008
-	t.max_speed = 0.2
+	t.accel = 0.01
+	t.max_speed = 0.25
 	t.reverse_factor = 0.5
 	t.friction = 0.96
-	t.turn_rate = 0.04
-	t.steer_threshold = 0.01
+	t.turn_rate = 0.05
+	t.steer_threshold = 0.0125
+	t.steer_ease_seconds = 0.12
 	t.bounce_factor = -0.3
 	t.drivable_extent = 90.0
 	t.speedo_max = 120.0
@@ -90,6 +106,15 @@ func _ticks_until_dial(s: RefCounted, target: int, limit: int) -> int:
 
 func _within(actual: float, expected: float, tol: float) -> bool:
 	return absf(actual - expected) <= tol
+
+
+## Step whatever is already held for the length of the steering ease-in, so the
+## next tick turns at the full `turnRate` the amended scenario states. Rounded
+## UP: the ramp reaches 1 on the first tick at or past `steerEaseSeconds`.
+func _hold_through_the_ease_ramp(s: RefCounted) -> void:
+	var ramp_ticks: int = int(ceilf(s.tuning.steer_ease_seconds * float(s.TICKS_PER_SECOND)))
+	for _i in range(ramp_ticks):
+		s.step()
 
 
 # @covers Kart Driving Physics / Accumulating forward speed
@@ -320,10 +345,18 @@ func _test_steering_reverses_in_reverse() -> void:
 ## threshold. An earlier version tested only the third — halving turnRate passed
 ## the entire suite, and the right input was never pressed anywhere. Review
 ## caught it.
+##
+## THE SCENARIO WAS AMENDED with the ease-in: the peak rate is turnRate, and it
+## is reached after `steerEaseSeconds` of holding rather than on the first tick.
+## So each direction is held through the ramp before the tick that is measured.
+## The ramp itself — the climb, the resets, the exact peak index — is
+## tests/steer_test.gd's subject; what is asserted here is the amended
+## scenario's own claim, that the settled rate is exactly turnRate either way.
 func _test_steering_magnitude_and_both_directions() -> void:
 	var left := _sim()
 	left.velocity = 0.15
 	left.input.left = true
+	_hold_through_the_ease_ramp(left)
 	var before_left: float = left.yaw
 	left.step()
 	_check(
@@ -337,6 +370,7 @@ func _test_steering_magnitude_and_both_directions() -> void:
 	var right := _sim()
 	right.velocity = 0.15
 	right.input.right = true
+	_hold_through_the_ease_ramp(right)
 	var before_right: float = right.yaw
 	right.step()
 	_check(

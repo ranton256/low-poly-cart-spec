@@ -33,39 +33,48 @@ const ITEMS := 15
 const GO_TICK := 240  # item 1: 4.0 s at 60 Hz; ± 0.1 s is ± 6 ticks
 const TIMING_TOL := 0.05  # items 4: the checklist's ± 0.05 s
 const KART_BOX := AABB(Vector3(-1.1, 0.0, -1.18), Vector3(2.2, 1.2, 2.36))
-const RECORDED_14B := "res://docs/progress/2026-08-30-refresh-probe.txt"
+const RECORDED_14B := "res://docs/progress/2026-09-01-refresh-probe.txt"
 ## tests/lap_gate_test.gd's LAP_PHASES, cycled — the drive item 14 replays.
 ## Baked from the shipped circuit by tools/author_first_light.gd, restated here
 ## rather than imported for the same reason main.gd restates it: this file is
 ## read as the checklist, and the drive it replays must be legible in it.
 const LAP_SCRIPT: Array = [
-	[true, false, false, 139],
-	[true, true, false, 29],
-	[true, false, false, 75],
+	[true, false, false, 116],
+	[true, true, false, 28],
+	[true, false, true, 3],
+	[true, false, false, 89],
 	[true, true, false, 1],
-	[true, false, false, 54],
-	[true, true, false, 34],
-	[true, false, false, 201],
-	[true, true, false, 1],
-	[true, false, false, 10],
-	[true, true, false, 29],
-	[true, false, false, 46],
-	[true, true, false, 1],
+	[true, false, false, 8],
+	[true, true, false, 31],
+	[true, false, true, 2],
+	[true, false, false, 34],
+	[true, false, true, 1],
+	[true, false, false, 131],
+	[true, true, false, 28],
+	[true, false, false, 11],
+	[true, false, true, 1],
 	[true, false, false, 114],
-	[true, true, false, 10],
-	[true, false, false, 84],
+	[true, false, true, 1],
+	[true, true, false, 12],
+	[true, false, true, 2],
+	[true, false, false, 123],
 	[true, true, false, 1],
-	[true, false, false, 101],
-	[true, true, false, 33],
-	[true, false, false, 10],
+	[true, false, false, 19],
+	[true, true, false, 31],
+	[true, false, false, 56],
 	[true, true, false, 1],
-	[true, false, false, 115],
-	[true, true, false, 47],
-	[true, false, false, 13],
-	[true, true, false, 1],
-	[true, false, false, 58],
-	[true, false, true, 30],
-	[true, false, false, 81],
+	[true, false, false, 42],
+	[true, true, false, 42],
+	[true, false, true, 2],
+	[true, false, false, 38],
+	[true, false, true, 1],
+	[true, false, false, 14],
+	[true, false, true, 29],
+	[true, true, false, 3],
+	[true, false, true, 1],
+	[true, false, false, 9],
+	[true, false, true, 1],
+	[true, false, false, 49],
 ]
 
 var _root: Node3D = null
@@ -599,8 +608,13 @@ func _item_14_frame_rate_independence() -> void:
 			% pairs
 		)
 	)
+	# RE-PINNED by retune-handling-and-line-clearance, and this one SHOULD move:
+	# it pins regenerated content, not a checklist figure. The ×1.25 retune
+	# re-baked the drive and the same seven gates are threaded four seconds
+	# quicker, so 22.00 became 17.93. The three literals above — 0.5 wu, 0.05 s,
+	# three rate pairs — are the checklist's own and did not move.
 	_check(
-		record.count("best lap 22.00") == 3,
+		record.count("best lap 17.93") == 3,
 		"item 14: and the recorded run really banked its lap at all three rates"
 	)
 

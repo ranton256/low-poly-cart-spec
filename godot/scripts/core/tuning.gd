@@ -20,6 +20,11 @@ var reverse_factor: float = 0.0
 var friction: float = 0.0
 var turn_rate: float = 0.0
 var steer_threshold: float = 0.0
+
+## How long steering takes to climb from nothing to `turn_rate` while one
+## direction is held continuously. Stated in SECONDS because the design
+## document's table states it in seconds; the tick converts to its own ticks.
+var steer_ease_seconds: float = 0.0
 var bounce_factor: float = 0.0
 var push_distance: float = 0.0
 var hitbox_contraction: float = 0.0
@@ -76,6 +81,16 @@ var lap_gate_abs_x_limit: float = 0.0
 var gate_depth: float = 0.0
 var gate_crossing_threshold: float = 0.0
 
+# --- port decisions the AUTHORING path reads ---
+# Not the design document's: this port's, from the port_decisions group.
+## The margin a prop's worst-case collision box must keep from the baked
+## drive's path. Read by tools/author_first_light.gd when it curates and by
+## tests/circuit_content_test.gd when it re-checks the committed file — NOT by
+## the tick, which is why it is absent from missing_fields(): that list is what
+## a stepping simulation needs, and a loader must not refuse to run the game
+## over a value only the authoring tool consults. The tool refuses for itself.
+var line_clearance_wu: float = 0.0
+
 # --- per-asset target heights, from the design document's §3 table ---
 # A dictionary rather than named fields: the asset set is data, and M3 adds
 # prop counts alongside these. Empty until apply_table() fills it.
@@ -98,6 +113,7 @@ func apply_table(table: Dictionary) -> void:
 	friction = float(physics.get("friction", 0.0))
 	turn_rate = float(physics.get("turnRate", 0.0))
 	steer_threshold = float(physics.get("steerThreshold", 0.0))
+	steer_ease_seconds = float(physics.get("steerEaseSeconds", 0.0))
 	bounce_factor = float(physics.get("bounceFactor", 0.0))
 	push_distance = float(physics.get("pushDistance", 0.0))
 	hitbox_contraction = float(physics.get("hitboxContraction", 0.0))
@@ -133,6 +149,8 @@ func apply_table(table: Dictionary) -> void:
 	var circuit: Dictionary = table.get("circuit", {})
 	gate_depth = float(circuit.get("gateDepth", 0.0))
 	gate_crossing_threshold = float(circuit.get("gateCrossingThreshold", 0.0))
+	var port: Dictionary = table.get("port_decisions", {})
+	line_clearance_wu = float(port.get("lineClearanceWu", 0.0))
 	var counts: Dictionary = table.get("prop_counts", {})
 	prop_counts = {}
 	for key in counts:
@@ -176,6 +194,7 @@ func missing_fields() -> PackedStringArray:
 		"friction",
 		"turn_rate",
 		"steer_threshold",
+		"steer_ease_seconds",
 		"bounce_factor",
 		"push_distance",
 		"hitbox_contraction",

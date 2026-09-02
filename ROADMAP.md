@@ -614,6 +614,22 @@ their full histories are in git at `streamline-process`'s parent commit.)
   and one raised inside `rework-course-and-gate-direction` alone). Consider
   moving the smoke drive out of `godot/scripts/` — data the tool writes, or a
   seam that is not a literal table — rather than growing the allowlist.
+  *(It happened a second time in `retune-handling-and-line-clearance`: the ×1.25
+  retune re-baked the whole drive, retiring both entries and raising three.)*
+- **M10** — The gallery's `gate_next` state measures a `strong_pct` noise floor
+  of 0.083% against a 0.10% limit (three samples: 0.005 / 0.074 / 0.083), the
+  tightest margin the set carries. The residual is render-interpolation phase at
+  the frozen frame, and the retune enlarged its effect by driving the kart from
+  8 wu short of gate 1 to 4.4. Neither the limit nor the tick was moved by
+  `retune-handling-and-line-clearance`; the measured fallback (tick 288 →
+  0.043%) is recorded in `tools/gallery_config.json`. Fix the interpolation
+  phase at the pause, or restage — do not widen the limit.
+- **M10** — The racing-line clearance rule measures a prop's collision box
+  against a corridor of sampled points (the baked arc plus the tight line
+  through the gate centres), not against the kart's swept volume, and
+  `lineClearanceWu` does not encode the kart's own width. If a future course
+  needs the stronger statement, it is an amendment with its own numbers — see
+  `tools/author_first_light.gd`'s header for what was decided and why.
 
 ---
 

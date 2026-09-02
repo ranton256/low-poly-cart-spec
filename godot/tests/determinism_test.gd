@@ -32,12 +32,13 @@ func _init() -> void:
 
 func _tuning() -> RefCounted:
 	var t := Tuning.new()
-	t.accel = 0.008
-	t.max_speed = 0.2
+	t.accel = 0.01
+	t.max_speed = 0.25
 	t.reverse_factor = 0.5
 	t.friction = 0.96
-	t.turn_rate = 0.04
-	t.steer_threshold = 0.01
+	t.turn_rate = 0.05
+	t.steer_threshold = 0.0125
+	t.steer_ease_seconds = 0.12
 	t.bounce_factor = -0.3
 	t.drivable_extent = 90.0
 	t.speedo_max = 120.0

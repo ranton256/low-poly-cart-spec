@@ -60,9 +60,9 @@
     ],
     "name": "first-light",
     "targets": {
-      "bronze": 25.5,
-      "gold": 20.5,
-      "silver": 23.0
+      "bronze": 21.5,
+      "gold": 16.5,
+      "silver": 19.0
     }
   },
   "props": [
@@ -245,21 +245,6 @@
       ],
       "targetHeight": 3.48594,
       "yaw": 6.004
-    },
-    {
-      "asset": "tree",
-      "position": [
-        44.39983,
-        2.36861,
-        -10.79384
-      ],
-      "scale": [
-        2.36861,
-        2.36861,
-        2.36861
-      ],
-      "targetHeight": 4.73722,
-      "yaw": 0.84293
     },
     {
       "asset": "tree",

@@ -50,6 +50,20 @@ var pos_x: float = 0.0
 var pos_z: float = 0.0
 var ticks: int = 0
 
+# --- the steering ease-in's state (stage 3) ---
+## How many consecutive ticks the current steering direction has been held, and
+## which direction that is. Zero and zero when nothing (or both) is held.
+## STATE, not a derived value: the ramp is a function of the input's history,
+## which is exactly what a pure per-tick function of the kart cannot recover.
+var steer_hold_ticks: int = 0
+var steer_hold_sign: float = 0.0
+
+## Steering effectiveness this tick, 0..1 — `min(1, held / steerEaseSeconds)`.
+## Written by stage 3 every tick, including the ticks that do not steer, and
+## carried in stats_line() so two runs differing only in steering history do
+## differ in the string the determinism suites compare.
+var steer_ease: float = 0.0
+
 # --- observable outcomes of the last tick, for the view and for tests ---
 var bounced_this_tick: bool = false
 
@@ -191,10 +205,49 @@ func _stage_2_clamp() -> void:
 
 ## Tested on the post-clamp, PRE-friction velocity. The sign of travel is what
 ## reverses the steering sense when reversing.
+##
+## THE EASE IS NOT A SMOOTHING FILTER on the yaw — it is a factor on the rate,
+## `turnRate × ease × sign(v)`, and it is a pure function of how many
+## consecutive ticks this direction has been held. Onset was the complaint the
+## first playtest raised: `yaw += turnRate` arrives whole on the tick the key
+## goes down, and a step function feels like a jerk because it is one.
+##
+## TWO ORDERING DECISIONS, both deliberate:
+##
+##   1. The hold counter is advanced BEFORE the threshold gate, so the ramp
+##      counts HELD ticks rather than steering ticks. The design document says
+##      the ease "never gates the threshold rule" but does not settle this
+##      edge; this port rules that the ramp models the hand on the key, not the
+##      kart's speed. The alternative reintroduces a jerk exactly where the
+##      kart accelerates through `steerThreshold` — the moment the feature
+##      exists to smooth. tests/steer_test.gd asserts the choice by name.
+##   2. The threshold gate itself is UNCHANGED: same comparison, same operand,
+##      same early return. Below the threshold there is no steering at any ease.
 func _stage_3_steer() -> void:
+	var direction: float = input.steer_sign()
+	# Released OR reversed — and "both held", which is neither direction — all
+	# reach zero here, which is the reset the document specifies for the first
+	# two and the consistent reading of the third.
+	if direction != steer_hold_sign:
+		steer_hold_ticks = 0
+	steer_hold_sign = direction
+	if direction != 0.0:
+		steer_hold_ticks += 1
+	steer_ease = _ease_for(steer_hold_ticks)
 	if absf(velocity) <= tuning.steer_threshold:
 		return
-	yaw += tuning.turn_rate * input.steer_sign() * signf(velocity)
+	yaw += tuning.turn_rate * steer_ease * direction * signf(velocity)
+
+
+## The ramp: linear from 0 to 1 over `steerEaseSeconds` of held ticks, flat at
+## 1 after. A zero-length ramp is no ramp — the limit of the definition, so a
+## held tick is immediately full rate — rather than a defaulted value; the
+## loader refuses a tuning table missing `steerEaseSeconds` outright.
+func _ease_for(held_ticks: int) -> float:
+	var ramp_ticks: float = tuning.steer_ease_seconds * float(TICKS_PER_SECOND)
+	if ramp_ticks <= 0.0:
+		return 1.0 if held_ticks > 0 else 0.0
+	return minf(1.0, float(held_ticks) / ramp_ticks)
 
 
 func _stage_4_friction() -> void:
@@ -319,7 +372,7 @@ func stats_line() -> String:
 	return (
 		(
 			"t=%d state=%d ts=%d lc=%d hold=%d bank=%.2f best=%.2f"
-			+ " circuit=%s gate=%d/%d medal=%s v=%.9f yaw=%.9f x=%.9f z=%.9f"
+			+ " circuit=%s gate=%d/%d medal=%s v=%.9f yaw=%.9f ease=%.9f x=%.9f z=%.9f"
 		)
 		% [
 			ticks,
@@ -335,6 +388,7 @@ func stats_line() -> String:
 			lap.banked_medal if lap.banked_medal != "" else "-",
 			velocity,
 			yaw,
+			steer_ease,
 			pos_x,
 			pos_z,
 		]

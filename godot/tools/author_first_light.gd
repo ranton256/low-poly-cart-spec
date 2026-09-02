@@ -35,16 +35,58 @@
 # Re-authoring the course is now: move a gate, re-run this, paste the printed
 # table into those four places, re-run the suite.
 #
-# Curation is deletions only: a prop whose collision box overlaps a gate mouth
-# is dropped, because the file is the design document's own guarantee that no
-# prop blocks a mouth. tests/circuit_content_test.gd re-checks that guarantee
-# against the committed file, so this tool cannot quietly ship a blocked gate.
+# Curation is deletions only, and there are now TWO rules.
+#
+#   1. GATE MOUTHS. A prop whose collision box overlaps a gate mouth is dropped,
+#      because the file is the design document's own guarantee that no prop
+#      blocks a mouth.
+#   2. THE RACING LINE. A prop whose WORST-CASE COLLISION BOX — the world-axis
+#      expansion of its yawed, scaled box, which is the volume the kart actually
+#      hits, not the mesh the player sees — comes within `lineClearanceWu` of
+#      the racing line is dropped too. Rule 1 alone shipped a tree at
+#      (44.40, −10.79) scattered at 48° of yaw: its canopy reads ~1.86 wu wide
+#      and its collision box is 2.64, leaving 0.12 wu of clearance on the
+#      gate-3→4 leg. Players drove visually past it and hit an invisible wall.
+#      That was the first outside-user report on the 1.1.0 build.
+#
+# THE RACING LINE IS A CORRIDOR, NOT ONE CURVE, and racing_line() below says so
+# in code. It is the union of two lines through the same gates:
+#
+#   the pilot's ARC     every tick of the drive this tool bakes — the loose,
+#                       bang-bang outside line the whole harness replays;
+#   the TIGHT line      the straight polyline from the start pose through each
+#                       gate centre to the finish aim — the inside line the
+#                       pilot never drives and the GOLD TARGET explicitly asks
+#                       for ("gold is the baked lap less a second — a tighter
+#                       line through the same gates", below).
+#
+# Measuring the arc alone would have passed the very tree this change exists to
+# remove: the retuned drive swings wide on that leg and clears its box by
+# 2.75 wu, while the tight line clears it by 0.51. A rule that protects only the
+# line the tool itself drives protects nobody who is trying to win.
+#
+# THE CLEARANCE IS BOX-TO-LINE, kart width NOT subtracted. The proposal's
+# headline "0.12 wu of clearance" is box-to-line minus the kart's own contracted
+# half-width; the rule is stated and enforced on the raw box-to-line distance,
+# which is the quantity the delta spec names, and 1.5 wu of it leaves a kart of
+# 2.2 wu width room to pass without the margin having to encode the kart too.
+#
+# tests/circuit_content_test.gd re-checks BOTH guarantees against the committed
+# file, so this tool cannot quietly ship a blocked gate or an ambushed line.
 # The tool ALSO refuses to bake a drive that touches a prop at all: two of the
 # consumers replay this table on a simulation with no props in it, so a table
 # whose kart bounces off a crate would bank in the game and not in the suite.
+#
+# RULE 2 IS CIRCULAR AND IS SOLVED BY ITERATION. Clearance is measured against
+# the baked path, and dropping a prop can change the path — the pilot's arc
+# depends on the props only through the collisions it refuses to have, but the
+# gates it aims at do not move, so in practice one pass converges. The tool does
+# not assume that: it bakes, drops, and re-bakes until a pass finds nothing,
+# and says so if it cannot reach that fixed point.
 extends SceneTree
 
 const Circuit := preload("res://scripts/core/circuit.gd")
+const Collision := preload("res://scripts/core/collision.gd")
 const InputState := preload("res://scripts/core/input_state.gd")
 const KartView := preload("res://scripts/view/kart_view.gd")
 const LayoutIO := preload("res://scripts/world/layout_io.gd")
@@ -99,6 +141,12 @@ const FINISH_AIM := Vector2(0.0, 12.0)
 ## The pilot gives up rather than loop forever. Three times the lap it bakes.
 const PILOT_TICK_BUDGET := 4000
 
+## How many bake→drop→re-bake passes the clearance rule may take before the tool
+## gives up and says the curation does not converge. One pass has always been
+## enough; the cap exists so a course that oscillates fails loudly instead of
+## spinning.
+const CLEARANCE_PASS_BUDGET := 8
+
 ## PROVISIONAL, and the owner's playtest is what settles them. Method: gold is
 ## the baked lap less a second — a tighter line through the same gates, which
 ## the bang-bang pilot does not drive; silver and bronze are looser rings at
@@ -117,10 +165,19 @@ const TARGET_ROUNDING_S := 0.5
 ## toward the centre of the gate the cursor names, or toward FINISH_AIM once the
 ## course is threaded. The steering sign is the sign of the cross product of the
 ## kart's heading with the bearing to that point, which is exactly the sign of
-## the wrapped angle between them; the deadband is one tick of `turnRate`,
-## because an error smaller than a single tick's turn authority cannot be
-## corrected without overshooting — a pilot that tries chatters left-right every
-## tick and bakes a table of hundreds of one-tick phases.
+## the wrapped angle between them; the deadband is ONE TICK OF TURN AUTHORITY,
+## because an error smaller than that cannot be corrected without overshooting —
+## a pilot that tries chatters left-right every tick and bakes a table of
+## hundreds of one-tick phases.
+##
+## THE STEERING EASE-IN CHANGED WHAT "ONE TICK OF TURN AUTHORITY" MEANS, and the
+## caller now passes the smallest of them: `turnRate / (steerEaseSeconds × 60)`,
+## the turn a FRESH press buys. Left at the old `turnRate`, the pilot pressed for
+## a single tick, got a seventh of the correction it had budgeted for, released,
+## reset the ramp, and pressed again — 170 baked phases of exactly the chatter
+## this deadband exists to prevent, against 36 at the eased value. The deadband
+## is an argument rather than a constant precisely so this stays the caller's
+## arithmetic against the tuning table.
 ##
 ## Static and taking plain values, so the bake is reproducible from simulation
 ## state alone with nothing remembered between ticks.
@@ -129,6 +186,44 @@ static func pilot_input(
 ) -> Array:
 	var error: float = wrapf(atan2(target.x - pos_x, target.y - pos_z) - yaw, -PI, PI)
 	return [true, error > deadband, error < -deadband]
+
+
+## The turn a single tick buys a pilot that has just pressed — the ease's first
+## step, and the deadband pilot_input() is given. One place, because
+## tests/circuit_content_test.gd re-bakes nothing but must reason about the same
+## drive.
+static func fresh_press_authority(tuning: RefCounted) -> float:
+	var ramp_ticks: float = tuning.steer_ease_seconds * float(Sim.TICKS_PER_SECOND)
+	if ramp_ticks <= 1.0:
+		return tuning.turn_rate
+	return tuning.turn_rate / ramp_ticks
+
+
+## THE RACING LINE, as the clearance rule means it: the corridor between the
+## loose line the pilot drives and the tight line a gold time demands.
+##
+## `arc` is the baked drive sampled every tick. The tight line is added here —
+## the straight polyline from the start pose through every gate centre to
+## `FINISH_AIM`, resampled at `spacing` so no gap between samples can step over
+## a prop. `spacing` is `maxSpeed`, which is also the widest the arc's own
+## samples can be, so both halves are sampled at the resolution the kart itself
+## moves at and a point test is a faithful stand-in for a swept one.
+##
+## Shared with tests/circuit_content_test.gd, which re-checks the committed file
+## against it: two definitions of "the racing line" would be two rules.
+static func racing_line(arc: Array, gates: Array, spacing: float) -> Array:
+	var corners: Array = [Vector2(0.0, 0.0)]
+	for gate: RefCounted in gates:
+		corners.append(Vector2(gate.x, gate.z))
+	corners.append(FINISH_AIM)
+	var line: Array = arc.duplicate()
+	for i in range(corners.size() - 1):
+		var from: Vector2 = corners[i]
+		var to: Vector2 = corners[i + 1]
+		var steps: int = maxi(1, int(ceilf(from.distance_to(to) / maxf(spacing, 0.01))))
+		for step in range(steps + 1):
+			line.append(from.lerp(to, float(step) / float(steps)))
+	return line
 
 
 ## Runs of identical held input, as [accelerate, steer_left, steer_right, ticks]
@@ -166,6 +261,14 @@ func _init() -> void:
 		printerr("author_first_light: no tuning")
 		quit(1)
 		return
+	# The clearance margin is a port decision the tick never reads, so the
+	# loader's missing_fields() cannot refuse it on this tool's behalf. Refuse
+	# here instead: a zero margin would make rule 2 vacuous and silently ship
+	# the very placement this change exists to forbid.
+	if tuning.line_clearance_wu <= 0.0:
+		printerr("author_first_light: port_decisions.lineClearanceWu is missing or zero")
+		quit(1)
+		return
 	await process_frame
 
 	var field: Node3D = _scatter_field(tuning)
@@ -181,7 +284,7 @@ func _init() -> void:
 	kart.set_script(KartView)
 	get_root().add_child(kart)
 	await process_frame
-	var drive: Dictionary = _bake_and_verify(tuning, field, kart)
+	var drive: Dictionary = _clear_the_racing_line(tuning, field, kart, document)
 	if drive.is_empty():
 		quit(1)
 		return
@@ -234,6 +337,117 @@ func _curate_and_write(field: Node3D, tuning: RefCounted) -> Dictionary:
 		)
 	)
 	return document
+
+
+## RULE 2, to a fixed point: bake, drop whatever the baked path runs too close
+## to, re-bake, and repeat until a pass finds nothing. Returns the drive that
+## the finally-curated file bakes, or {} having said why.
+##
+## The document is mutated in place — `_init` writes it again afterwards with
+## the targets this drive derives — and the file on disk is rewritten each pass,
+## because the next bake reads the FILE (see `_bake_and_verify`).
+func _clear_the_racing_line(
+	tuning: RefCounted, field: Node3D, kart: Node3D, document: Dictionary
+) -> Dictionary:
+	for pass_index in range(CLEARANCE_PASS_BUDGET):
+		var drive: Dictionary = _bake_and_verify(tuning, field, kart)
+		if drive.is_empty():
+			return {}
+		var line: Array = racing_line(
+			drive["path"] as Array, (drive["circuit"] as RefCounted).gates, tuning.max_speed
+		)
+		var offenders: Array = _line_offenders(
+			field.collision_props(), line, tuning.line_clearance_wu
+		)
+		if offenders.is_empty():
+			print(
+				(
+					(
+						"author_first_light: racing line clear — every prop keeps ≥ %.2f wu from the "
+						+ "corridor (arc and tight line, %d samples; closest %.2f wu), settled after "
+						+ "%d pass(es)"
+					)
+					% [
+						tuning.line_clearance_wu,
+						line.size(),
+						_closest_approach(field.collision_props(), line),
+						pass_index + 1,
+					]
+				)
+			)
+			return drive
+		var kept: Array = []
+		var dropped := {}
+		for offender: Dictionary in offenders:
+			dropped[int(offender["index"])] = true
+			print("author_first_light: %s" % offender["text"])
+		for i in range((document["props"] as Array).size()):
+			if not dropped.has(i):
+				kept.append((document["props"] as Array)[i])
+		document["props"] = kept
+		if not _write(document):
+			return {}
+		print(
+			(
+				"author_first_light: dropped %d prop(s) off the racing line — %d left, re-baking"
+				% [offenders.size(), kept.size()]
+			)
+		)
+	printerr(
+		(
+			"author_first_light: the clearance curation did not settle in %d passes"
+			% CLEARANCE_PASS_BUDGET
+		)
+	)
+	return {}
+
+
+## Which props come within `margin` of the baked path, as {index, text}.
+##
+## THE BOX IS THE WORST-CASE COLLISION BOX — `prop.box`, which the field built
+## through Normalise.world_box, the same world-axis expansion of the yawed,
+## scaled instance that stage 7 tests against. Not the mesh, not the unrotated
+## footprint: measuring either is how the 48° tree passed curation and failed a
+## player.
+##
+## THE LINE IS racing_line()'s CORRIDOR — the pilot's own arc sampled every
+## tick, together with the tight line through the gate centres. Consecutive
+## samples on either are at most `maxSpeed` (0.25 wu) apart, far under any
+## margin worth setting, so sampling cannot step over a prop the swept path
+## would have grazed.
+func _line_offenders(props: Array, line: Array, margin: float) -> Array:
+	var offenders: Array = []
+	for i in range(props.size()):
+		var prop: RefCounted = props[i]
+		var closest: float = INF
+		for point: Vector2 in line:
+			closest = minf(closest, Collision.distance_to_box_xz(prop.box, point.x, point.y))
+		if closest >= margin:
+			continue
+		(
+			offenders
+			. append(
+				{
+					"index": i,
+					"text":
+					(
+						"dropping %s #%d at (%.2f, %.2f) — %.2f wu from the racing line, under %.2f"
+						% [prop.asset, i, prop.centre_x(), prop.centre_z(), closest, margin]
+					),
+				}
+			)
+		)
+	return offenders
+
+
+## The nearest any surviving prop comes to the corridor — reported so the margin
+## is visibly a margin rather than a number that happened to fit.
+func _closest_approach(props: Array, line: Array) -> float:
+	var closest: float = INF
+	for prop: RefCounted in props:
+		for point: Vector2 in line:
+			closest = minf(closest, Collision.distance_to_box_xz(prop.box, point.x, point.y))
+	return closest
 
 
 ## Bake the drive twice and agree with itself, or {} having said why.
@@ -303,14 +517,21 @@ func _bake(tuning: RefCounted, circuit: RefCounted, props: Array, kart: Node3D) 
 
 	var per_tick: Array = []
 	var passes: Array = []
+	var path: Array = [Vector2(s.pos_x, s.pos_z)]
 	var collisions: int = 0
+	var deadband: float = fresh_press_authority(tuning)
 	while s.ticks < PILOT_TICK_BUDGET:
-		var held: Array = pilot_input(s.yaw, s.pos_x, s.pos_z, _waypoint(s), tuning.turn_rate)
+		var held: Array = pilot_input(s.yaw, s.pos_x, s.pos_z, _waypoint(s), deadband)
 		s.input.forward = held[0]
 		s.input.left = held[1]
 		s.input.right = held[2]
 		per_tick.append(held)
 		s.step()
+		# THE PATH IS SAMPLED HERE, at the end of every tick, including the
+		# start pose above: it is the arc the kart really described, which is
+		# what the clearance rule is about. Gate centres would describe a course
+		# nobody drives.
+		path.append(Vector2(s.pos_x, s.pos_z))
 		if s.last_hit != null:
 			collisions += 1
 		if passes.size() < s.circuit.cursor - 1:
@@ -330,7 +551,13 @@ func _bake(tuning: RefCounted, circuit: RefCounted, props: Array, kart: Node3D) 
 			"author_first_light: the pilot hit a prop on %d ticks; move a gate off it" % collisions
 		)
 		return {}
-	return {"phases": bake_phases(per_tick), "passes": passes, "bank": s.ticks}
+	return {
+		"phases": bake_phases(per_tick),
+		"passes": passes,
+		"bank": s.ticks,
+		"path": path,
+		"circuit": circuit,
+	}
 
 
 ## Where the pilot is steering: the centre of the gate the cursor names, or the

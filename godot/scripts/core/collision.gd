@@ -34,7 +34,8 @@ const Normalise := preload("res://scripts/core/normalise.gd")
 ## Below this, the horizontal vector from a prop's centre to the kart's position
 ## is treated as having no direction.
 ##
-## The kart moves at most maxSpeed (0.2) wu per tick and pushDistance is 0.3, so
+## The kart moves at most maxSpeed (0.25 since the ×1.25 retune) wu per tick and
+## pushDistance is 0.3, so
 ## a separation this small cannot arise from ordinary motion — it takes a prop
 ## scattered exactly onto the kart, which the document's own regeneration scenario
 ## describes. Stated here rather than tuned to a measurement: it is the scale at
@@ -103,6 +104,22 @@ static func make_prop(
 	var box: AABB = Normalise.world_box(normalised, yaw)
 	prop.box = AABB(box.position + Vector3(x, 0.0, z), box.size)
 	return prop
+
+
+## The horizontal distance from a point to a prop's volume — zero when the point
+## is inside it, and measured against the SAME world-axis box first_overlap()
+## tests, which is the whole reason it lives here.
+##
+## The racing-line clearance rule (godot/checkpoint-circuit) is stated in terms
+## of the volume that actually collides, not the visible mesh: a broad-canopied
+## tree at a diagonal yaw expands to 2.64 wu of world-axis box against a ~1.86 wu
+## canopy, and the 0.78 wu difference is an invisible wall. Both the authoring
+## tool that curates the field and the test that re-checks the committed file
+## measure with this function, so "clearance" cannot come to mean two things.
+static func distance_to_box_xz(box: AABB, x: float, z: float) -> float:
+	var dx: float = maxf(box.position.x - x, maxf(0.0, x - (box.position.x + box.size.x)))
+	var dz: float = maxf(box.position.z - z, maxf(0.0, z - (box.position.z + box.size.z)))
+	return sqrt(dx * dx + dz * dz)
 
 
 ## The first intersecting prop in registration order, or -1.

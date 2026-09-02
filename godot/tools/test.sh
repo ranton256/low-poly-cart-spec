@@ -94,6 +94,9 @@ run_suite tests/smoke_test.gd
 # The simulation core — the design document's tick order, the boundary, and the
 # reproducibility every other headless suite rests on.
 run_suite tests/tick_test.gd
+# Stage 3's steering ease-in, at tick resolution: the ramp, its two resets, its
+# exact peak, and its non-interaction with steerThreshold.
+run_suite tests/steer_test.gd
 run_suite tests/race_state_test.gd
 run_suite tests/lap_gate_test.gd
 run_suite tests/circuit_test.gd

@@ -27,12 +27,20 @@ const Sim := preload("res://scripts/core/sim.gd")
 const InputState := preload("res://scripts/core/input_state.gd")
 const TuningLoader := preload("res://scripts/tuning_loader.gd")
 const LapSuite := preload("res://tests/lap_gate_test.gd")
+const Collision := preload("res://scripts/core/collision.gd")
+## The authoring tool, for its definition of the racing line and nothing else.
+## Preloaded rather than restated because two definitions of "the racing line"
+## would be two rules, and the file this suite checks was curated against that
+## one. (A test may read a tool; only the shipped binary may not read a test.)
+const Author := preload("res://tools/author_first_light.gd")
 
 ## Where the baked drive banks, in racing ticks, and the gates it passes on the
 ## way. Regenerated with the course: tools/author_first_light.gd prints both.
-const SCRIPTED_BANK_TICK := 1319
-const SCRIPTED_BANK_SECONDS := 21.9833
-const SCRIPTED_GATE_TICKS: Array = [139, 298, 544, 735, 931, 1090, 1208]
+## Re-baked by retune-handling-and-line-clearance — the ×1.25 physics turns the
+## same course four seconds faster and the pilot's arc through it is new.
+const SCRIPTED_BANK_TICK := 1075
+const SCRIPTED_BANK_SECONDS := 17.9167
+const SCRIPTED_GATE_TICKS: Array = [116, 246, 444, 599, 756, 886, 984]
 
 var _root: Node3D = null
 var _tuning: RefCounted = null
@@ -51,6 +59,7 @@ func _init() -> void:
 
 	_test_every_gate_is_inside_the_boundary()
 	_test_no_curated_prop_blocks_a_gate_mouth()
+	_test_no_prop_ambushes_the_racing_line()
 	_test_the_targets_are_ordered()
 	_test_the_boot_world_is_the_shipped_circuit()
 	_test_the_shipped_file_is_a_fixed_point_of_the_round_trip()
@@ -59,7 +68,9 @@ func _init() -> void:
 	get_root().remove_child(_root)
 	_root.free()
 	RVTest.finish(
-		self, "circuit content: bounds, clear mouths, targets, boot, harness ok", "content check(s)"
+		self,
+		"circuit content: bounds, clear mouths, clear line, targets, boot, harness ok",
+		"content check(s)"
 	)
 
 
@@ -119,6 +130,68 @@ func _test_no_curated_prop_blocks_a_gate_mouth() -> void:
 			% [_root.props.prop_count(), str(blocked)]
 		)
 	)
+
+
+## NO INVISIBLE WALL AMBUSHES THE RACING LINE (godot/checkpoint-circuit).
+##
+## The guarantee the gate-mouth rule above does NOT give: a prop can stand well
+## clear of every mouth and still put its collision box on the line between two
+## of them. One did — a tree at (44.40, −10.79) at 48° of yaw, whose world-axis
+## box came within 0.51 wu of the tight line through gates 3 and 4 while its
+## canopy looked a comfortable distance away. Players passed it by eye and were
+## stopped dead by nothing they could see. It is not in the file any more, and
+## this is what keeps it out.
+##
+## Measured exactly as the authoring tool measures it: the props the game really
+## builds, their worst-case collision boxes, against Author.racing_line()'s
+## corridor — the baked drive replayed here tick by tick, plus the tight line
+## through the gate centres a gold time asks for.
+func _test_no_prop_ambushes_the_racing_line() -> void:
+	var circuit: RefCounted = _circuit()
+	_check(_tuning.line_clearance_wu > 0.0, "the clearance margin is a named, non-zero value")
+	var line: Array = Author.racing_line(
+		_replay_the_baked_drive(circuit), circuit.gates, _tuning.max_speed
+	)
+	var closest: float = INF
+	var too_close: Array = []
+	for prop: RefCounted in _root.props.collision_props():
+		var gap: float = INF
+		for point: Vector2 in line:
+			gap = minf(gap, Collision.distance_to_box_xz(prop.box, point.x, point.y))
+		closest = minf(closest, gap)
+		if gap < _tuning.line_clearance_wu:
+			too_close.append(
+				"%s at (%.2f, %.2f) — %.2f wu" % [prop.asset, prop.centre_x(), prop.centre_z(), gap]
+			)
+	_check(
+		too_close.is_empty(),
+		(
+			(
+				"every prop's worst-case collision box clears the racing line by ≥ %.2f wu "
+				% _tuning.line_clearance_wu
+			)
+			+ "(closest %.2f wu over %d samples): %s" % [closest, line.size(), str(too_close)]
+		)
+	)
+
+
+## The baked drive's own positions, tick by tick — the same arc the tool
+## measured against, reproduced from the table every other consumer replays.
+func _replay_the_baked_drive(circuit: RefCounted) -> Array:
+	var s := Sim.new()
+	s.tuning = _tuning
+	s.input = InputState.new()
+	s.race.start_racing_immediately()
+	s.arm_circuit(circuit)
+	var path: Array = [Vector2(s.pos_x, s.pos_z)]
+	for phase: Array in LapSuite.LAP_PHASES:
+		s.input.forward = phase[0]
+		s.input.left = phase[1]
+		s.input.right = phase[2]
+		for _i in range(int(phase[3])):
+			s.step()
+			path.append(Vector2(s.pos_x, s.pos_z))
+	return path
 
 
 func _test_the_targets_are_ordered() -> void:

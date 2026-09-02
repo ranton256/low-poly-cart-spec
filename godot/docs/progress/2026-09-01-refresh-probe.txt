@@ -1,0 +1,25 @@
+Re-run 2026-09-01 for retune-handling-and-line-clearance, against the retuned
+physics and the re-baked drive. Both moved together and neither could have moved
+alone: accel/maxSpeed/turnRate/steerThreshold are all x1.25 (GDD 3e0c98c) and
+steering now eases in over steerEaseSeconds, so the waypoint pilot's arc through
+the same seven gates is new and four seconds quicker — 22.00 s became 17.93 s,
+and the 60-second script therefore ends somewhere else. tests/conformance_test.gd
+item 14 pins this run.
+
+The end position is inside the field this time rather than against the fence:
+the previous record's (-4.7042, 90.0000) is the north boundary, where the old,
+slower drive spent the tail of its 60 seconds pinned. It no longer gets there.
+
+(Drawn-frame counts wobble by a few between runs; they are the evidence each pass
+really rendered at its cap, not a pinned figure. tools/refresh_probe.gd REFUSES
+to record a pass that drew fewer than rate x 10 frames — an occluded or undrawn
+window is not evidence of a rate, a lesson learned the hard way at M9 — so the
+counts below are a run the operator kept visible for its full three minutes.)
+
+refresh_probe: 60 vs 30 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
+refresh_probe: 60 vs 144 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
+refresh_probe: 30 vs 144 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
+refresh_probe:  60 fps — end (-9.4383, 33.6716), best lap 17.9333 s, 3600 frames drawn in 60.0 s
+refresh_probe:  30 fps — end (-9.4383, 33.6716), best lap 17.9333 s, 1800 frames drawn in 60.0 s
+refresh_probe: 144 fps — end (-9.4383, 33.6716), best lap 17.9333 s, 8641 frames drawn in 60.0 s
+refresh_probe: acceptance 14b holds at 30/60/144 fps
