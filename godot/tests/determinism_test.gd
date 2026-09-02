@@ -95,7 +95,7 @@ func _test_precision_is_far_below_the_tolerance() -> void:
 	for _i in range(LONG_RUN_TICKS):
 		s.velocity = minf(s.velocity + accel, s.tuning.max_speed) * friction
 	var drift: float = absf(s.velocity - closed_form)
-	# One tick of velocity is ~0.192 wu; the tolerance is three ticks of TIME.
+	# One tick of velocity is ~0.24 wu; the tolerance is three ticks of TIME.
 	# Drift of even 1e-9 wu/tick is six orders below anything that could move a
 	# reported timing by a single tick.
 	_check(

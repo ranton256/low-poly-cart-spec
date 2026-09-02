@@ -215,7 +215,7 @@ func _test_coast_falls_below_threshold_on_time() -> void:
 ## Friction is applied AFTER the clamp, so the achievable speed is below it.
 ## This is why the dial tops out short of its nominal maximum.
 # @covers Kart Driving Physics / Clamping to the configured speed limits
-## Steady state is 0.192 against a clamp of 0.2, so "speed stays below the
+## Steady state is 0.24 against a clamp of 0.25, so "speed stays below the
 ## clamp" is arithmetic — it held whether or not stage 2 existed, and deleting
 ## the forward clamp passed the whole suite. This drives velocity ABOVE the
 ## clamp and asserts it is pulled back. Review caught it.

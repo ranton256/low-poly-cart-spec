@@ -42,7 +42,7 @@ const HEADINGS := 16
 ## Far enough that the kart starts clear of the prop at every heading, near enough
 ## that it arrives well inside the drivable extent.
 const APPROACH_RADIUS := 6.0
-## Generous: at 0.192 wu/tick the kart covers APPROACH_RADIUS in about 32.
+## Generous: at 0.24 wu/tick the kart covers APPROACH_RADIUS in about 25.
 const APPROACH_TICKS := 200
 ## Reversing is limited to maxSpeed x reverseFactor, so backing clear takes
 ## roughly twice as long as arriving.
@@ -628,7 +628,7 @@ func _test_the_diagonal_volume_is_larger_and_that_is_accepted() -> void:
 ## EVERY tick is checked, not only the last one.
 ## (Claimed by the reverse-out sweep above — one claim per scenario.)
 ##
-## Top speed is 0.192 wu/tick against a prop 3 wu across, so a tunnel is unlikely
+## Top speed is 0.24 wu/tick against a prop 3 wu across, so a tunnel is unlikely
 ## rather than impossible — and a final-position check cannot tell "never crossed"
 ## from "crossed and came back". The kart drives at full speed straight down -Z
 ## into a prop at the origin; its Z must stay on the near side throughout, and it

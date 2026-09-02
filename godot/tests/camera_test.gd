@@ -27,9 +27,10 @@ const FOV_TOLERANCE := 0.2
 
 const SETTLE_TICKS := 240
 ## Long enough to reach steady state, which the design document puts at 2.60 s
-## (156 ticks), and SHORT enough not to reach the boundary: at 0.192 wu/tick a
-## longer run covers more than the drivable extent, bounces, and leaves the kart
-## nearly stopped. A first version used 600 and measured a camera that never
+## (156 ticks), and SHORT enough not to reach the boundary: at the retuned
+## 0.24 wu/tick a longer run covers more than the drivable extent, bounces, and
+## leaves the kart nearly stopped — 200 spin-up ticks reach ~40 wu against the
+## fence at 90. A first version used 600 and measured a camera that never
 ## lagged, because the kart was barely moving.
 const SPIN_UP_TICKS := 200
 
