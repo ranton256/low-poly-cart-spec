@@ -143,6 +143,12 @@ run_suite tests/scatter_test.gd
 run_suite tests/prop_field_test.gd
 run_suite tests/collision_test.gd
 
+# The cue stream (godot/audio-feedback): every emission at the stage that owns
+# it, the five negative promises, and the baked lap script's whole stream
+# byte-compared across two replays. SILENT — the simulation publishes cues as
+# data and nothing in this suite, or in the core, plays one.
+run_suite tests/audio_cue_test.gd
+
 
 # Lint and format. Fast, and they keep the diff about behaviour.
 # Every .gd under scripts/ and tests/, not a fixed list of directories — an

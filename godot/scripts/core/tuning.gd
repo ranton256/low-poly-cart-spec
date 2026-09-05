@@ -81,6 +81,23 @@ var lap_gate_abs_x_limit: float = 0.0
 var gate_depth: float = 0.0
 var gate_crossing_threshold: float = 0.0
 
+# --- audio, from the design document's Audio table ---
+# ONLY WHAT THE CORE READS, for the same reason the circuit block above holds
+# only two of its table's nine rows: a field nothing reads joins missing_fields()
+# and fails a loader over a value no simulation needs. The engine note's four
+# curve endpoints, `audioMaxDistance` and `masterVolume` are the view's — they
+# arrive with the change that makes a sound. What is here is the impact scale,
+# the rate-limit window, and one volume per cue the tick emits.
+var impact_full_scale: float = 0.0
+var impact_rate_limit: float = 0.0
+var rebound_volume: float = 0.0
+var countdown_tick_volume: float = 0.0
+var countdown_go_volume: float = 0.0
+var gate_passed_volume: float = 0.0
+var lap_banked_volume: float = 0.0
+var new_best_volume: float = 0.0
+var medal_volume: float = 0.0
+
 # --- port decisions the AUTHORING path reads ---
 # Not the design document's: this port's, from the port_decisions group.
 ## The margin a prop's worst-case collision box must keep from the baked
@@ -149,6 +166,16 @@ func apply_table(table: Dictionary) -> void:
 	var circuit: Dictionary = table.get("circuit", {})
 	gate_depth = float(circuit.get("gateDepth", 0.0))
 	gate_crossing_threshold = float(circuit.get("gateCrossingThreshold", 0.0))
+	var audio: Dictionary = table.get("audio", {})
+	impact_full_scale = float(audio.get("impactFullScale", 0.0))
+	impact_rate_limit = float(audio.get("impactRateLimit", 0.0))
+	rebound_volume = float(audio.get("reboundVolume", 0.0))
+	countdown_tick_volume = float(audio.get("countdownTickVolume", 0.0))
+	countdown_go_volume = float(audio.get("countdownGoVolume", 0.0))
+	gate_passed_volume = float(audio.get("gatePassedVolume", 0.0))
+	lap_banked_volume = float(audio.get("lapBankedVolume", 0.0))
+	new_best_volume = float(audio.get("newBestVolume", 0.0))
+	medal_volume = float(audio.get("medalVolume", 0.0))
 	var port: Dictionary = table.get("port_decisions", {})
 	line_clearance_wu = float(port.get("lineClearanceWu", 0.0))
 	var counts: Dictionary = table.get("prop_counts", {})
@@ -226,6 +253,15 @@ func missing_fields() -> PackedStringArray:
 		"lap_gate_abs_x_limit",
 		"gate_depth",
 		"gate_crossing_threshold",
+		"impact_full_scale",
+		"impact_rate_limit",
+		"rebound_volume",
+		"countdown_tick_volume",
+		"countdown_go_volume",
+		"gate_passed_volume",
+		"lap_banked_volume",
+		"new_best_volume",
+		"medal_volume",
 	]:
 		if float(get(field)) == 0.0:
 			missing.append(field)

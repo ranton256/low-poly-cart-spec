@@ -21,41 +21,9 @@
   },
   {
    "feature": "Audio Feedback",
-   "scenario": "The simulation publishes cues as data",
-   "kind": "deferred",
-   "reason": "The core cue list, determinism-summary membership, headless stream.",
-   "milestone": "M10",
-   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes."
-  },
-  {
-   "feature": "Audio Feedback",
    "scenario": "The engine note follows the speed ratio",
    "kind": "deferred",
    "reason": "The looping source's pitch/volume curves on the sim clock (view half; the ratio is already core state).",
-   "milestone": "M10",
-   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes."
-  },
-  {
-   "feature": "Audio Feedback",
-   "scenario": "An impact is heard once, as hard as it hit",
-   "kind": "deferred",
-   "reason": "Volume from velocity destroyed; the pin rate limit.",
-   "milestone": "M10",
-   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes."
-  },
-  {
-   "feature": "Audio Feedback",
-   "scenario": "The race speaks at its moments",
-   "kind": "deferred",
-   "reason": "Countdown/GO/lap/best/gate/medal emissions on exact ticks.",
-   "milestone": "M10",
-   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes."
-  },
-  {
-   "feature": "Audio Feedback",
-   "scenario": "What must NOT sound",
-   "kind": "deferred",
-   "reason": "The negative promises \u2014 rebound is not impact, ignored passes silent, LOADING silent, focus loss silent, reset silent.",
    "milestone": "M10",
    "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes."
   },
@@ -79,9 +47,9 @@
    "feature": "Audio Feedback",
    "scenario": "The cue stream is deterministic",
    "kind": "deferred",
-   "reason": "Byte-identical stream across runs and rates; acceptance item 16's carrier.",
+   "reason": "HALF DONE, and deferred until the other half exists. add-audio-cue-core put the stream in sim.stats_line(), so the headless half — byte-identical ids, order, tick timestamps and volumes across runs — is now tested: tests/audio_cue_test.gd replays the baked lap script twice and compares the whole stream byte for byte, and determinism_test, replay_test and conformance item 14 all fail on a cue-only divergence (mutation-verified). What is NOT tested is ACROSS RENDER RATES, which is the scenario's other clause and acceptance item 16's: that needs tools/refresh_probe.gd to record the stream at 30/60/144 fps, and the probe extension belongs to add-audio-playback. A partial claim is not a claim, so this stays deferred rather than being claimed by the suite that covers half of it.",
    "milestone": "M10",
-   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes."
+   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes; add-audio-cue-core took the headless half, add-audio-playback owes the cross-rate half and with it the claim."
   }
  ]
 }

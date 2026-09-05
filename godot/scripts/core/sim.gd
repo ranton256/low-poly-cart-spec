@@ -22,6 +22,7 @@ const Collision := preload("res://scripts/core/collision.gd")
 const RaceState := preload("res://scripts/core/race_state.gd")
 const LapGate := preload("res://scripts/core/lap_gate.gd")
 const Circuit := preload("res://scripts/core/circuit.gd")
+const AudioCues := preload("res://scripts/core/audio_cues.gd")
 
 const TICKS_PER_SECOND := 60
 
@@ -44,6 +45,13 @@ var lap: RefCounted = LapGate.new()
 ## one: the game still boots procedural until the presentation change ships the
 ## boot circuit, and an empty circuit changes nothing about the tick.
 var circuit: RefCounted = Circuit.new()
+
+## This tick's audio cues, as DATA (godot/audio-feedback). Cleared at the top of
+## every step() and appended by the stage that owns each event; the view drains
+## it each frame and plays it, and the simulation never touches an audio API.
+## Its rate-limit window is wired from the tuning on the first step, so the
+## recorder stays constructible bare exactly like the race state machine.
+var cues: RefCounted = AudioCues.new()
 var velocity: float = 0.0
 var yaw: float = 0.0
 var pos_x: float = 0.0
@@ -169,11 +177,31 @@ func step() -> void:
 	bounced_this_tick = false
 	last_hit = null
 
+	# The cue list is emptied FIRST, before any stage can append: a cue belongs to
+	# the tick that emitted it, and a list carried over would let a view play last
+	# tick's events again. The rate-limit window is wired from the tuning here for
+	# the same reason the countdown length is, one line below.
+	if cues.impact_window_ticks == 0 and tuning != null:
+		cues.impact_window_ticks = int(roundf(tuning.impact_rate_limit * TICKS_PER_SECOND))
+	cues.begin_tick(ticks)
+
 	# Stage 0 — the race state, every tick in every state (godot/race-state).
 	# Its countdown length comes from the tuning like every other constant.
 	if race.countdown_step_ticks == 0 and tuning != null:
 		race.countdown_step_ticks = int(roundf(tuning.countdown_step * TICKS_PER_SECOND))
+	var countdown_before: int = race.countdown_index()
+	var was_starting: bool = race.state == RaceState.STARTING
 	race.advance()
+	# The countdown's voice, on its exact ticks. GO! is not a fourth index — it is
+	# the RACING transition itself — so it is detected as that transition, while
+	# the three steps are detected as the DERIVED INDEX turning over, which is the
+	# same edge the countdown overlay redraws on. Nothing can fire in LOADING:
+	# countdown_index() is -1 there and stays -1, a failed boot included, and no
+	# transition is taken from inside advance().
+	if was_starting and race.is_racing():
+		cues.emit(AudioCues.COUNTDOWN_GO, tuning.countdown_go_volume)
+	elif countdown_before >= 0 and race.countdown_index() > countdown_before:
+		cues.emit(AudioCues.COUNTDOWN_TICK, tuning.countdown_tick_volume)
 
 	# The kart pipeline is gated on RACING: held input stays tracked (the
 	# caller writes it every tick) but nothing accelerates, steers, or moves.
@@ -278,6 +306,10 @@ func _stage_6_boundary() -> void:
 	pos_z = clamped_z
 	if bounced_this_tick:
 		velocity *= tuning.bounce_factor
+		# ITS OWN ID, never impact's. The document makes that normative: the two
+		# are different physics and the player must be able to tell them apart by
+		# ear. Heard from where the kart met the fence.
+		cues.emit_at(AudioCues.REBOUND, tuning.rebound_volume, pos_x, pos_z)
 
 
 ## Stage 7 — collision detection and response.
@@ -304,15 +336,25 @@ func _stage_7_collision() -> void:
 		return
 
 	# The FIRST intersecting prop, and no further testing this tick.
-	var hit: RefCounted = Collision.resolve(
-		props[index] as Collision.Prop, pos_x, pos_z, yaw, tuning.push_distance
-	)
+	var struck: Collision.Prop = props[index] as Collision.Prop
+	var hit: RefCounted = Collision.resolve(struck, pos_x, pos_z, yaw, tuning.push_distance)
 	hit.index = index
 	pos_x += hit.push_x
 	pos_z += hit.push_z
+	# The velocity this collision DESTROYS, read before it is destroyed: the
+	# document scales the impact cue by it, and after the next line there is
+	# nothing left to measure.
+	var destroyed: float = absf(velocity)
 	# EXACTLY zero. Not reflected, not damped — the kart stops dead.
 	velocity = 0.0
 	last_hit = hit
+	# "A top-speed hit is full scale, a nudge is a tap", at the struck prop, and
+	# under the rate limit so the specified two-prop pin is one event rather than
+	# a drum roll. The limit is the recorder's, not this stage's: the pin really
+	# does collide on every tick and stage 7 must go on saying so.
+	if tuning.impact_full_scale > 0.0:
+		var loudness: float = minf(1.0, destroyed / tuning.impact_full_scale)
+		cues.emit_impact(loudness, struck.centre_x(), struck.centre_z())
 
 
 ## Stage 8 — the circuit, then the lap gate. Both run last and observe only: a
@@ -329,8 +371,27 @@ func _stage_8_lap_gate() -> void:
 		circuit.tuning = tuning
 	if lap.circuit == null:
 		lap.circuit = circuit
+	# ONLY WHEN THE CURSOR ADVANCES. An out-of-order, repeated or backwards pass
+	# changes nothing, and the document says it must therefore sound like nothing;
+	# the cursor's own movement is the whole test, so there is no second rule here
+	# to disagree with circuit.gd's.
+	var cursor_before: int = circuit.cursor
 	circuit.advance(pos_x, pos_z, last_step5_dx, last_step5_dz)
+	if circuit.cursor != cursor_before:
+		var gate := circuit.gates[cursor_before - 1] as Circuit.Gate
+		cues.emit_at(AudioCues.GATE_PASSED, tuning.gate_passed_volume, gate.x, gate.z)
+
+	# The bank's three voices, READ from what the lap gate has just decided rather
+	# than recomputed: the medal is its verdict at bank time, and a second opinion
+	# here could differ from the one the HUD shows.
+	var best_before: float = lap.best_seconds
 	lap.advance(pos_x, pos_z, last_step5_dz)
+	if lap.banked_this_tick:
+		cues.emit(AudioCues.LAP_BANKED, tuning.lap_banked_volume)
+		if lap.best_seconds != best_before:
+			cues.emit(AudioCues.NEW_BEST, tuning.new_best_volume)
+		if lap.banked_medal != "":
+			cues.emit(AudioCues.MEDAL, tuning.medal_volume)
 
 
 ## Arm a circuit — what loading a version-2 layout does. The lap gate is
@@ -368,11 +429,17 @@ func reset_kart() -> void:
 
 ## A one-line state summary. Cheap, and far easier to diff between two runs than
 ## comparing object graphs — the determinism tests compare these strings.
+##
+## THE CUE STREAM IS IN IT, which is what makes the standing replay and batching
+## suites cover the audio feature for free. Not the whole stream: this tick's
+## cues verbatim, plus the running count, digest and rate-limit window that stand
+## for every cue emitted so far — see audio_cues.gd's header for why a cumulative
+## list here would make determinism_test quadratic.
 func stats_line() -> String:
 	return (
 		(
 			"t=%d state=%d ts=%d lc=%d hold=%d bank=%.2f best=%.2f"
-			+ " circuit=%s gate=%d/%d medal=%s v=%.9f yaw=%.9f ease=%.9f x=%.9f z=%.9f"
+			+ " circuit=%s gate=%d/%d medal=%s v=%.9f yaw=%.9f ease=%.9f x=%.9f z=%.9f %s"
 		)
 		% [
 			ticks,
@@ -391,5 +458,6 @@ func stats_line() -> String:
 			steer_ease,
 			pos_x,
 			pos_z,
+			cues.summary(),
 		]
 	)
