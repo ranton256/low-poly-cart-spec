@@ -809,7 +809,7 @@ not apply to it.)*
 
 * **Given** any tick in which a sounding event occurs
 * **Then** the simulation appends to an ordered per-tick cue list a record of the cue's **id**, its **volume** (0–1), and — for spatial cues — its world position; the list is part of simulation state and appears in the determinism summary
-* **And** the simulation itself never touches an audio API: views drain the list each frame and play it, exactly as every other view reads state
+* **And** the simulation itself never touches an audio API: views drain the list once per simulation tick and play it, exactly as every other view reads state *(amended per A16: a per-tick list drained per frame double-plays at high refresh rates and drops cues at low ones)*
 * **And** a headless run therefore produces the complete cue stream with no sound hardware at all
 
 ### Scenario: The engine note follows the speed ratio
