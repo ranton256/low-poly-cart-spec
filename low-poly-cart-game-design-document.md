@@ -150,7 +150,7 @@ All HUD elements are screen-space overlays that do not receive world lighting an
 
 | Element | Anchor | Specification |
 |---|---|---|
-| **Title & controls** | Top-left | Game title in bright green `#00FF00` at ~20 px; control hints beneath in white at ~14 px, 80% opacity. The hints name the objective: `W/S drive · A/D steer · G restart · follow the gates`. Soft black drop shadow on all text. Light sans-serif face. |
+| **Title & controls** | Top-left | Game title in bright green `#00FF00` at ~20 px; control hints beneath in white at ~14 px, 80% opacity. The hints name the objective: `W/S drive · A/D steer · G restart · M mute · follow the gates`. Soft black drop shadow on all text. Light sans-serif face. |
 | **Timer block** | Top-right | Monospace. Label `TIME` (12 px, 70% opacity) above the running time in green `#00FF00` at 24 px, formatted to **two decimal places**. Below it, label `BEST` above the best time in yellow `#FFFF00`, same size, showing `--.--` until a lap is banked. |
 | **Gate counter** | Top-right | Within the timer block, `GATE n/N` in the timer label style. When the next gate is off-screen, a chevron at the screen edge points along the shortest turn toward it. |
 | **Speedometer** | Bottom-right | A 160 × 90 px half-dial: a 160 px circle with an 8 px `#444444` rim, bottom half clipped away. A 4 px × 70 px needle pivoting at the dial's bottom centre, filled with a vertical red→yellow gradient (`#FF0000` at base → `#FFFF00` at tip), with ~0.1 s eased motion. Beneath the pivot: the unit label `KM/H` in grey `#888888` at 10 px, and the integer speed readout in white at 18 px. |
@@ -795,6 +795,70 @@ build — it is specified fresh, and Known Deviations does not apply to it.)*
 
 ---
 
+## Feature: Audio Feedback
+
+As a player,
+I want the game to tell me with sound what just happened and how fast I am,
+So that consequential events register without my eyes leaving the road.
+
+*(Added by `amend-gdd-for-audio-cues`; this feature has no reference build —
+the JS reference is silent — and is specified fresh. Known Deviations does
+not apply to it.)*
+
+### Scenario: The simulation publishes cues as data
+
+* **Given** any tick in which a sounding event occurs
+* **Then** the simulation appends to an ordered per-tick cue list a record of the cue's **id**, its **volume** (0–1), and — for spatial cues — its world position; the list is part of simulation state and appears in the determinism summary
+* **And** the simulation itself never touches an audio API: views drain the list each frame and play it, exactly as every other view reads state
+* **And** a headless run therefore produces the complete cue stream with no sound hardware at all
+
+### Scenario: The engine note follows the speed ratio
+
+* **Given** the state is RACING and audio is not muted
+* **Then** a looping engine source plays on the kart with pitch `enginePitchBase + enginePitchSpan × ratio` and volume `engineVolumeBase + engineVolumeSpan × ratio`, where `ratio` is the same post-friction speed ratio the speedometer and camera read
+* **And** both track the ratio continuously on the simulation clock, so acceleration audibly rises and coasting falls away
+* **And** the engine source is silent while LOADING and through the countdown, and fades with the ratio rather than cutting
+
+### Scenario: An impact is heard once, as hard as it hit
+
+* **Given** a collision resolves at stage 7, destroying velocity `v`
+* **Then** exactly one `impact` cue is emitted that tick, at volume `min(1, |v| / impactFullScale)` — a top-speed hit is full scale, a nudge is a tap — positioned at the struck prop
+* **And** the pinned-between-props oscillation emits at most one impact cue per `impactRateLimit` — a pin is one event, not a drum roll
+
+### Scenario: The race speaks at its moments
+
+* **Then** each countdown step 3, 2, 1 emits `countdown_tick` and GO! emits the distinct `countdown_go`, on their exact ticks
+* **And** banking a lap emits `lap_banked`; a new session best emits `new_best` as well; a medal lap emits its `medal` cue with the readout
+* **And** passing the gate the cursor names emits `gate_passed`; the boundary rebound emits `rebound`
+* **And** every volume above is a named constant in the Audio table
+
+### Scenario: What must NOT sound
+
+* **Then** a boundary rebound never plays the `impact` cue — the two are different physics and must be told apart by ear
+* **And** an out-of-order, repeated, or backwards gate pass — which changes nothing — sounds like nothing
+* **And** no cue of any kind is emitted in LOADING, and a terminal LOADING failure is silent
+* **And** losing window focus mid-throttle emits nothing: the kart coasting down is the engine note falling, not an event
+* **And** Reset Kart is silent — it is specified as the start pose and NOTHING else, and a sound is not nothing
+
+### Scenario: Space is audible
+
+* **Given** a spatial cue (`impact`, `gate_passed`, `rebound`)
+* **Then** it is heard from its world position with distance attenuation reaching silence by `audioMaxDistance`, tuned to the 100 wu playfield
+* **And** the engine note and the race-moment cues (`countdown_tick`, `countdown_go`, `lap_banked`, `new_best`, `medal`) are non-spatial
+
+### Scenario: Mute
+
+* **Given** the player presses the **Mute** action (bound to `M`)
+* **Then** all audio output toggles off or on; the cue stream itself is unaffected — the simulation keeps publishing, the view keeps score
+* **And** the state is session-only: a fresh boot is always unmuted, and no settings surface exists or is implied
+
+### Scenario: The cue stream is deterministic
+
+* **Given** the same tick-timed input sequence (ambiguity A14's sense of "replayed")
+* **Then** the cue stream — ids, order, tick timestamps, and volumes — is byte-identical across runs and across render rates
+
+---
+
 ## Feature: Input Handling
 
 As a player,
@@ -816,6 +880,7 @@ So that the kart always does what I am asking.
   | Save Layout | `P` | — |
 
 * **And** a **Restart Circuit** action (formerly Regenerate World; renamed by `amend-gdd-for-checkpoint-circuit`) exists but has no required binding — how a port exposes it is unspecified
+* **And** a **Mute** action exists, bound to `M`, toggling all audio output *(added by `amend-gdd-for-audio-cues`)*
 
 ### Scenario: Tracking held inputs as continuous state
 
@@ -1052,6 +1117,26 @@ the ordered checkpoint gates replaced it as the farming defence.
 Gate widths, positions, and targets are **content**, not tuning — they live
 in each circuit's layout file.
 
+## Audio
+
+| `name` | Value | Notes |
+|---|---|---|
+| `enginePitchBase` | 0.8 | Pitch scale at rest |
+| `enginePitchSpan` | 0.7 | Pitch reaches 1.5 at full ratio |
+| `engineVolumeBase` | 0.25 | |
+| `engineVolumeSpan` | 0.35 | Volume reaches 0.6 at full ratio |
+| `impactFullScale` | 0.24 wu/tick | The steady top speed; a full-speed hit is volume 1 |
+| `impactRateLimit` | 0.25 s | At most one impact cue per this window while pinned |
+| `reboundVolume` | 0.4 | |
+| `countdownTickVolume` | 0.8 | |
+| `countdownGoVolume` | 1.0 | |
+| `lapBankedVolume` | 0.9 | |
+| `newBestVolume` | 1.0 | |
+| `gatePassedVolume` | 0.7 | |
+| `medalVolume` | 1.0 | |
+| `audioMaxDistance` | 120 wu | Spatial cues silent beyond this |
+| `masterVolume` | 1.0 | The mute toggle multiplies output by 0 or this |
+
 ---
 
 # Acceptance Checklist
@@ -1075,6 +1160,7 @@ Where a criterion gives a tolerance, that tolerance is normative — "approximat
 13. Changing `accel`, `friction`, `turnRate`, or `maxSpeed` at runtime alters handling on the next tick, with no restart.
 14. A scripted 60-second input sequence replayed at 30, 60, and 144 frames per second ends with the kart **within 0.5 wu** of the same position and **within 0.05 s** of the same lap time.
 15. The shipped circuit loads at boot with numbered gates; the next gate is indicated on the gate itself, the HUD counter, and the minimap; a lap that skips any gate refuses to bank; Restart Circuit rebuilds the authored world, returns the kart to the start, and keeps the session best.
+16. A scripted run's cue stream — ids, order, tick timestamps, and volumes — is identical at 30, 60, and 144 frames per second; the engine note's pitch tracks the speed ratio between its named endpoints; a full-speed collision sounds at full scale and a boundary rebound never plays the impact cue.
 
 ---
 
@@ -1100,7 +1186,7 @@ The specification above is normative. These are places where the original implem
 
 These are additional, optional features to consider for specification and implementation. They **should not be implemented** until if and when they are specifically requested.
 
-### 1. Engine and impact audio
+### 1. Engine and impact audio *(promoted to the specification by `amend-gdd-for-audio-cues`; see Feature: Audio Feedback)*
 
 * **Requirement:** Position an engine sound source on the kart and modulate its playback rate continuously with the speed ratio, so acceleration audibly rises in pitch and coasting falls away.
 * **Requirement:** Trigger a one-shot impact sound at the point of contact on every registered collision, with its volume scaled by the velocity destroyed by the impact.
