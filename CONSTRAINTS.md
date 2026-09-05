@@ -444,7 +444,7 @@ Deterministic acceptance conditions — pass/fail with no judgment.
 | V4 | No physics-body symbol from §4 appears anywhere under `godot/` | ✅ `check_boundaries.py` + the commit hook on staged content |
 | V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py` |
 | V6 | **G1** — every GDD scenario claimed exactly once; a claim on a scenario the document lacks also fails | ✅ `check_spec_coverage.py` |
-| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ✅ `tests/conformance_test.gd`: `_item_01`…`_item_15` green against the AMENDED checklist — `add-circuit-world-and-presentation` re-pointed items 1, 2 and 10 and added item 15, and the suite counts its own cases |
+| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ⚠️ `_item_01`…`_item_15` green; `amend-gdd-for-audio-cues` added item 16 — the M10 implementation owes `_item_16`; until then G2 covers the pre-amendment checklist |
 | V8 | Pinned project settings match §6, and every model has a valid committed import preset | ✅ `check_settings.py` |
 | V9 | Gallery diffs within recorded thresholds on all three criteria | ✅ `tools/gallery.sh` + `gallery_compare.py`, nine states (`gate_next` added at M9; `gate_front`/`gate_back` with it, a pair because a gate's readable pass direction is a comparison), floor and limits recorded in `gallery_config.json`; verified by mutation (a painted band fails on all three criteria) |
 | V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py` |
@@ -648,12 +648,15 @@ Absent by decision, not by oversight:
 - **Accounts, auth, API contracts, SLAs, database schemas** — there is no server.
 - **Persistent storage.** The best time is session-only in the GDD;
   `track_layout.json` is player-initiated export, not a save system.
-- **Audio** — Optional Feature 1, unimplemented. No `AudioStreamPlayer` ships.
+- **Audio** — promoted at M10 (`amend-gdd-for-audio-cues`); see the GDD's
+  Audio Feedback feature. The core stays `AudioStreamPlayer`-free by design —
+  cues are simulation data, views play them.
 - **2D sprite tooling** — the inherited skeleton's sprite auditor was deleted;
   this is a 3D project with no sprites.
-- **Particles, boost, drifting, checkpoints, ghost replay, time-of-day,
-  end-of-session flow, kart customisation** — Optional Features 2–10; the GDD
-  is explicit they wait to be "specifically requested."
+- **Particles, boost, drifting, ghost replay, time-of-day, end-of-session
+  flow, kart customisation** — the still-optional features (2–4, 6–10 minus
+  the promoted circuit and audio); the GDD is explicit they wait to be
+  "specifically requested."
 - **A menu, a pause state, a settings screen, a fail state, an end condition.**
   Load → countdown → drive forever.
 - **A fourth game state.** The spec defines three.

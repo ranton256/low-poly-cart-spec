@@ -169,9 +169,9 @@
     "minimapDiscHeightWu": 0.1,
     "groundSkirtSize": 800,
     "groundSkirtDropWu": 0.05,
-    "_lineClearanceWu_note": "The racing-line clearance rule (retune-handling-and-line-clearance). Every curated prop's WORST-CASE collision box — the world-axis expansion of its yawed, scaled box, which is the volume the kart actually hits — must clear the baked drive's own path by at least this margin. A port decision, not a GDD value: the design document guarantees clear gate MOUTHS and says nothing about the line between them, which is how a 48-degree tree came to leave 0.12 wu of clearance on the gate-3-to-4 leg and read to the player as an invisible wall. 1.5 wu is a little under the kart's 2.2 wu width in half-widths, so a kart on the baked line has room either side of it without the rule emptying the field. tools/author_first_light.gd enforces it when it curates; tests/circuit_content_test.gd re-checks the committed bytes.",
+    "_lineClearanceWu_note": "The racing-line clearance rule (retune-handling-and-line-clearance). Every curated prop's WORST-CASE collision box \u2014 the world-axis expansion of its yawed, scaled box, which is the volume the kart actually hits \u2014 must clear the baked drive's own path by at least this margin. A port decision, not a GDD value: the design document guarantees clear gate MOUTHS and says nothing about the line between them, which is how a 48-degree tree came to leave 0.12 wu of clearance on the gate-3-to-4 leg and read to the player as an invisible wall. 1.5 wu is a little under the kart's 2.2 wu width in half-widths, so a kart on the baked line has room either side of it without the rule emptying the field. tools/author_first_light.gd enforces it when it curates; tests/circuit_content_test.gd re-checks the committed bytes.",
     "lineClearanceWu": 1.5,
-    "_gate_presentation_note": "The gate furniture's dimensions. The GDD's Circuit table names the pylon height and the three state colours and says the rest is 'generated geometry in the band's visual family' — these are this port's reading of that sentence, the way the minimap marker sizes are its reading of 'a flat red disc'. Gate positions, yaws and widths are CONTENT and live in each circuit file, never here.",
+    "_gate_presentation_note": "The gate furniture's dimensions. The GDD's Circuit table names the pylon height and the three state colours and says the rest is 'generated geometry in the band's visual family' \u2014 these are this port's reading of that sentence, the way the minimap marker sizes are its reading of 'a flat red disc'. Gate positions, yaws and widths are CONTENT and live in each circuit file, never here.",
     "gatePylonRadiusWu": 0.35,
     "gateStripeOpacity": 0.45,
     "gateStripeReachWu": 5.0,
@@ -209,5 +209,23 @@
     "medalGoldColour": "#FFD700",
     "medalSilverColour": "#C0C0C0",
     "medalBronzeColour": "#CD7F32"
+  },
+  "audio": {
+    "_note": "The Audio table from the GDD (amend-gdd-for-audio-cues). Nothing reads these until the M10 implementation changes; they exist so the document and this file stay in lockstep.",
+    "enginePitchBase": 0.8,
+    "enginePitchSpan": 0.7,
+    "engineVolumeBase": 0.25,
+    "engineVolumeSpan": 0.35,
+    "impactFullScale": 0.24,
+    "impactRateLimit": 0.25,
+    "reboundVolume": 0.4,
+    "countdownTickVolume": 0.8,
+    "countdownGoVolume": 1.0,
+    "lapBankedVolume": 0.9,
+    "newBestVolume": 1.0,
+    "gatePassedVolume": 0.7,
+    "medalVolume": 1.0,
+    "audioMaxDistance": 120,
+    "masterVolume": 1.0
   }
 }

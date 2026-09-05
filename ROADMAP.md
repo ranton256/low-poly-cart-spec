@@ -594,6 +594,33 @@ approves.
 
 ---
 
+## M10 — The soundtrack
+
+**Goal.** The game tells the player with sound what just happened and how
+fast they are going — through the cue-as-data architecture the M0 ban has
+reserved for it all along.
+
+**Changes**
+- `amend-gdd-for-audio-cues` — the GDD amendment (owner-approved
+  2026-09-04, applied as 8265a0a; six edits, no consequential extras)
+- implementation change(s), split proposed after this archives — owing:
+  - the core cue list (emissions at the exact stages, the pin rate limit,
+    determinism-summary membership) with the negative promises as tests
+  - the audio view (engine loop on the ratio curves, spatial one-shots,
+    non-spatial race moments), the synthesized cue set from a committed
+    generator tool, the M mute action (check_settings pin + hint line —
+    the hint change re-blesses the gallery)
+  - `_item_16` in G2; the cue-stream hash extending the refresh probe;
+    the 8 registered M10 deferrals claimed; §5 G2 back to ✅
+  - web payload re-measured with the WAVs aboard
+
+**Done when** the game sounds like the feature specifies, silence keeps its
+promises, the gate is green with zero M10 deferrals, the Critic approves —
+and the owner has LISTENED: cue correctness is assertable, whether it
+sounds good is the one property no suite or Critic in this repo can hear.
+
+---
+
 ## Backlog
 
 Work no accepted change covers: deferred scope, issues found in passing, and
