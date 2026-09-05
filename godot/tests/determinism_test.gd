@@ -49,7 +49,10 @@ func _sim() -> RefCounted:
 	var s := Sim.new()
 	s.tuning = _tuning()
 	s.input = InputState.new()
-	# Boot from LOADING through the real countdown: acceptance 14a spans it
+	# Boot from LOADING through the countdown AS THIS SUITE'S SYNTHETIC TUNING
+	# SHAPES IT (zero-length without a countdownStep row — the rich cue-stream
+	# coverage rides on audio_cue_test and item 14; M10 Critic finding 3):
+	# acceptance 14a spans it
 	# (godot/race-state, "Two runs agree through the countdown").
 	s.race.mark_world_ready()
 	return s

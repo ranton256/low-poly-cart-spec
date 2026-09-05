@@ -628,6 +628,16 @@ belongs in the change that does the work. Milestone tags say where each most
 plausibly lands. (Numbered items migrated from the retired `att` tracker;
 their full histories are in git at `streamline-process`'s parent commit.)
 
+- **GDD proposal (A16, owner approval owed)** — one phrase in Audio
+  Feedback: "views drain the list each frame" becomes the per-tick truth
+  the port ships and asserts. *(M10 Critic finding 1)*
+- Web export preset packs with an empty exclude filter, so gitignored
+  `godot/gallery/` scratch can ride into the shipped pck unnoticed (a clean
+  tree does not protect against it); tighten the preset's exclude filter.
+  *(found measuring M10's payload)*
+- `Purpose: TBD` boilerplate in 10 archived capability specs sits outside
+  `check_placeholders.py`'s watch; extend the gate or fill the purposes.
+  *(M10 Critic finding 4)*
 - Extend `check_static_typing.py` to member variables; V19 stays ⚠️ until
   then. *(was att 18)*
 - **M8** — Cold-load-to-countdown ≤ 5 s on the web build, measured in a

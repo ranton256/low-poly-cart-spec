@@ -61,8 +61,37 @@ func _check(cond: bool, msg: String) -> void:
 	RVTest.check(cond, msg)
 
 
+## F2 of the M10 review: the digest is what carries volume and position
+## coverage into the final-line determinism suites, so its field-completeness
+## must be a STANDING assertion, not a one-off mutation record. Two streams
+## differing only in one field must never share a digest.
+func _test_the_digest_sees_every_field() -> void:
+	var a := AudioCues.new()
+	var b := AudioCues.new()
+	a.begin_tick(1)
+	b.begin_tick(1)
+	a.emit("impact", 0.5)
+	b.emit("impact", 0.6)
+	_check(a.digest != b.digest, "a volume-only difference changes the digest")
+	var c := AudioCues.new()
+	var d := AudioCues.new()
+	c.begin_tick(1)
+	d.begin_tick(1)
+	c.emit_at("impact", 0.5, 1.0, 2.0)
+	d.emit_at("impact", 0.5, 1.0, 3.0)
+	_check(c.digest != d.digest, "a position-only difference changes the digest")
+	var e := AudioCues.new()
+	var f := AudioCues.new()
+	e.begin_tick(1)
+	f.begin_tick(1)
+	e.emit("impact", 0.5)
+	f.emit("rebound", 0.5)
+	_check(e.digest != f.digest, "an id-only difference changes the digest")
+
+
 func _init() -> void:
 	_test_the_simulation_publishes_cues_as_data()
+	_test_the_digest_sees_every_field()
 	_test_the_race_speaks_at_its_moments()
 	_test_an_impact_is_heard_once_as_hard_as_it_hit()
 	_test_what_must_not_sound()

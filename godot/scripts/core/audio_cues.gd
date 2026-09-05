@@ -4,8 +4,9 @@
 # THE ARCHITECTURE IS THE FIRST RULE, and it is the reason the feature is
 # testable at all. The simulation never touches an audio API: it appends a
 # RECORD — an id, a volume from the Audio table, and for a spatial cue a world
-# position — and the view drains the list each frame and plays it, exactly as
-# every other view reads state. `AudioStreamPlayer` is a banned symbol under
+# position — and the view drains the list once per simulation TICK and plays
+# it (A16: the GDD's "each frame" cannot drain a per-tick list).
+# `AudioStreamPlayer` is a banned symbol under
 # scripts/core/ (CONSTRAINTS §4 Architectural boundaries) and check_boundaries.py
 # is the enforcement, not this comment. The consequence worth having: a headless
 # run produces the complete cue stream with no sound hardware at all, so every

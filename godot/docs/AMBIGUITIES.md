@@ -463,9 +463,43 @@ first playtest, resolved by GDD amendment 869893e and this port's arrows.*
 
 ## Open
 
-None. A12, the last open entry, was settled at M8 by amending the design
-document itself (history below); A14 was raised and resolved in the same
-milestone's remediation pass.
+One: **A16**, raised by the M10 Critic — the amended GDD's own drain wording
+contradicts the per-tick cue list it specifies; the port's ruling is recorded
+below and the one-phrase GDD amendment awaits the owner, carried in the
+ROADMAP Backlog. (A12 was settled at M8 by amending the design document;
+A14 was raised and resolved in the same milestone's remediation pass.)
+
+### A16 — "Each frame" cannot drain a per-tick list (OPEN: GDD proposal in the Backlog)
+
+**The specification says** (Feature: Audio Feedback, added by
+`amend-gdd-for-audio-cues`): the cue list is **per-tick** — "cleared at tick
+start" — and that "views drain the list each frame and play it, exactly as
+every other view reads state."
+
+**Those two sentences cannot both hold.** At 144 fps a frame-drained
+per-tick list plays most ticks' cues twice; at 30 fps, two ticks share a
+frame and every other tick's cues — countdown beeps included — are cleared
+unheard before any frame sees them. The defect was written into the
+amendment itself and went unnoticed through owner review and application;
+the implementation discovered it and resolved it in code without registering
+it, which the M10 Critic caught (its finding 1 — the A12 species, a defect
+in the document, this time one this repository authored).
+
+**The port resolves: the view drains once per simulation TICK**, driven from
+the fixed-rate callback with a tick guard, playing each tick's cues exactly
+once at every render rate. "Exactly as every other view reads state" is the
+half of the sentence that survives — views are pure consumers on the sim
+clock — and "each frame" is the half that was wrong. The behaviour is
+asserted in `audio_view_test` (the drained-once case, whose tick-guard
+mutation plays a cued tick six times) and carried across real 30/60/144 fps
+rendering by the probe record conformance item 16 parses.
+
+**Owner action owed:** a one-phrase GDD amendment by proposal replacing
+"each frame" with the per-tick truth. Until it lands this entry stays OPEN —
+the code is right and the document is wrong, and in this repository that is
+an amendment, not a shrug.
+
+*Raised by the M10 Critic (review of `add-audio-playback`). Open.*
 
 ### A13 — Props below the blessed 1024 (RESOLVED)
 

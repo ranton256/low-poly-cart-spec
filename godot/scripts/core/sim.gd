@@ -48,7 +48,7 @@ var circuit: RefCounted = Circuit.new()
 
 ## This tick's audio cues, as DATA (godot/audio-feedback). Cleared at the top of
 ## every step() and appended by the stage that owns each event; the view drains
-## it each frame and plays it, and the simulation never touches an audio API.
+## it once per TICK (A16) and plays it; the simulation never touches an audio API.
 ## Its rate-limit window is wired from the tuning on the first step, so the
 ## recorder stays constructible bare exactly like the race state machine.
 var cues: RefCounted = AudioCues.new()

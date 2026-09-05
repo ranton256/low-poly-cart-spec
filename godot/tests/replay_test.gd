@@ -52,7 +52,11 @@ func _sim() -> RefCounted:
 	var s := Sim.new()
 	s.tuning = _tuning()
 	s.input = InputState.new()
-	# Boot from LOADING through the real countdown: batch-independence must
+	# Boot from LOADING through the countdown AS THIS SUITE'S SYNTHETIC TUNING
+	# SHAPES IT (no countdownStep row, so the countdown is zero-length and the
+	# native cue coverage here is a single record — the rich-stream determinism
+	# rides on audio_cue_test's double replay and conformance item 14; M10
+	# Critic finding 3): batch-independence must
 	# hold across the frozen prefix too (godot/race-state).
 	s.race.mark_world_ready()
 	return s
