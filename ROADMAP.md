@@ -701,11 +701,18 @@ Absent by decision. The full list with reasoning is in
 [CONSTRAINTS §15 Not applicable](CONSTRAINTS.md); the ones most likely to be
 asked about:
 
-- **All ten Optional Features** — audio, particles, boost, drifting, checkpoints,
-  ghost replay, persistent best times, time-of-day, an end-of-session flow, kart
-  customisation. The GDD is explicit that these "should not be implemented until
-  if and when they are specifically requested." Each waits for a specific
-  request; none is a milestone or a Backlog line.
+- **The eight remaining Optional Features** — particles, boost, drifting,
+  ghost replay, persistent best times, time-of-day, an end-of-session flow,
+  kart customisation. Two were specifically requested and became milestones
+  (checkpoints → M9, audio → M10); the owner decided at the M10 close
+  (2026-09-04) that the rest stay unimplemented in this trial-run build —
+  they are the course's student exercises, and this build's job is to show
+  the promotion pattern, not to exhaust the list. An M11 bundling the
+  session flow, ghost, and persistence was reviewed in detail and PARKED on
+  that decision; the review's findings (the sessionLaps harness ripple, the
+  frozen not-a-fourth-state requirement title, the ghost's material
+  override) wait in the conversation record for whoever picks it up. None
+  is a milestone or a Backlog line.
 - **Networking of any kind**, including leaderboards and telemetry.
 - **A menu, a pause, a settings screen, a fail state, or an end condition.** The
   session shape is load → countdown → drive forever.

@@ -669,7 +669,8 @@ Absent by decision, not by oversight:
 - **Particles, boost, drifting, ghost replay, time-of-day, end-of-session
   flow, kart customisation** — the still-optional features (2–4, 6–10 minus
   the promoted circuit and audio); the GDD is explicit they wait to be
-  "specifically requested."
+  "specifically requested," and the owner decided at the M10 close that in
+  THIS build they stay unimplemented — student exercises, not milestones.
 - **A menu, a pause state, a settings screen, a fail state, an end condition.**
   Load → countdown → drive forever.
 - **A fourth game state.** The spec defines three.
