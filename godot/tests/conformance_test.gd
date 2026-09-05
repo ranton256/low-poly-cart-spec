@@ -1,7 +1,7 @@
-# G2 — the Acceptance Checklist as fifteen named cases (V7), each quoting
+# G2 — the Acceptance Checklist as sixteen named cases (V7), each quoting
 # its item and asserting the stated tolerance as a LITERAL. The machinery
 # behind every item is proven across the other suites; this file is the one
-# place a reviewer reads fifteen names against fifteen items and sees the
+# place a reviewer reads sixteen names against sixteen items and sees the
 # document's own numbers. Plus the lap-gate ordering discriminator (Backlog).
 #
 # THREE CASES MOVED WITH THE CHECKLIST when amend-gdd-for-checkpoint-circuit
@@ -15,6 +15,12 @@
 # Item 14 is split per CONSTRAINTS §6 Determinism and the reference frame:
 # 14a (three batchings agree, here) and 14b (three refresh rates in the real
 # game — tools/refresh_probe.gd, windowed, its run recorded in the change).
+#
+# ITEM 16 IS SPLIT THE SAME WAY and for the same reason: its cross-rate clause
+# needs the real game at three real refresh rates, so it rides the SAME probe
+# record 14b does — the probe grew a per-pass cue-stream hash in
+# add-audio-playback, and _item_16 parses that record for three agreeing
+# hashes. Its other three clauses are headless and are asserted here.
 extends SceneTree
 
 const RVTest := preload("res://tests/harness.gd")
@@ -26,14 +32,16 @@ const ChaseCamera := preload("res://scripts/core/chase_camera.gd")
 const Collision := preload("res://scripts/core/collision.gd")
 const Normalise := preload("res://scripts/core/normalise.gd")
 const ArtTuning := preload("res://scripts/art_tuning.gd")
+const AudioView := preload("res://scripts/view/audio_view.gd")
+const AudioCues := preload("res://scripts/core/audio_cues.gd")
 const Circuit := preload("res://scripts/core/circuit.gd")
 const LayoutIO := preload("res://scripts/world/layout_io.gd")
 
-const ITEMS := 15
+const ITEMS := 16
 const GO_TICK := 240  # item 1: 4.0 s at 60 Hz; ± 0.1 s is ± 6 ticks
 const TIMING_TOL := 0.05  # items 4: the checklist's ± 0.05 s
 const KART_BOX := AABB(Vector3(-1.1, 0.0, -1.18), Vector3(2.2, 1.2, 2.36))
-const RECORDED_14B := "res://docs/progress/2026-09-01-refresh-probe.txt"
+const RECORDED_14B := "res://docs/progress/2026-09-04-refresh-probe.txt"
 ## tests/lap_gate_test.gd's LAP_PHASES, cycled — the drive item 14 replays.
 ## Baked from the shipped circuit by tools/author_first_light.gd, restated here
 ## rather than imported for the same reason main.gd restates it: this file is
@@ -107,6 +115,7 @@ func _init() -> void:
 	_item_13_live_tuning_next_tick()
 	_item_14_frame_rate_independence()
 	await _item_15_the_shipped_circuit_is_the_game()
+	_item_16_the_game_speaks_the_same_way_every_time()
 	_ordering_discriminator()
 
 	_check(_ran == ITEMS, "all %d checklist items ran as named cases (%d)" % [ITEMS, _ran])
@@ -114,7 +123,7 @@ func _init() -> void:
 	get_root().remove_child(_root)
 	_root.free()
 	RVTest.finish(
-		self, "conformance: 15 items at their stated tolerances ok", "conformance check(s)"
+		self, "conformance: 16 items at their stated tolerances ok", "conformance check(s)"
 	)
 
 
@@ -750,6 +759,123 @@ func _item_15_the_shipped_circuit_is_the_game() -> void:
 	)
 	sim.lap.best_seconds = -1.0
 	sim.lap.bests.clear()
+
+
+# @covers Audio Feedback / The cue stream is deterministic
+## "A scripted run's cue stream — ids, order, tick timestamps, and volumes — is
+## identical at 30, 60, and 144 frames per second; the engine note's pitch tracks
+## the speed ratio between its named endpoints; a full-speed collision sounds at
+## full scale and a boundary rebound never plays the impact cue."
+##
+## Four clauses, and the first one cannot be run headlessly: three REAL refresh
+## rates need a real window, exactly as item 14b does, so it rides the same
+## recorded probe run. The other three are arithmetic and are asserted here. The
+## deep versions live elsewhere — tests/audio_cue_test.gd owns the emission rules
+## and all five negative promises, tests/audio_view_test.gd owns the view's
+## parameters — and this case restates the checklist's own literals, which is
+## what every other item in this file does.
+func _item_16_the_game_speaks_the_same_way_every_time() -> void:
+	_ran += 1
+
+	# Clause 1: the cue stream is identical at 30, 60 and 144 fps. Parsed from
+	# the recorded windowed run, whose passes must agree on both hashes and on
+	# the record count.
+	var record := FileAccess.get_file_as_string(RECORDED_14B)
+	var stamps := PackedStringArray()
+	for line in record.split("\n"):
+		# The tool's own lines only. The record carries prose above them, and a
+		# looser match read the explanation as a fourth pass — caught by the case
+		# failing on its own record, which is the shape item 14's parse uses too.
+		if not line.begins_with("refresh_probe:") or "tick hash" not in line:
+			continue
+		stamps.append(line.get_slice("cue stream ", 1).strip_edges())
+	var agree: bool = stamps.size() == 3
+	for stamp in stamps:
+		if stamp != stamps[0]:
+			agree = false
+	_check(
+		agree and record.count("the cue stream is identical across 30/60/144 fps ok") == 1,
+		(
+			(
+				"item 16: the recorded 30/60/144 fps run produced ONE cue stream — %d passes, %s "
+				+ "(rerun: godot -s tools/refresh_probe.gd, windowed)"
+			)
+			% [stamps.size(), stamps[0] if stamps.size() > 0 else "nothing recorded"]
+		)
+	)
+
+	# Clause 2: the engine note's pitch tracks the ratio BETWEEN ITS NAMED
+	# ENDPOINTS — 0.8 at rest and 1.5 at full ratio, the Audio table's own
+	# figures, and monotonically rising in between.
+	var art: RefCounted = ArtTuning.load_art()
+	_check(
+		(
+			absf(AudioView.engine_pitch(art, 0.0) - 0.8) < 1e-9
+			and absf(AudioView.engine_pitch(art, 1.0) - 1.5) < 1e-9
+		),
+		(
+			"item 16: the engine note runs 0.8 to 1.5 across the ratio (%.4f, %.4f)"
+			% [AudioView.engine_pitch(art, 0.0), AudioView.engine_pitch(art, 1.0)]
+		)
+	)
+	var rising := true
+	var previous: float = AudioView.engine_pitch(art, 0.0)
+	for step in range(1, 11):
+		var pitch: float = AudioView.engine_pitch(art, float(step) / 10.0)
+		if pitch <= previous:
+			rising = false
+		previous = pitch
+	_check(rising, "item 16: and it TRACKS the ratio — strictly rising at every tenth of it")
+
+	# Clause 3: a full-speed collision sounds at full scale. Coasting at the
+	# clamp, friction hands stage 7 the steady top speed, which the Audio table
+	# names as impactFullScale — so the volume is exactly 1.
+	var s := _sim()
+	s.kart_normalised = Normalise.to_target_height(KART_BOX, 1.2)
+	var authored := AABB(Vector3(-1.0, 0.0, -1.0), Vector3(2.0, 2.0, 2.0))
+	s.props = [
+		Collision.make_prop("tree", Normalise.to_target_height(authored, 2.0), 0.0, 0.0, 1.5)
+	]
+	s.velocity = s.tuning.max_speed
+	s.step()
+	var impact: RefCounted = _cue_of(s, AudioCues.IMPACT)
+	_check(
+		s.last_hit != null and impact != null and absf(impact.volume - 1.0) < 1e-9,
+		(
+			"item 16: a full-speed collision sounds at FULL SCALE — volume %.9f"
+			% (impact.volume if impact != null else -1.0)
+		)
+	)
+
+	# Clause 4: a boundary rebound never plays the impact cue. Driven into the
+	# fence with no prop within reach, so the only thing that can sound is the
+	# rebound.
+	var fence := _sim()
+	fence.pos_z = fence.tuning.drivable_extent - 0.01
+	fence.input.forward = true
+	var rebounds := 0
+	var impacts := 0
+	for _i in range(240):
+		fence.step()
+		if _cue_of(fence, AudioCues.REBOUND) != null:
+			rebounds += 1
+		if _cue_of(fence, AudioCues.IMPACT) != null:
+			impacts += 1
+	_check(
+		rebounds > 0 and impacts == 0,
+		(
+			"item 16: and a boundary rebound NEVER plays the impact cue (%d rebounds, %d impacts)"
+			% [rebounds, impacts]
+		)
+	)
+
+
+## This tick's first cue with this id, or null.
+func _cue_of(s: RefCounted, id: String) -> RefCounted:
+	for cue: AudioCues.Cue in s.cues.cues:
+		if cue.id == id:
+			return cue
+	return null
 
 
 ## The Backlog's ordering discriminator: a push-out carries the kart INTO the

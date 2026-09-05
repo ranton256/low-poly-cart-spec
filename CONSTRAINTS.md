@@ -206,7 +206,7 @@ call.
 | | Status |
 |---|---|
 | **G1** — Every `### Scenario:` in the GDD is claimed exactly once: by a named test (`# @covers`), by the visual register with a stated reason, or by a deferral naming the milestone that owns it | ✅ `check_spec_coverage.py` |
-| **G2** — Each of the 15 Acceptance Checklist items is one named conformance test carrying its stated tolerance as a literal | ✅ `tests/conformance_test.gd` (M9: `_item_01` boots into the shipped circuit, `_item_02` reaches the random scales through the authoring scatter, `_item_10` banks a threaded lap with no minimum, `_item_15` is the circuit end to end); the refresh-rate half of item 14 by `tools/refresh_probe.gd`, run recorded |
+| **G2** — Each of the 16 Acceptance Checklist items is one named conformance test carrying its stated tolerance as a literal | ✅ `tests/conformance_test.gd` (M9: `_item_01` boots into the shipped circuit, `_item_02` reaches the random scales through the authoring scatter, `_item_10` banks a threaded lap with no minimum, `_item_15` is the circuit end to end; M10: `_item_16`, the cue stream). Two items ride a recorded windowed run rather than the headless suite, for the same reason: item 14's refresh-rate half and item 16's cross-rate half both need real rendering at real caps, and `tools/refresh_probe.gd` produces both in one pass — the record is parsed by the two cases |
 
 ```
    every scenario in the design document — the gate counts them on every run
@@ -383,11 +383,11 @@ hostile on the web.
 
 | | Budget | Status |
 |---|---|---|
-| Total web payload, compressed | ≤ 25 MB | ✅ measured 20.5 MB — see the measured row below |
+| Total web payload, compressed | ≤ 25 MB | ✅ measured 19.72 MB — see the measured row below |
 | Prop textures | Downsampled to **512** — the GDD blesses 1024 for "the texture set" and states a floor only *for the kart*; props carry none and are seen at gameplay distances | ✅ `stamp_texture_imports.py --check` in the standing suite |
 | Kart textures | **1024 floor** — an earlier row here read "2048² retained", a misreading of the GDD's "do not go below that [1024] for the kart"; the qualifier is the kart's floor, not a retention rule | ✅ same stamp check |
 | Texture compression | Basis Universal on import (transcodes on load), stamped by `tools/stamp_texture_imports.py` — the project-level decision the old att-5 row asked for | ✅ `--check` in the suite |
-| Total web payload, measured | **19.05 MB gzip-9** against the 25 MB budget (wasm 8.94 + pck 10.03 + js 0.07) — re-measured at M8 after the macOS target required `import_etc2_astc`; was 20.5 before, 89.2 before the stamp | ✅ measured in add-export-and-release-pipeline |
+| Total web payload, measured | **19.72 MB gzip-9** against the 25 MB budget (wasm 9.38 + pck 10.26 + js 0.08) — re-measured at M10 with the synthesized cue set aboard. The audio's own cost is **+0.156 MB**: the same tree at `f9b9b6d`, exported and gzipped the same way minutes earlier, measures 19.56 MB, and the whole of the difference is 122 KB of 16-bit PCM, which gzip cannot compress. The wasm's 8.94 → 9.38 since M8 is export-template drift and is not this change's. Earlier figures: 19.05 at M8, 20.5 before that, 89.2 before the texture stamp | ✅ measured in add-audio-playback |
 | Cold load → countdown, web, warm cache | ≤ 5 s | ✅ measured 0.62 s to engine start on a COLD cache (48.3 MB actually transferred, verified by resource transferSize), countdown inside the following second — locally served on the reference machine, so network transfer is excluded; the gzip payload row bounds that part |
 
 ### Design targets — measured on the reference machine
@@ -395,7 +395,7 @@ hostile on the web.
 | | Target | Status |
 |---|---|---|
 | Cold start → countdown, desktop | ≤ 2 s | 📐 measured **1.05 s** via `tools/fps_probe.gd` (windowed, re-runnable) |
-| `godot/tools/test.sh` wall time | ≤ 60 s. Measured 8.4 s warm, 10.9 s cold; re-measure whenever a check is added | 📐 |
+| `godot/tools/test.sh` wall time | ≤ 60 s. Measured **36.2 s** warm at M10 with `audio_view_test` added — 33.7 s on the same machine at `f9b9b6d` without it, so the new suite costs ~2.5 s (it shells out to Python three times to prove the cue set regenerates). The 8.4 s / 10.9 s this row carried was measured at M2 and had gone stale unnoticed, which is what this row exists to prevent; re-measure whenever a check is added | 📐 |
 
 A gate slow enough to skip stops being run, and a gate that is not run is not a
 gate. If a budget is enforced at runtime, prefer a machine-independent bound —
@@ -409,9 +409,16 @@ The seven supplied models are **provided and committed separately by the
 repository owner**. No change, task, or tool copies, generates, or commits a
 `.glb`.
 
+**The cue set is the exception that proves the rule.** `godot/assets/audio/`
+holds nine small WAVs — the game's whole voice — and they are the *port's*, not
+the owner's: rendered by `godot/tools/synth_cues.py`, committed like the shipped
+circuit's JSON, and regenerable. The rule above is about the supplied models,
+which have no generator and could not have one.
+
 | | Status |
 |---|---|
 | Assets live at **`assets/`** in the repository root, shared by every port | ✅ committed |
+| The cue set at `godot/assets/audio/` is exactly `tools/synth_cues.py`'s output, byte for byte, and two runs of that tool agree | ✅ `tests/audio_view_test.gd`, which runs the tool twice into scratch directories and then `--check`s the committed set |
 | `godot/tools/sync_assets.sh` copies the models into `godot/assets/` by content hash, at the front of the standing suite | ✅ |
 | The copied `.glb` files and Godot's extracted textures are git-ignored; only `godot/assets/*.glb.import` is committed | ✅ `.gitignore` |
 | The normalisation contract (GDD §3) is implemented in **`scripts/core/`** and unit-tested against synthetic boxes, with no `.glb` present | ✅ `normalise_test.gd` |
@@ -444,7 +451,7 @@ Deterministic acceptance conditions — pass/fail with no judgment.
 | V4 | No physics-body symbol from §4 appears anywhere under `godot/` | ✅ `check_boundaries.py` + the commit hook on staged content |
 | V5 | No **distinctive** tuning value appears as a literal in `godot/scripts/` | ✅ `check_tuning_literals.py` |
 | V6 | **G1** — every GDD scenario claimed exactly once; a claim on a scenario the document lacks also fails | ✅ `check_spec_coverage.py` |
-| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ⚠️ `_item_01`…`_item_15` green; `amend-gdd-for-audio-cues` added item 16 — the M10 implementation owes `_item_16`; until then G2 covers the pre-amendment checklist |
+| V7 | **G2** — every Acceptance Checklist item has a named conformance test asserting its literal tolerance | ✅ `_item_01`…`_item_16` green — `add-audio-playback` closed the gap `amend-gdd-for-audio-cues` opened; the case's cross-rate clause is carried by the recorded probe run, its other three are headless |
 | V8 | Pinned project settings match §6, and every model has a valid committed import preset | ✅ `check_settings.py` |
 | V9 | Gallery diffs within recorded thresholds on all three criteria | ✅ `tools/gallery.sh` + `gallery_compare.py`, nine states (`gate_next` added at M9; `gate_front`/`gate_back` with it, a pair because a gate's readable pass direction is a comparison), floor and limits recorded in `gallery_config.json`; verified by mutation (a painted band fails on all three criteria) |
 | V10 | Every relative link in every Markdown file resolves | ✅ `check_links.py` |
@@ -578,7 +585,7 @@ Added by this project:
 | GDScript lint and format | `gdtoolkit` — `gdlint`, `gdformat --check` | M0 |
 | Whitespace, EOF newline, large files | the hand-rolled `godot/tools/pre-commit` | ✅ M0 |
 | Visual gate (V9) | `tools/gallery.sh` + `gallery_compare.py` — windowed, nine deterministic states vs committed baselines | ✅ M6 |
-| Acceptance conformance G2 (V7) | `tests/conformance_test.gd`, 15 named cases | M8 |
+| Acceptance conformance G2 (V7) | `tests/conformance_test.gd`, 16 named cases | M8 |
 | Commit-time gate | `godot/tools/pre-commit`, installed by `tools/install-hooks.sh`; checks **staged blobs**, bash-3.2-portable | ✅ M0 |
 | Asset sync and import | `godot/tools/sync_assets.sh` + `tests/assets_test.gd` — content-hash sync, poisoned-preset refusal, load assertion | ✅ M0 |
 | Tuning transcription | `godot/tools/check_tuning_transcription.py` | ✅ M0 |
@@ -590,6 +597,7 @@ Added by this project:
 | Kart conformance | `godot/tools/check_kart_conformance.py` — against the GDD's own figures | ✅ M2 |
 | Field conformance | `godot/tools/check_scatter_conformance.py` — against the GDD's own tables | ✅ M3 |
 | Suite registration | `godot/tools/check_suites_registered.py` — every `tests/*.gd` runs in `test.sh`; exists because three suites once were not | ✅ M2 |
+| Cue set regenerability | `godot/tools/synth_cues.py --check`, run from `tests/audio_view_test.gd` | ✅ M10 |
 | Exposure (A9) | `godot/tools/measure_exposure.py`, `find_light_scale.py` — windowed | 📐 M2 |
 | Contact shadow | `godot/tools/measure_contact_shadow.py` — windowed | 📐 M2 |
 | Staged collision capture | `godot/tools/collision_capture.sh` — windowed, stages an arrangement and measures the shudder against an unjolted twin | 📐 M3 |
@@ -648,9 +656,13 @@ Absent by decision, not by oversight:
 - **Accounts, auth, API contracts, SLAs, database schemas** — there is no server.
 - **Persistent storage.** The best time is session-only in the GDD;
   `track_layout.json` is player-initiated export, not a save system.
-- **Audio** — promoted at M10 (`amend-gdd-for-audio-cues`); see the GDD's
-  Audio Feedback feature. The core stays `AudioStreamPlayer`-free by design —
-  cues are simulation data, views play them.
+- **Audio** — no longer absent: promoted at M10 (`amend-gdd-for-audio-cues`)
+  and implemented by `add-audio-cue-core` and `add-audio-playback`; see the
+  GDD's Audio Feedback feature. The core stays `AudioStreamPlayer`-free by
+  design — cues are simulation data, `scripts/view/audio_view.gd` plays them.
+  What remains absent here is everything the feature deliberately excludes:
+  music, any volume control beyond the M mute, and any cue outside the
+  specified set.
 - **2D sprite tooling** — the inherited skeleton's sprite auditor was deleted;
   this is a 3D project with no sprites.
 - **Particles, boost, drifting, ghost replay, time-of-day, end-of-session

@@ -18,38 +18,6 @@
    "milestone": "M6",
    "capture": "docs/progress/2026-08-29-m6-boundary-skirt.png",
    "note": "Met by A11's settlement (add-render-pipeline-and-web-budget): a ground skirt in the Ground's own albedo spans past fogEnd, so from the pinned boundary the chase camera sees grass dissolving into fog with no drawn edge \u2014 the capture shows it, and world_test asserts the geometry that guarantees it (nearest skirt edge beyond fogEnd from anywhere drivable). The specified 200x200 Ground, the +/-90 boundary, and 50-150 fog are untouched. Earlier notes and the elevated-oblique capture remain in git history."
-  },
-  {
-   "feature": "Audio Feedback",
-   "scenario": "The engine note follows the speed ratio",
-   "kind": "deferred",
-   "reason": "The looping source's pitch/volume curves on the sim clock (view half; the ratio is already core state).",
-   "milestone": "M10",
-   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes."
-  },
-  {
-   "feature": "Audio Feedback",
-   "scenario": "Space is audible",
-   "kind": "deferred",
-   "reason": "Spatial vs non-spatial cue split and the attenuation bound.",
-   "milestone": "M10",
-   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes."
-  },
-  {
-   "feature": "Audio Feedback",
-   "scenario": "Mute",
-   "kind": "deferred",
-   "reason": "The M toggle: output gated, cue stream unaffected, session-only.",
-   "milestone": "M10",
-   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes."
-  },
-  {
-   "feature": "Audio Feedback",
-   "scenario": "The cue stream is deterministic",
-   "kind": "deferred",
-   "reason": "HALF DONE, and deferred until the other half exists. add-audio-cue-core put the stream in sim.stats_line(), so the headless half — byte-identical ids, order, tick timestamps and volumes across runs — is now tested: tests/audio_cue_test.gd replays the baked lap script twice and compares the whole stream byte for byte, and determinism_test, replay_test and conformance item 14 all fail on a cue-only divergence (mutation-verified). What is NOT tested is ACROSS RENDER RATES, which is the scenario's other clause and acceptance item 16's: that needs tools/refresh_probe.gd to record the stream at 30/60/144 fps, and the probe extension belongs to add-audio-playback. A partial claim is not a claim, so this stays deferred rather than being claimed by the suite that covers half of it.",
-   "milestone": "M10",
-   "note": "Entered the universe when amend-gdd-for-audio-cues was applied (owner-approved 2026-09-04). Owed by the M10 implementation changes; add-audio-cue-core took the headless half, add-audio-playback owes the cross-rate half and with it the claim."
   }
  ]
 }

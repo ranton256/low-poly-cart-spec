@@ -66,6 +66,7 @@ SIM = GODOT / "scripts" / "core" / "sim.gd"
 # equivalent. Pinned because project.godot is rewritten by the editor AND by
 # ProjectSettings.save(), and both drop things — see GOTCHAS.md.
 KEY_W, KEY_A, KEY_S, KEY_D, KEY_R, KEY_P, KEY_G, KEY_L = 87, 65, 83, 68, 82, 80, 71, 76
+KEY_M = 77
 KEY_LEFT, KEY_UP, KEY_RIGHT, KEY_DOWN = 4194319, 4194320, 4194321, 4194322
 REQUIRED_ACTIONS = {
     "accelerate": {KEY_W, KEY_UP},
@@ -84,6 +85,10 @@ REQUIRED_ACTIONS = {
     # here for the same reason as the rest: project.godot is rewritten by the
     # editor and by ProjectSettings.save(), and both have dropped things from it.
     "regenerate_world": {KEY_G},
+    # Mute. Unlike Restart Circuit, the design document DOES pin this one: the
+    # Audio Feedback feature and the control table both bind it to M, so the key
+    # is the specification's rather than the port's.
+    "mute": {KEY_M},
 }
 
 

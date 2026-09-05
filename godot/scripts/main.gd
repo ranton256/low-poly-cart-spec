@@ -169,6 +169,12 @@ var _jolts: int = 0
 ## the root with none of them attached.
 @onready var gates: Node3D = get_node_or_null("Gates") as Node3D
 
+## The game's voice. Optional like the other views, and driven from
+## _physics_process rather than _process — see scripts/view/audio_view.gd: the
+## cue list is per TICK and is cleared by the next step, so a per-frame drain
+## would double-play at 144 fps and drop cues at 30.
+@onready var audio: Node3D = get_node_or_null("Audio") as Node3D
+
 
 ## The render-scale cap (Limiting render resolution on high-density displays).
 ## The knob that governs the RENDER SURFACE is the viewport's 3D scale — the
@@ -225,6 +231,8 @@ func _ready() -> void:
 		minimap.configure(_art, self)
 		if chase_camera != null:
 			chase_camera.cull_mask &= ~(1 << 1)
+	if audio != null and _art != null:
+		audio.configure(_art)
 	if OS.get_environment("LPC_SMOKE") == "1":
 		_run_smoke()
 
@@ -260,6 +268,11 @@ func _physics_process(_delta: float) -> void:
 			camera.jolt()
 			_jolts += 1
 		_camera_steps += 1
+	# THE CUE LIST IS DRAINED HERE, on the tick that produced it and before the
+	# next step clears it — never in _process with the other views. See the
+	# `audio` handle above and scripts/view/audio_view.gd's header.
+	if audio != null:
+		audio.draw_from(sim)
 	_steps += 1
 
 
@@ -508,6 +521,12 @@ func _read_input() -> void:
 		save_layout()
 	if Input.is_action_just_pressed("load_layout"):
 		load_layout()
+	# Mute (M): edge-triggered like Reset Kart, and deliberately NOT gated on
+	# RACING. The countdown beeps, so the toggle has to work before the race
+	# starts; and it reaches only the view, so a press can never move the
+	# simulation the way restart_circuit() and reset_kart() do.
+	if Input.is_action_just_pressed("mute") and audio != null:
+		print("audio: %s" % ("muted" if audio.toggle_mute() else "unmuted"))
 
 
 ## Every held input is released when the window loses focus.

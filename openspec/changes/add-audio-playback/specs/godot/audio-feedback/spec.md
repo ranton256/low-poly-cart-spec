@@ -4,14 +4,24 @@
 
 ### Requirement: The audio view is a pure consumer of the cue stream
 
-`scripts/view/audio_view.gd` SHALL drain the core's cue list each frame and
-play it: spatial ids from their world positions with attenuation reaching
-silence by `audioMaxDistance`, race moments non-spatial, and the engine
-loop's pitch and volume set from the Audio table's curves on the speed
-ratio each frame — silent in LOADING and through the countdown. Every
-parameter the view sets SHALL be a function of core state and the data
-layer, asserted headlessly. The Mute action (pinned to M) SHALL gate
-output only: the cue stream is unaffected, and a fresh boot is unmuted.
+`scripts/view/audio_view.gd` SHALL drain the core's cue list **once per
+simulation tick**, on the tick that produced it, and play it: spatial ids from
+their world positions with attenuation reaching silence by `audioMaxDistance`,
+race moments non-spatial, and the engine loop's pitch and volume set from the
+Audio table's curves on the speed ratio, on that same clock — silent in
+LOADING and through the countdown. Every parameter the view sets SHALL be a
+function of core state and the data layer, asserted headlessly. The Mute
+action (pinned to M) SHALL gate output only: the cue stream is unaffected, and
+a fresh boot is unmuted.
+
+**The tick, not the rendered frame, is the clock** — a correction made in the
+doing, and not a detail. `sim.cues` holds ONE tick's records and is cleared at
+the top of the next `Sim.step()`, so a per-frame drain plays a tick's cues
+twice at 144 fps and drops every other tick's entirely at 30 fps, a countdown
+beep included. The composition root therefore drives this view from
+`_physics_process`, immediately after the step, rather than from the per-frame
+callback every other view uses, and the view holds a tick guard so that a
+second call inside one tick is a no-op.
 
 #### Scenario: The view's parameters at a tick are computable without ears
 

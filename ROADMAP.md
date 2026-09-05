@@ -603,16 +603,15 @@ reserved for it all along.
 **Changes**
 - `amend-gdd-for-audio-cues` — the GDD amendment (owner-approved
   2026-09-04, applied as 8265a0a; six edits, no consequential extras)
-- implementation change(s), split proposed after this archives — owing:
-  - the core cue list (emissions at the exact stages, the pin rate limit,
-    determinism-summary membership) with the negative promises as tests
-  - the audio view (engine loop on the ratio curves, spatial one-shots,
-    non-spatial race moments), the synthesized cue set from a committed
-    generator tool, the M mute action (check_settings pin + hint line —
-    the hint change re-blesses the gallery)
-  - `_item_16` in G2; the cue-stream hash extending the refresh probe;
-    the 8 registered M10 deferrals claimed; §5 G2 back to ✅
-  - web payload re-measured with the WAVs aboard
+- `add-audio-cue-core` — the core cue list (emissions at the exact stages,
+  the pin rate limit, determinism-summary membership) with the negative
+  promises as tests; the game still silent
+- `add-audio-playback` — the audio view (engine loop on the ratio curves,
+  spatial one-shots, non-spatial race moments), the synthesized cue set from
+  `tools/synth_cues.py`, the M mute action (check_settings pin + hint line —
+  the hint change re-blessed the gallery), `_item_16` in G2, the cue-stream
+  hash extending the refresh probe, the last 4 M10 deferrals claimed, §5's
+  G2 row back to ✅, and the web payload re-measured with the WAVs aboard
 
 **Done when** the game sounds like the feature specifies, silence keeps its
 promises, the gate is green with zero M10 deferrals, the Critic approves —
@@ -651,6 +650,18 @@ their full histories are in git at `streamline-process`'s parent commit.)
   `retune-handling-and-line-clearance`; the measured fallback (tick 288 →
   0.043%) is recorded in `tools/gallery_config.json`. Fix the interpolation
   phase at the pause, or restage — do not widen the limit.
+- The Web preset exports `all_resources` with an empty exclude filter, so a
+  release built while `godot/gallery/` exists packs the scratch captures:
+  measured 1.2 MB of PNGs inside `index.pck`, found while re-measuring the
+  payload for `add-audio-playback` (19.72 MB clean against 20.51 MB with the
+  scratch aboard). `gallery/` is git-ignored, so it never makes the tree dirty
+  and `export_all.sh` would not refuse. Exclude the scratch directories in the
+  presets, or have `export_all.sh` clear them first.
+- The engine loop's `loop_mode` lives in its committed `.import` sidecar, and
+  `godot --headless --import` did not re-apply that parameter change against a
+  warm `.godot/imported/` cache — the stale sample had to be deleted by hand.
+  `tests/audio_view_test.gd` asserts the loop and names the remedy in its
+  failure message, which is the guard; a cache-aware re-import step is the fix.
 - **M10** — The racing-line clearance rule measures a prop's collision box
   against a corridor of sampled points (the baked arc plus the tight line
   through the gate centres), not against the kart's swept volume, and

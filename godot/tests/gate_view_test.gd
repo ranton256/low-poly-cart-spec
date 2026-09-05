@@ -433,7 +433,7 @@ func _test_the_hud_counts_the_gates() -> void:
 func _test_the_hint_line_names_the_objective() -> void:
 	var hints: Label = _root.overlay.get_node("Hints") as Label
 	_check(
-		hints.text == "W/S drive · A/D steer · G restart · follow the gates",
+		hints.text == "W/S drive · A/D steer · G restart · M mute · follow the gates",
 		"the hint line is §7's own text, verbatim (%s)" % hints.text
 	)
 

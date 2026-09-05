@@ -1,0 +1,44 @@
+Re-run 2026-09-04 for add-audio-playback. The physics did not move — the position
+and lap figures below are the 2026-09-01 record's to the last digit — so this
+re-run exists for the COLUMN THAT IS NEW: the per-pass cue stream. The probe
+grew two hashes per pass with this change, and acceptance item 16's first clause
+("a scripted run's cue stream — ids, order, tick timestamps, and volumes — is
+identical at 30, 60, and 144 frames per second") is asserted against this file by
+tests/conformance_test.gd item 16, exactly the way item 14b is asserted against
+the position and lap columns.
+
+The two hashes answer different questions and both are reported per pass:
+
+  tick hash    the probe's own FNV-1a fold over sim.cues.line(), sampled once per
+               PHYSICS tick of the 3600-tick scripted drive. line() renders each
+               record as id@tick:volume(x,z), so the fold covers exactly the four
+               things the checklist names, in emission order.
+  core digest  scripts/core/audio_cues.gd's own running digest over every record
+               emitted since the pass began, the countdown included. It needs no
+               sampling, so it cannot be defeated by one.
+
+Neither hash is pinned as a literal anywhere. What item 16 asserts is that the
+three RATES agree — the hashes are a function of the drive and the tuning table,
+both of which move by proposal.
+
+RUN THREE OF THREE, and the other two are worth recording rather than hiding.
+Run 1 measured the same three agreeing hashes but its 144 fps pass drew 7464
+frames rather than ~8641 — a real cap miss with the window behind the terminal,
+above the probe's refusal floor but below its own previous record. Run 2 was
+REFUSED outright: "the 144 fps pass drew only 0 frames — an occluded or undrawn
+window is not evidence of a rate. Nothing recorded." That guard doing its job on
+an operator's own run is the best evidence there is that the numbers below came
+from a window that really rendered. Run 3, kept and pasted verbatim, drew 8641
+frames at 144 fps — the same figure the 2026-09-01 record carries.
+
+refresh_probe: 60 vs 30 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
+refresh_probe: 60 vs 144 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
+refresh_probe: 30 vs 144 fps — position gap 0.0000 wu (≤ 0.5), lap gap 0.0000 s (≤ 0.05) ok
+refresh_probe:  60 fps — end (-9.4383, 33.6716), best lap 17.9333 s, 3601 frames drawn in 60.0 s
+refresh_probe:  30 fps — end (-9.4383, 33.6716), best lap 17.9333 s, 1800 frames drawn in 60.0 s
+refresh_probe: 144 fps — end (-9.4383, 33.6716), best lap 17.9333 s, 8641 frames drawn in 60.0 s
+refresh_probe:  60 fps — cue stream 86 records, tick hash 0x7bd2fedc, core digest 0xde8e5f82
+refresh_probe:  30 fps — cue stream 86 records, tick hash 0x7bd2fedc, core digest 0xde8e5f82
+refresh_probe: 144 fps — cue stream 86 records, tick hash 0x7bd2fedc, core digest 0xde8e5f82
+refresh_probe: the cue stream is identical across 30/60/144 fps ok
+refresh_probe: acceptance 14b holds at 30/60/144 fps

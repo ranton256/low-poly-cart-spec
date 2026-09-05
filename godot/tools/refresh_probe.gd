@@ -18,10 +18,30 @@
 # decoupled from the render rate the drawn-frame counts verify — and the
 # tolerance absorbs whatever float or scheduling wiggle real rendering adds
 # (measured: none). conformance_test item 14 pins this run's record.
+#
+# AND THE CUE STREAM, added by add-audio-playback for acceptance item 16: "a
+# scripted run's cue stream — ids, order, tick timestamps, and volumes — is
+# identical at 30, 60, and 144 frames per second". Two hashes per pass, and
+# they answer different questions:
+#
+#   tick hash    this probe's own FNV-1a fold over sim.cues.line() sampled once
+#                per physics tick of the scripted drive. line() renders each
+#                record as id@tick:volume(x,z), so the fold covers exactly the
+#                four things the checklist names, in emission order.
+#   core digest  scripts/core/audio_cues.gd's own running digest over EVERY
+#                record emitted since the pass began, countdown included. It
+#                needs no sampling and so cannot be defeated by one.
+#
+# The sampling phase is the same in all three passes (the loop awaits
+# physics_frame, which fires once per tick at every render rate), so the tick
+# hash is comparable across them; it is not a figure with meaning on its own,
+# and neither hash is pinned as a literal anywhere — what conformance item 16
+# asserts is that the three passes AGREE.
 extends SceneTree
 
 const LapSuite := preload("res://tests/lap_gate_test.gd")
 const Common := preload("res://tools/capture_common.gd")
+const AudioCues := preload("res://scripts/core/audio_cues.gd")
 
 const RATES: Array[int] = [60, 30, 144]
 const RACE_TICKS := 3600  # the checklist's 60 seconds
@@ -95,9 +115,47 @@ func _init() -> void:
 				% [RATES[i], r.x, r.z, r.lap, r.frames, r.wall_s]
 			)
 		)
+	# THE CUE STREAM, item 16's own clause. Compared pass against pass rather than
+	# against a pinned literal: the hashes are a function of the drive and the
+	# tuning table, both of which move by proposal, and what the checklist asks is
+	# that the three RATES agree.
+	var cue_stable := true
+	for i in range(1, RATES.size()):
+		var a: Dictionary = results[0]
+		var b: Dictionary = results[i]
+		if a.cue_hash != b.cue_hash or a.cue_digest != b.cue_digest or a.cues != b.cues:
+			cue_stable = false
+	for i in range(RATES.size()):
+		var r: Dictionary = results[i]
+		print(
+			(
+				"refresh_probe: %3d fps — cue stream %d records, tick hash 0x%08x, core digest 0x%08x"
+				% [RATES[i], int(r.cues), int(r.cue_hash), int(r.cue_digest)]
+			)
+		)
+	print(
+		(
+			"refresh_probe: the cue stream is identical across 30/60/144 fps %s"
+			% ("ok" if cue_stable else "FAIL")
+		)
+	)
+	if not cue_stable:
+		failures += 1
+
 	if failures == 0:
 		print("refresh_probe: acceptance 14b holds at 30/60/144 fps")
 	quit(failures)
+
+
+## FNV-1a over the text, folded into a running hash. The algorithm and its three
+## numbers are scripts/core/audio_cues.gd's — imported rather than restated, so
+## the probe and the core cannot disagree about what a digest is.
+func _fold(hash_value: int, text: String) -> int:
+	var folded: int = hash_value
+	for i in range(text.length()):
+		folded = (folded ^ text.unicode_at(i)) & AudioCues.DIGEST_MASK
+		folded = (folded * AudioCues.DIGEST_PRIME) & AudioCues.DIGEST_MASK
+	return folded
 
 
 func _run_at(rate: int) -> Dictionary:
@@ -113,6 +171,7 @@ func _run_at(rate: int) -> Dictionary:
 	var race_start: int = root.sim.ticks
 	var phase_index := 0
 	var phase_start: int = race_start
+	var cue_hash: int = AudioCues.DIGEST_SEED
 	while root.sim.ticks - race_start < RACE_TICKS:
 		var phase: Array = LapSuite.LAP_PHASES[phase_index % LapSuite.LAP_PHASES.size()]
 		if root.sim.ticks >= phase_start + int(phase[3]):
@@ -131,6 +190,9 @@ func _run_at(rate: int) -> Dictionary:
 		Common.release(idle)
 		Common.press(held)
 		await physics_frame
+		# ONE SAMPLE PER PHYSICS TICK, at every render rate — physics_frame is the
+		# tick, not the frame. line() is the tick's records as stable text.
+		cue_hash = _fold(cue_hash, root.sim.cues.line())
 	Common.release(PackedStringArray(PHASE_ACTIONS))
 
 	# The drawn-frame count is the proof the pass really rendered at its cap:
@@ -141,6 +203,9 @@ func _run_at(rate: int) -> Dictionary:
 		"lap": root.sim.lap.best_seconds,
 		"frames": Engine.get_frames_drawn() - drawn_at_start,
 		"wall_s": (Time.get_ticks_msec() - wall_start) / 1000.0,
+		"cue_hash": cue_hash,
+		"cue_digest": root.sim.cues.digest,
+		"cues": root.sim.cues.emitted,
 	}
 	get_root().remove_child(root)
 	root.free()

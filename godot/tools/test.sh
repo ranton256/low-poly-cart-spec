@@ -149,6 +149,12 @@ run_suite tests/collision_test.gd
 # data and nothing in this suite, or in the core, plays one.
 run_suite tests/audio_cue_test.gd
 
+# The other half: the view that makes it audible. The generated cue set's
+# determinism, the engine curves, the spatial/non-spatial split, and mute — all
+# from node properties and mapping functions, because a headless audio server is
+# a dummy that mixes nothing. The listen test is the owner's and is not a gate.
+run_suite tests/audio_view_test.gd
+
 
 # Lint and format. Fast, and they keep the diff about behaviour.
 # Every .gd under scripts/ and tests/, not a fixed list of directories — an

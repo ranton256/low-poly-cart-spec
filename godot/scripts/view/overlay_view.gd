@@ -26,7 +26,7 @@ const GO_TEXT := "GO!"
 const TITLE_TEXT := "LOW POLY CART"
 ## §7's hint line, verbatim — it names the objective, which is why the amended
 ## document spells it out rather than leaving the wording to the port.
-const HINTS_TEXT := "W/S drive · A/D steer · G restart · follow the gates"
+const HINTS_TEXT := "W/S drive · A/D steer · G restart · M mute · follow the gates"
 ## The gate counter's own format, §7's "GATE n/N in the timer label style".
 const GATE_FORMAT := "GATE %d/%d"
 
