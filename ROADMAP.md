@@ -613,10 +613,23 @@ reserved for it all along.
   hash extending the refresh probe, the last 4 M10 deferrals claimed, §5's
   G2 row back to ✅, and the web payload re-measured with the WAVs aboard
 
+**Review record.** Critic, first pass: "[REJECTED] — Every mechanical,
+mutational, and windowed check passed under my own hands, but the amended
+GDD's 'views drain the list each frame' contradicts the shipped
+once-per-tick drain and that spec-defect resolution is registered nowhere"
+— the A12 species again, this time a defect in an amendment this repository
+itself authored and owner-approved. Four findings remediated in a769fbd
+(A16 filed OPEN with the owed one-phrase GDD amendment in the Backlog; the
+digest-completeness guard made standing; comments corrected; two more
+Backlog lines). Re-review verified each by hand, mutation-killed the new
+guard, and closed "[APPROVED]" with one advisory (A16's sourcing,
+corrected).
+
 **Done when** the game sounds like the feature specifies, silence keeps its
-promises, the gate is green with zero M10 deferrals, the Critic approves —
+promises, the gate is green with zero M10 deferrals, the Critic approves ✅ —
 and the owner has LISTENED: cue correctness is assertable, whether it
 sounds good is the one property no suite or Critic in this repo can hear.
+The listen, and A16's one-phrase amendment approval, are what remain.
 
 ---
 

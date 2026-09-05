@@ -472,9 +472,11 @@ A14 was raised and resolved in the same milestone's remediation pass.)
 ### A16 — "Each frame" cannot drain a per-tick list (OPEN: GDD proposal in the Backlog)
 
 **The specification says** (Feature: Audio Feedback, added by
-`amend-gdd-for-audio-cues`): the cue list is **per-tick** — "cleared at tick
-start" — and that "views drain the list each frame and play it, exactly as
-every other view reads state."
+`amend-gdd-for-audio-cues`): the simulation appends to "an ordered
+**per-tick** cue list", and "views drain the list each frame and play it,
+exactly as every other view reads state." (The port's own delta spec is the
+one that says "cleared at tick start"; the re-review corrected this entry's
+sourcing — the contradiction rests on the two phrases that ARE the GDD's.)
 
 **Those two sentences cannot both hold.** At 144 fps a frame-drained
 per-tick list plays most ticks' cues twice; at 30 fps, two ticks share a
