@@ -1186,6 +1186,14 @@ The specification above is normative. These are places where the original implem
 
 These are additional, optional features to consider for specification and implementation. They **should not be implemented** until if and when they are specifically requested.
 
+*Status (2026-09-04): features 1 (audio) and 5 (checkpoints) have been
+specifically requested and promoted into the specification above; see their
+headings. The remaining eight are deliberately left unimplemented in the
+reference Godot build — by decision, not omission — and remain open
+exercises for any port that wants them. A port implementing one should
+follow the promotion pattern the two promoted features record: specify by
+amendment first, then build against the amended contract.*
+
 ### 1. Engine and impact audio *(promoted to the specification by `amend-gdd-for-audio-cues`; see Feature: Audio Feedback)*
 
 * **Requirement:** Position an engine sound source on the kart and modulate its playback rate continuously with the speed ratio, so acceleration audibly rises in pitch and coasting falls away.
