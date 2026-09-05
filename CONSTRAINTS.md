@@ -268,7 +268,7 @@ carries the reasoning:
 | A13 | §2's 1024 downsample blessing states a floor only for the kart; whether props may ship below 1024 was unstated | Resolved in M6: props 512 / kart 1024 / Basis, forced by the 25 MB budget, gated by the baselines and the stamp check |
 | A14 | Item 14's "replayed at 30/60/144 fps" does not say whether inputs are tick-timed or frame-quantised; measured 8.83 wu apart | ✅ resolved M8 — tick-timed (the only reading the 0.5 wu tolerance can test); refresh_probe + conformance item 14 |
 | A15 | The gate mechanic is directional — a backwards pass counts for nothing — but every piece of furniture the GDD listed is symmetric, and it never said which way a gate faces | ✅ resolved M9 — found by the owner's first playtest, not by any gate; GDD amended (869893e), and the port's stripe and chevron became arrows along gate-forward, asserted at five yaws |
-| A16 | The audio amendment specifies a per-tick cue list AND "views drain the list each frame" — the two cannot both hold at 30 or 144 fps | ❓ open — the port drains once per tick (asserted; probe-carried across rates); the one-phrase GDD amendment awaits the owner (Backlog) |
+| A16 | The audio amendment specified a per-tick cue list AND "views drain the list each frame" — the two cannot both hold at 30 or 144 fps | ✅ resolved at the M10 close — the port drains once per tick (asserted; probe-carried across rates); GDD amended by owner-approved 9e73b6a |
 
 ---
 

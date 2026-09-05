@@ -596,6 +596,9 @@ approves.
 
 ## M10 — The soundtrack
 
+**✅ COMPLETE.** Critic [REJECTED] then [APPROVED] (record above); the owner
+listened and passed it; A16 closed by owner-approved amendment 9e73b6a.
+
 **Goal.** The game tells the player with sound what just happened and how
 fast they are going — through the cue-as-data architecture the M0 ban has
 reserved for it all along.
@@ -629,7 +632,8 @@ corrected).
 promises, the gate is green with zero M10 deferrals, the Critic approves ✅ —
 and the owner has LISTENED: cue correctness is assertable, whether it
 sounds good is the one property no suite or Critic in this repo can hear.
-The listen, and A16's one-phrase amendment approval, are what remain.
+Both landed 2026-09-04: the owner listened and passed it, and approved
+A16's amendment (9e73b6a).
 
 ---
 
@@ -641,9 +645,6 @@ belongs in the change that does the work. Milestone tags say where each most
 plausibly lands. (Numbered items migrated from the retired `att` tracker;
 their full histories are in git at `streamline-process`'s parent commit.)
 
-- **GDD proposal (A16, owner approval owed)** — one phrase in Audio
-  Feedback: "views drain the list each frame" becomes the per-tick truth
-  the port ships and asserts. *(M10 Critic finding 1)*
 - Web export preset packs with an empty exclude filter, so gitignored
   `godot/gallery/` scratch can ride into the shipped pck unnoticed (a clean
   tree does not protect against it); tighten the preset's exclude filter.

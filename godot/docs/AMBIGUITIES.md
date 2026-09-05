@@ -463,13 +463,11 @@ first playtest, resolved by GDD amendment 869893e and this port's arrows.*
 
 ## Open
 
-One: **A16**, raised by the M10 Critic — the amended GDD's own drain wording
-contradicts the per-tick cue list it specifies; the port's ruling is recorded
-below and the one-phrase GDD amendment awaits the owner, carried in the
-ROADMAP Backlog. (A12 was settled at M8 by amending the design document;
-A14 was raised and resolved in the same milestone's remediation pass.)
+None. A16 — raised by the M10 Critic, the third defect settled by amending
+the design document itself (after A12 and A15) — closed with the
+owner-approved commit 9e73b6a at the milestone's end.
 
-### A16 — "Each frame" cannot drain a per-tick list (OPEN: GDD proposal in the Backlog)
+### A16 — "Each frame" cannot drain a per-tick list (RESOLVED at M10 close)
 
 **The specification says** (Feature: Audio Feedback, added by
 `amend-gdd-for-audio-cues`): the simulation appends to "an ordered
@@ -496,12 +494,12 @@ asserted in `audio_view_test` (the drained-once case, whose tick-guard
 mutation plays a cued tick six times) and carried across real 30/60/144 fps
 rendering by the probe record conformance item 16 parses.
 
-**Owner action owed:** a one-phrase GDD amendment by proposal replacing
-"each frame" with the per-tick truth. Until it lands this entry stays OPEN —
-the code is right and the document is wrong, and in this repository that is
-an amendment, not a shrug.
+**The resolution:** owner-approved amendment 9e73b6a — the sentence now
+reads "views drain the list once per simulation tick", with the reasoning
+inline. The code was right all along; the document caught up, on the record.
 
-*Raised by the M10 Critic (review of `add-audio-playback`). Open.*
+*Raised by the M10 Critic (review of `add-audio-playback`). Resolved at the
+M10 close by GDD amendment 9e73b6a.*
 
 ### A13 — Props below the blessed 1024 (RESOLVED)
 
