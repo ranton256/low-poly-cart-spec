@@ -2,17 +2,17 @@
 
 A starting point for demonstrating **spec-driven development** with a game.
 
-This repo deliberately contains no code. It holds one artifact —
+`main` deliberately contains no code. It holds one artifact —
 [`low-poly-cart-game-design-document.md`](low-poly-cart-game-design-document.md)
 — a build specification complete enough that a working game can be written from
 it alone, in any language, on any engine.
 
 ## The game
 
-**LowPolyCartJS** is a single-player arcade go-kart time trial: an open green
-field scattered with low-poly props, momentum-based handling, a chase camera, a
-minimap, and a stopwatch. No opponents, no fail state. Load → countdown → drive
-forever.
+**Low-Poly Cart Racer** is a single-player arcade go-kart time trial: an open
+green field scattered with low-poly props, momentum-based handling, a chase
+camera, a minimap, and a stopwatch. No opponents, no fail state. Load →
+countdown → drive forever.
 
 ## The spec
 
@@ -30,6 +30,14 @@ forever.
 Read the spec, pick a stack, build the game, and check the result against the
 acceptance checklist. The interesting question is how much of the game two
 independent implementations agree on — and where the spec was quietly ambiguous.
+
+## Branches
+
+- **`main`** — the spec, and your starting point. No code, deliberately.
+- **`godot-trial-1`** — a worked build in Godot 4: the OpenSpec change history,
+  an architecture and tuning gate, a conformance suite run against the
+  acceptance checklist, and tagged releases through `v1.3.0`. One answer, not
+  the answer; read it after your own attempt.
 
 ## Provenance
 
