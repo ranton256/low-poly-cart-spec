@@ -21,7 +21,7 @@ Phase 2 — smoke (LPC_SMOKE=1):
     docs/release/1.0.0.md for the owed one-liner.
 
 Phase 3 — sign (macOS):
-  Developer ID Application: Richard Anton (2U8TFZTUT5), hardened runtime,
+  Developer ID Application: Richard Anton (<team-id>), hardened runtime,
   secure timestamp; codesign --verify --deep --strict: valid, satisfies DR.
   Notarization NOT run (no credentials on this machine); spctl reports
   "rejected (Unnotarized Developer ID)" as expected. Steps for the
