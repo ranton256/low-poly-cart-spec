@@ -40,3 +40,11 @@ the differences so a porter comparing side by side is not surprised.
 
 Optional features are listed at the end and should not be implemented unless
 specifically requested.
+
+## Third-party files
+
+`.claude/skills/openspec-*/` and `.claude/commands/opsx/` are not original work:
+they are installed by the [OpenSpec](https://github.com/Fission-AI/openspec)
+CLI and are MIT licensed, Copyright (c) 2024 OpenSpec Contributors. They are
+kept in the repository so the change workflow that built this branch can be
+read and re-run.
